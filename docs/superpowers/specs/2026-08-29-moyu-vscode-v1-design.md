@@ -2,7 +2,7 @@
 
 Date: 2026-08-29
 
-Status: Proposed for user review
+Status: Approved after design review
 
 Target platform: Windows 10 and Windows 11
 
@@ -57,7 +57,7 @@ The system has four explicit layers:
 
 1. **VS Code integration:** activation, commands, Activity Bar view, context keys, panel lifecycle, dialogs, and notifications.
 2. **Application services:** bookshelf, reader, indexing, EPUB parsing, 2048 persistence coordination, boss state machine, and module repositories.
-3. **Infrastructure:** VS Code `globalState`, `globalStorageUri`, filesystem adapters, atomic cache writes, encoding decoder, schema migrations, and logging.
+3. **Infrastructure:** VS Code `globalState` for noncritical preferences, transactional files under `globalStorageUri` for conflict-sensitive state, filesystem adapters, lock files, crash-safe writes, encoding decoder, schema migrations, and logging.
 4. **Webview application:** router, reader UI, 2048 UI, boss overlay, settings UI, and typed message client.
 
 Dependencies point inward. Pure domain modules do not import `vscode`, DOM APIs, Node filesystem APIs, or storage implementations. VS Code and Webview adapters depend on shared domain contracts.
@@ -122,7 +122,7 @@ Shared TypeScript contracts define discriminated unions with a protocol version,
 
 Host-to-Webview messages are either correlated success/error responses or events such as `books/changed`, `reader/progressChanged`, `game2048/changed`, `app/stateSnapshot`, and `boss/modeChanged`.
 
-Runtime guards reject unknown protocol versions, unknown message types, missing fields, oversized payloads, invalid board shapes, invalid URIs, invalid numeric ranges, and messages from stale session IDs. Errors returned to the Webview use stable error codes and safe display messages; raw stack traces and local file contents are not exposed.
+Runtime guards reject unknown protocol versions, unknown message types, missing fields, messages larger than 1 MiB after UTF-8 JSON serialization, invalid board shapes, invalid URIs, invalid numeric ranges, and messages from stale session IDs. Errors returned to the Webview use stable error codes and safe display messages; raw stack traces and local file contents are not exposed.
 
 The protocol transports structured text blocks, not raw EPUB HTML or file handles. Large TXT content is requested in bounded chunks. Every request handler maps to one explicit service operation.
 
@@ -157,9 +157,10 @@ Import examines a small bounded prefix:
 
 1. BOM determines UTF-8, UTF-16LE, or UTF-16BE.
 2. Without BOM, strict UTF-8 validation is attempted.
-3. Invalid UTF-8 is decoded as GB18030 and evaluated for decoding validity; GBK is available as an explicit compatible choice.
-4. Ambiguous or low-confidence results require user confirmation instead of silently accepting likely mojibake.
-5. The confirmed encoding is persisted in `BookMetadata`. “Reselect encoding” invalidates the index and reopens at a recovered logical location without deleting prior progress until successful rebuild.
+3. Invalid UTF-8 produces a GB18030 candidate preview. Successful GB18030 decoding is not treated as reliable detection because most arbitrary byte sequences are decodable.
+4. On first import of that candidate, the user must confirm GB18030, select GBK, or manually select a supported UTF encoding while viewing bounded text previews.
+5. No candidate is committed until confirmation. The confirmed encoding is persisted in `BookMetadata` and is reused without further guessing.
+6. “Reselect encoding” shows the same explicit preview flow, invalidates the index only after confirmation, and reopens at a recovered logical location without deleting prior progress until a successful rebuild.
 
 `iconv-lite` is the planned local decoder because it is pure JavaScript, supports streaming and GBK/GB18030, includes TypeScript declarations, and is MIT licensed. The exact dependency version is locked during Task 1 implementation setup after audit.
 
@@ -175,7 +176,24 @@ Empty files produce an explicit empty-book state. Invalid paths, permissions, tr
 
 ## 10. EPUB Strategy
 
-EPUB is treated as an untrusted ZIP container. The Extension Host:
+EPUB is treated as an untrusted ZIP container. V1 uses the following inclusive hard limits; values above a limit are rejected before further expansion or transport:
+
+| Resource | Maximum |
+|---|---:|
+| EPUB source file | 256 MiB |
+| ZIP entries | 4,096 |
+| One expanded ZIP entry | 16 MiB |
+| Total expanded ZIP bytes | 512 MiB |
+| Per-entry and aggregate compression ratio | 100:1 |
+| `META-INF/container.xml` | 256 KiB |
+| OPF package document | 4 MiB |
+| Spine chapters | 2,048 |
+| One chapter's source markup | 8 MiB |
+| One chapter's sanitized UTF-8 text | 4 MiB |
+| XML/HTML element nesting depth | 64 |
+| One Host/Webview JSON message | 1 MiB serialized UTF-8 |
+
+The Extension Host:
 
 1. Validates extension, readability, ZIP structure, entry count, total expanded size, individual entry size, and compression ratio limits.
 2. Reads `META-INF/container.xml` and resolves the OPF path without allowing path traversal.
@@ -185,7 +203,7 @@ EPUB is treated as an untrusted ZIP container. The Extension Host:
 6. Drops scripts, styles, iframes, objects, embeds, event attributes, forms, SVG active content, external links, remote resources, media, fonts, and images.
 7. Emits `chapterId`, safe title, and `paragraphs: string[]` only.
 
-Parser limits prevent ZIP bombs, unbounded XML nesting, excessive chapter counts, and oversized messages. Image elements are ignored or converted to the literal paragraph `[Image omitted]`; image bytes are never sent to the Webview. Entity expansion and external entity resolution are disabled.
+Every byte, count, ratio, depth, and message limit is checked incrementally where possible so rejection occurs before the next allocation or decompression step. Image elements are ignored or converted to the literal paragraph `[Image omitted]`; image bytes are never sent to the Webview. Entity expansion and external entity resolution are disabled.
 
 Parsed chapter indexes and sanitized text caches may live in versioned derived storage under `globalStorageUri`. Original EPUB bytes remain at the selected URI and are not copied into extension storage.
 
@@ -229,19 +247,32 @@ If Moyu is absent or hidden, the command is a no-op. It never opens Moyu, closes
 
 ### Storage placement
 
-`globalState` stores small user-level JSON envelopes:
+Conflict-sensitive state is stored as separate versioned JSON files beneath `globalStorageUri/state/`:
 
-- `bookshelfState`
-- `readingProgressState`
-- `readerSettingsState`
-- `game2048State`
-- `schemaVersion`
+- `bookshelf.json`
+- `reading-progress.json`
+- `game2048.json`
 
-`globalStorageUri` stores derived TXT indexes, sanitized EPUB chapter caches, bounded cache metadata, and migration backups. Raw full novels, Webview DOM, timers, panel handles, focus, boss mode, session IDs, and current visibility are not persisted as global truth.
+`readerSettingsState`, the global schema metadata, and noncritical presentation preferences may use `globalState`. `globalState` is not used as a compare-and-swap primitive: the VS Code `Memento` API exposes `get`, `keys`, and `update`, but no atomic conditional update or transaction.
 
-### Versioned envelopes
+`globalStorageUri` also stores derived TXT indexes, sanitized EPUB chapter caches, bounded cache metadata, transaction recovery files, and migration backups. Raw full novels, Webview DOM, timers, panel handles, focus, boss mode, Webview session IDs, and current visibility are not persisted as global truth.
 
-Each module envelope has `schemaVersion`, module `version`, and `updatedAt`. Writes use optimistic concurrency: read latest, compare `baseVersion`, apply the module-specific merge or reject, increment the version, persist, and return the committed envelope.
+### Cross-process file transaction
+
+Each critical state file has its own short-lived lock file. Every critical read-modify-write operation follows this Windows V1 protocol:
+
+1. Acquire the module lock using exclusive file creation (`wx`) with a random owner token, process ID, and lease timestamp.
+2. If the lock exists, retry with bounded jitter for up to 5 seconds. A lock older than 15 seconds is not deleted directly: the contender attempts to atomically rename it to a unique stale-lock name. Exactly one contender can win that rename, remove the quarantined stale file, and retry acquisition.
+3. While holding the lock, recover any interrupted prior transaction, read the latest validated state, compare the caller's `baseVersion`, and apply the module-specific merge or rejection rule.
+4. Write the complete next envelope to a same-directory uniquely named temporary file, flush and close it, rotate the prior validated file to a recovery backup, and atomically rename the temporary file to the canonical module filename.
+5. Re-read and validate the committed envelope before returning it.
+6. Release only the lock whose on-disk owner token matches the holder's token. Cleanup failures are logged; the lease mechanism permits recovery after process termination.
+
+Critical readers also acquire the same module lock, so they never observe the brief Windows replacement sequence. On startup or lock acquisition, recovery selects the highest valid generation from canonical, backup, and completed temporary candidates; invalid candidates are quarantined rather than silently accepted. All transaction paths are confined to `globalStorageUri` and use same-volume renames. No IPC server, daemon, Registry, or OS-global mutex is introduced.
+
+### Versioned envelopes and merge rules
+
+Each module envelope has `schemaVersion`, module `version`, `generation`, and `updatedAt`. Version comparison and persistence occur inside the file lock; versions are conflict inputs, not a claim of CAS by themselves.
 
 - Bookshelf merges by `bookId`; additions are unioned; removals create versioned tombstones retained long enough to prevent stale resurrection.
 - Reading progress has a separate version per `bookId`; conflicts for the same book retain the later valid logical checkpoint by timestamp and record a diagnostic conflict event. Different books merge independently.
@@ -249,17 +280,17 @@ Each module envelope has `schemaVersion`, module `version`, and `updatedAt`. Wri
 - 2048 best score always merges with `max`.
 - Board updates are accepted only for the active `gameSessionId` and increasing move sequence. Explicit new-game creation atomically changes the active session. Stale session board writes are rejected with “The game was restarted in another window”; their observed score may still raise `bestScore`.
 
-Migrations are pure, version-by-version transformations with validation and a recoverable backup. Corrupt state falls back per module, not by erasing all Moyu data.
+Migrations are pure, version-by-version transformations performed under the corresponding lock with validation and a recoverable backup. Corrupt state falls back per module, not by erasing all Moyu data.
 
 ## 15. Multi-window Data Semantics
 
 Bookshelf, progress, reader settings, 2048 state, best score, and schema version are user-global. Panel existence, visibility, boss mode, focus, temporary UI, and Webview session ID are window-local.
 
-VS Code desktop windows normally have separate Extension Host processes. `globalState.update` does not provide a dependable cross-window subscription bus, and in-process event emitters cannot cross process boundaries. Therefore V1 does not claim reliable real-time cross-window broadcasting.
+VS Code desktop windows normally have separate Extension Host processes. The official `Memento` surface does not expose atomic compare-and-swap, and `globalState.update` does not provide a dependable cross-window subscription bus. In-process event emitters cannot cross process boundaries. Therefore V1 uses per-module filesystem transactions for correctness and does not claim reliable real-time cross-window broadcasting.
 
-Within one Extension Host, a Webview session registry broadcasts committed changes immediately. Across windows, every mutation first rereads the latest module envelope and applies optimistic concurrency. Panels refresh module state when created, restored, revealed, focused through a user action, navigated, and immediately before a mutation. A low-frequency visibility-scoped refresh may improve freshness but is not correctness-critical.
+Within one Extension Host, a Webview session registry broadcasts committed changes immediately. Across windows, every critical mutation runs under its module lock and rereads the latest file before merge. Panels refresh module state when created, restored, revealed, focused through a user action, navigated, and immediately before a mutation. A low-frequency visibility-scoped refresh may improve freshness but is not correctness-critical.
 
-This model guarantees deterministic conflict handling and prevents obvious stale overwrites without introducing IPC servers, lock daemons, filesystem watchers as a protocol, or distributed-system machinery. Two windows may display temporarily stale information until the next refresh point; the limitation is documented.
+This model serializes critical cross-process read-modify-write transactions and provides deterministic crash recovery without introducing IPC servers, lock daemons, filesystem watchers as a protocol, or distributed-system machinery. It does not make all UI state realtime: two windows may display temporarily stale information until the next refresh point, but a stale mutation cannot bypass the locked merge rules.
 
 ## 16. Security
 
@@ -269,10 +300,8 @@ Each HTML document has a fresh cryptographic nonce and CSP equivalent to:
 
 ```text
 default-src 'none';
-img-src webview-csp-source data:;
 style-src webview-csp-source;
 script-src 'nonce-<generated>';
-font-src webview-csp-source;
 connect-src 'none';
 object-src 'none';
 frame-src 'none';
@@ -280,7 +309,7 @@ base-uri 'none';
 form-action 'none';
 ```
 
-V1 contains no remote resources and no network requests. Inline event handlers, `eval`, dynamic code construction, unsafe `innerHTML`, and executable EPUB content are forbidden. Message payloads are validated at runtime. File access is limited to URIs explicitly selected or relocated by the user. Paths are not interpolated into shell commands. The extension never executes novel content.
+V1 contains no image or custom-font rendering, remote resources, or network requests, so CSP grants neither `img-src` nor `font-src`; both fall back to `default-src 'none'`. Inline event handlers, `eval`, dynamic code construction, unsafe `innerHTML`, and executable EPUB content are forbidden. Message payloads are validated at runtime and capped at 1 MiB serialized UTF-8. File access is limited to URIs explicitly selected or relocated by the user. Paths are not interpolated into shell commands. The extension never executes novel content.
 
 ZIP extraction is logical and bounded; entries are read by validated canonical names rather than extracted into user directories. Logs redact full content and avoid exposing sensitive paths in normal telemetry. V1 does not add telemetry.
 
@@ -311,11 +340,12 @@ Tests use a fast TypeScript unit runner selected during skeleton implementation,
 Required suites include:
 
 - 2048 moves in four directions, merge rules, no double merge, spawn, score, no-op move, game over, victory, continue, deterministic RNG, session conflict, serialization, and recovery.
-- TXT BOM detection, strict UTF-8, UTF-16LE/BE, GB18030/GBK, ambiguous selection, streaming decoder boundaries, indexing, block reads, large-file behavior, empty file, invalid path, file mutation, logical progress, relocation, and boundary navigation.
-- EPUB container/OPF/spine/title/text extraction, missing resources, chapter navigation, progress, path traversal, external entities, scripts, event attributes, remote resources, images, ZIP bomb limits, malformed markup, and oversized chapters.
-- Persistence serialization, module migrations, corrupt module fallback, tombstones, optimistic conflicts, per-book progress merge, settings last-write-wins, best-score max, and game-session rejection.
+- TXT BOM detection, strict UTF-8, mandatory first-confirmation previews after invalid UTF-8, manual UTF/GB18030/GBK selection, no silent GB candidate commit, streaming decoder boundaries, indexing, block reads, large-file behavior, empty file, invalid path, file mutation, logical progress, relocation, and boundary navigation.
+- EPUB container/OPF/spine/title/text extraction, missing resources, chapter navigation, progress, path traversal, external entities, scripts, event attributes, remote resources, images, malformed markup, and each numeric security limit at `limit - 1`, `limit`, and `limit + 1`. Size tests use mocked metadata or sparse fixtures where allocating the full limit would be wasteful.
+- Persistence serialization, module migrations, corrupt module fallback, tombstones, per-book progress merge, settings last-write-wins, best-score max, and game-session rejection.
+- Cross-process transactions with competing writers, exclusive acquisition, 5-second acquisition timeout, 15-second stale-lock quarantine, owner-token release, stale `baseVersion`, same-module serialization, different-module independence, temp-write failure, crash after backup rotation, crash before canonical rename, corrupt canonical recovery, and highest-valid-generation selection.
 - Boss enter, exit, rapid toggles, hidden/absent no-op, title restoration, focus token restoration, timer pause/resume, and reader/game identity preservation.
-- Protocol valid mappings, unknown version/type, malformed payload, oversized payload, stale session, and safe error mapping.
+- Protocol valid mappings, unknown version/type, malformed payload, exactly 1 MiB payload acceptance, over-1-MiB rejection, stale session, and safe error mapping.
 - Extension integration for activation, commands, context keys, file picker cancellation, Sidebar-to-Panel navigation, serializer restoration, and VSIX smoke installation.
 
 Windows 10 and Windows 11 manual acceptance covers F5, import, reading, restart recovery, 2048 recovery, boss toggle, keybinding reassignment, theme variants, high contrast, and multiple VS Code windows.
@@ -406,15 +436,15 @@ The prepackage gate runs clean install from the lockfile, lint, formatting check
 V1 is accepted on Windows 10/11 when all of the following are demonstrated:
 
 1. F5 opens an Extension Development Host and the Activity Bar Moyu entry opens one main panel.
-2. Multiple TXT books can be imported without copying originals; UTF-8, UTF-16LE/BE, GB18030, and GBK fixtures render correctly or request explicit encoding selection.
+2. Multiple TXT books can be imported without copying originals; BOM and strict UTF-8 paths behave deterministically, while invalid UTF-8 always presents a GB18030 candidate preview and requires explicit confirmation or manual encoding selection before metadata is committed.
 3. A large TXT opens through a reusable asynchronous index without synchronously loading the entire file; logical progress survives viewport resizing, panel close, and VS Code restart.
 4. Missing or moved files show Relocate and preserve identity/progress after successful relocation.
-5. EPUB imports produce safe ordered chapters and text-only reading; malicious and unsupported active content does not execute or load.
+5. EPUB imports produce safe ordered chapters and text-only reading; malicious and unsupported active content does not execute or load, and every published byte/count/ratio/depth/payload limit passes boundary tests.
 6. Removing a book never deletes the source file.
 7. 2048 supports arrows/WASD, valid merges, scoring, best score, new game, victory/continue, game over, and exact recovery after restart.
 8. `Ctrl+M`, while the Moyu panel is visible, instantly overlays the selected disguise without reconstructing reader or game state; the second toggle restores module, position, title, and focus.
 9. `Ctrl+M` while Moyu is absent or hidden does not open Moyu or change the real editor. Users can rebind the command.
-10. Module-specific multi-window conflicts follow documented deterministic rules and do not silently lower best score, resurrect books, or overwrite a newer game session.
+10. Competing Windows Extension Host processes serialize critical module transactions through per-module lock files; crash-recovery tests pass, and conflicts cannot silently lower best score, resurrect books, lose newer progress, or overwrite a newer game session.
 11. Light, dark, high-contrast, keyboard, and reduced-motion checks pass.
 12. `npm test`, `npm run build`, lint, formatting checks, extension integration tests, and VSIX packaging pass from a clean checkout.
 13. The VSIX installs in an isolated supported VS Code profile and completes the core reader, 2048, and boss-mode smoke flow offline.
@@ -446,9 +476,12 @@ These extensions must reuse the typed protocol, storage repositories, CSP, modul
 - **Consistency:** Sidebar is consistently an entry/navigation surface; the single panel is the only main content surface. Boss mode is always window-local and in-Webview.
 - **Scope:** No future game, network, backend, AI, cloud, original EPUB rendering, or hard disguise implementation enters V1.
 - **File responsibility:** Domain, application, infrastructure, VS Code adapters, Webview modules, and shared protocol have separate ownership.
-- **Security:** Novel and EPUB input never becomes executable HTML; CSP, nonce, parser limits, URI validation, runtime message validation, and no-network defaults are explicit.
+- **Security:** Novel and EPUB input never becomes executable HTML; CSP grants only packaged styles and nonce scripts, with no image, font, frame, object, form, or network source. Every parser and message limit is numeric and boundary-testable.
 - **EPUB complexity:** The design stops at ordered, sanitized text chapters and deliberately omits layout and images.
 - **Boss restoration:** The normal module is retained, durable state is independent of DOM lifetime, and focus/scroll restoration use logical tokens.
+- **Cross-process race:** Critical state uses per-module exclusive lock files; latest read, validation/merge, durable temporary write, same-directory rename, validation, and release occur inside the lock. Readers share the lock and interrupted generations have deterministic recovery. `globalState` is not presented as CAS.
+- **TXT encoding:** Invalid UTF-8 only creates a GB18030 preview candidate. First import requires confirmation, and no successful decode is treated as high-confidence detection.
+- **EPUB limits:** Source, ZIP, XML, OPF, chapter, text, nesting, ratio, and protocol limits are concrete and tested at boundaries.
 - **Multi-window complexity:** Conflicts are module-specific, refresh is honest about cross-process limits, and no IPC subsystem is introduced.
 - **Ambiguity:** Minimum VS Code version, supported encodings, storage placement, conflict rules, commands, platform acceptance, and non-goals are concrete.
 

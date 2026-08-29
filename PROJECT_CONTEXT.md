@@ -14,16 +14,15 @@ Design and implementation planning only. No feature source, package manifest, de
 - One main WebviewPanel per VS Code window hosts the reader, 2048, and boss overlay.
 - Extension Host owns commands, file access, persistence, lifecycle, indexing, and parsing.
 - Webview owns rendering and interaction and has no Node.js file access.
-- User data is globally shared with per-module optimistic concurrency; panel and boss state are window-local.
+- Conflict-sensitive user data is globally shared through per-module locked file transactions under `globalStorageUri`; panel and boss state are window-local.
 
 ## Completed work
 
 - Product and architecture decisions approved.
-- V1 design specification prepared for review.
+- V1 design specification approved subject to four review corrections, which are incorporated.
 
 ## Pending work
 
-- User review of the design specification.
 - Detailed implementation plan.
 - Implementation is explicitly not started in this phase.
 
