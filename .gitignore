@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+*.vsix
+.vscode-test/
+.superpowers/
+*.log
+.env
+.env.*
+!.env.example
+*.tmp
+*.cache
