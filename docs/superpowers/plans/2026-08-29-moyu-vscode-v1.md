@@ -6,7 +6,7 @@
 
 **Architecture:** An Activity Bar Sidebar is the native entry and light navigation surface; one WebviewPanel per VS Code window hosts all main content. The Extension Host exclusively owns files, parsing, persistence, commands, context keys, and lifecycle, while a Vanilla TypeScript Webview owns safe rendering and interaction through a runtime-validated typed protocol. Conflict-sensitive global data uses per-module locked file transactions under `globalStorageUri`; window and boss state remain process-local.
 
-**Tech Stack:** Node.js 22 LTS, TypeScript 5.9.2, VS Code API with `engines.vscode: ^1.96.0` and `@types/vscode@1.96.0`, Vanilla TypeScript/HTML/CSS, esbuild 0.28.1, Vitest 4.0.0, ESLint 9.34.0 with typescript-eslint 8.68.0, Prettier 3.6.2, `iconv-lite@0.7.3`, `@zip.js/zip.js@2.8.60`, `saxes@6.0.0`, `parse5@8.0.1`, `@vscode/test-electron@3.1.0`, and `@vscode/vsce@3.9.2`.
+**Tech Stack:** Node.js 22 LTS as development tooling only; production Extension Host compatibility targets Node 20.18 in VS Code 1.96.x. TypeScript 5.9.2, VS Code API with `engines.vscode: ^1.96.0`, `@types/vscode@1.96.0`, and `@types/node@20.18.0`, Vanilla TypeScript/HTML/CSS, esbuild 0.28.1, Vitest 4.0.0, ESLint 9.34.0 with typescript-eslint 8.68.0, Prettier 3.6.2, `iconv-lite@0.7.3`, `@zip.js/zip.js@2.8.60`, `saxes@6.0.0`, `parse5@8.0.1`, `@vscode/test-electron@3.1.0`, and `@vscode/vsce@3.9.2`.
 
 **Spec:** `docs/superpowers/specs/2026-08-29-moyu-vscode-v1-design.md`
 
@@ -20,7 +20,8 @@
 - Webview content is offline, uses nonce CSP with default deny, and renders untrusted text only through `textContent`/DOM APIs.
 - Host/Webview JSON messages are capped at 1 MiB serialized UTF-8 and must pass runtime guards.
 - EPUB hard limits are exactly those in the spec: 256 MiB source, 4,096 entries, 16 MiB per expanded entry, 512 MiB expanded total, 100:1 ratio, 256 KiB container XML, 4 MiB OPF, 2,048 chapters, 8 MiB chapter markup, 4 MiB sanitized chapter text, depth 64, and 1 MiB message.
-- Critical bookshelf, reading-progress, and 2048 writes must use the specified per-module 5-second lock acquisition, 15-second stale-lock quarantine, crash-safe replacement, validation, and recovery protocol.
+- Critical bookshelf, reading-progress, and 2048 writes must use per-module exclusive lease locks with a 5-second acquisition timeout, 2-second heartbeat, 30-second stale threshold, evidence-gated single-winner quarantine, token-checked release, crash-safe replacement, validation, and recovery. A timeout returns `STATE_LOCK_TIMEOUT` and never itself authorizes takeover.
+- Node.js 22 LTS is limited to npm/build/test/lint/package. Extension production code must remain Node 20.18 compatible; Webview code targets Chromium 128, and neither bundle may be generalized to `esnext`.
 - Every production task follows RED → minimal GREEN → focused regression → commit. Do not combine unrelated cleanup.
 - Do not push, publish, or alter the old `D:\Moyu\Thief-Book-VSCode` repository.
 
@@ -60,6 +61,11 @@ it('uses the approved VS Code engine and entry point', () => {
   expect(manifest.main).toBe('./dist/extension.js');
   expect(manifest.activationEvents).not.toContain('*');
 });
+
+it('keeps production bundles on the minimum VS Code runtime boundary', () => {
+  expect(build.extension).toMatchObject({ platform: 'node', target: 'node20.18' });
+  expect(build.webview).toMatchObject({ platform: 'browser', target: 'chrome128' });
+});
 ```
 
 - [ ] **Step 2: Run RED**
@@ -69,7 +75,9 @@ Expected: FAIL because the manifest and test toolchain do not exist.
 
 - [ ] **Step 3: Create the minimal pinned toolchain and empty entry points**
 
-Create a private extension manifest with `engines.vscode: ^1.96.0`, `main: ./dist/extension.js`, `type: module`, explicit commands/views activation, and Node `>=22 <23`. Pin direct production dependency `iconv-lite@0.7.3`; pin development dependencies `typescript@5.9.2`, `esbuild@0.28.1`, `vitest@4.0.0`, `eslint@9.34.0`, `typescript-eslint@8.68.0`, `prettier@3.6.2`, `@types/node@22.20.1`, `@types/vscode@1.96.0`, `@vscode/test-electron@3.1.0`, and `@vscode/vsce@3.9.2`. Use `npm install --package-lock-only` followed by `npm ci` to lock and verify; do not install globally.
+Create a private extension manifest with `engines.vscode: ^1.96.0`, `main: ./dist/extension.js`, `type: module`, explicit commands/views activation, and a contributor-tooling Node engine of `>=22 <23`. This npm engine documents development tooling only and must not be treated as the Extension Host runtime. Pin direct production dependency `iconv-lite@0.7.3`; pin development dependencies `typescript@5.9.2`, `esbuild@0.28.1`, `vitest@4.0.0`, `eslint@9.34.0`, `typescript-eslint@8.68.0`, `prettier@3.6.2`, `@types/node@20.18.0`, `@types/vscode@1.96.0`, `@vscode/test-electron@3.1.0`, and `@vscode/vsce@3.9.2`. Use `npm install --package-lock-only` followed by `npm ci` to lock and verify; do not install globally.
+
+Configure the Extension Host bundle with esbuild `platform: 'node'`, `target: 'node20.18'`, and TypeScript `target: 'ES2022'`, `lib: ['ES2022']`, Node 20.18/VS Code 1.96 types. Configure the Webview bundle with esbuild `platform: 'browser'`, `target: 'chrome128'`, and TypeScript `target: 'ES2022'`, `lib: ['ES2022', 'DOM', 'DOM.Iterable']`, without Node types. Type checking must reject Node 22-only production APIs.
 
 ```ts
 // src/extension/activation.ts
@@ -148,7 +156,8 @@ git commit -m "feat: define validated Webview message protocol"
 **Interfaces:**
 - Produces: `acquireFileLock(lockUri, options): Promise<LockHandle>`, `LockHandle.release(): Promise<void>`.
 - Produces: `transactJson<T>(paths, validate, mutate): Promise<T>`, `recoverJsonState<T>(paths, validate): Promise<T | undefined>`.
-- Uses exact options: `{ acquireTimeoutMs: 5000, staleAfterMs: 15000, retryMinMs: 20, retryMaxMs: 100 }`.
+- Uses exact options: `{ acquireTimeoutMs: 5000, heartbeatMs: 2000, staleAfterMs: 30000, retryMinMs: 20, retryMaxMs: 100 }`.
+- Lock metadata is `{ ownerToken: UUID; pid; acquiredAt; renewedAt }`; `ownerToken` is the authoritative identity.
 
 - [ ] **Step 1: Write failing concurrency and crash-window tests**
 
@@ -157,6 +166,7 @@ const results = await Promise.all(Array.from({ length: 20 }, () => incrementInTr
 expect(results.sort((a, b) => a - b)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
 expect(await readGenerationAfterCrash('after-backup-rotation')).toBe(7);
 expect(await releaseWithWrongToken()).toBe(false);
+await expect(acquireWhileOwnerDeathIsUncertain()).rejects.toMatchObject({ code: 'STATE_LOCK_TIMEOUT' });
 ```
 
 - [ ] **Step 2: Run RED**
@@ -181,12 +191,14 @@ export async function transactJson<T>(args: TransactionArgs<T>): Promise<T> {
 }
 ```
 
-All file paths are below one injected `globalStorageUri`; readers use the same lock. Quarantine stale locks by rename, never blind delete, and release only matching owner tokens.
+Acquire with exclusive creation and heartbeat every 2 seconds. Waiting stops after 5 seconds with `STATE_LOCK_TIMEOUT`; waiting expiry never permits stealing. An unrenewed lease becomes stale after 30 seconds, but PID/liveness is only auxiliary: recover only when the lease is expired and the owner is clearly absent. If death is uncertain, time out without takeover. Quarantine by atomic rename from `module.lock` to `module.lock.stale.<uuid>`; only the rename winner recovers and then retries normal acquisition. Re-read metadata before release and remove only an exact `ownerToken` match.
+
+All file paths are below one injected `globalStorageUri`; readers use the same lock. The locked mutation is strictly acquire, recover/read latest, validate `baseVersion`, merge/reject, unique temp write, flush/close, backup rotation, same-directory rename, committed-generation re-read/validation, and release. TXT indexing, EPUB parsing, large-file scanning, UI waits, and user-input waits are forbidden inside this critical section.
 
 - [ ] **Step 4: Run GREEN including real child-process contention on Windows**
 
 Run: `npm test -- --run test/unit/storage && npm run build`
-Expected: PASS for contention, timeout, stale takeover, owner mismatch, temp failure, each crash window, invalid JSON, and highest-generation recovery.
+Expected: PASS for heartbeat preventing false stale takeover, crashed-owner recovery, no theft from a live slow owner, `STATE_LOCK_TIMEOUT`, one-winner stale quarantine, wrong-token release refusal, competing child-process serialization, temp failure, each commit crash window, invalid JSON, and highest-valid-generation recovery.
 
 - [ ] **Step 5: Commit**
 
@@ -230,7 +242,7 @@ return transactJson(paths, validateGameEnvelope, current => {
 });
 ```
 
-Keep reader settings and schema pointers in the VS Code preference adapter; critical repositories use files. Migrate one module at a time under its lock and retain a validated backup.
+Keep reader settings and schema pointers in the VS Code preference adapter; critical repositories use files. Compute expensive TXT/EPUB/index inputs before acquisition, then perform only the short read/validate/merge/commit transaction under the module lock. Migrate one module at a time under its lock and retain a validated backup.
 
 - [ ] **Step 4: Run GREEN**
 
@@ -1083,7 +1095,7 @@ git commit -m "feat: add recovery UX and multi-window refresh"
 - Modify: `package.json`, `.vscode/tasks.json`
 
 **Interfaces:**
-- Produces `npm run test:extension` against VS Code 1.96-compatible API and current installed supported VS Code.
+- Produces `npm run test:extension:current` for the current development VS Code and `npm run test:extension:min` using an isolated downloaded VS Code `1.96.0` through `@vscode/test-electron`.
 - Produces deterministic isolated user-data, extension, global-storage, TXT, and EPUB fixture directories.
 
 - [ ] **Step 1: Write failing activation/restart/multi-process tests**
@@ -1104,18 +1116,19 @@ Expected: FAIL because the runner and full lifecycle suite are absent.
 
 ```ts
 await runTests({
+  version: '1.96.0',
   extensionDevelopmentPath,
   extensionTestsPath,
   launchArgs: [fixtureWorkspace, '--disable-extensions'],
 });
 ```
 
-Generate fixtures under test temp storage, never user folders. Exercise activation events, Sidebar navigation, panel serializer, picker cancellation, restart recovery, boss contexts, and competing Node child processes against one state directory.
+Generate fixtures under test temp storage, never user folders. The current-version lane covers daily F5/integration. The minimum lane pins `version: '1.96.0'` and must smoke activation, Webview creation/message flow, TXT import/read, 2048 move/restore, and Boss Mode enter/exit. Exercise Sidebar navigation, panel serializer, picker cancellation, restart recovery, boss contexts, and competing Node child processes against one state directory. The lock suite includes heartbeat, crashed owner, live-slow owner, timeout, one-winner quarantine, wrong-token release, process serialization, and crash recovery of the highest valid generation.
 
 - [ ] **Step 4: Run GREEN on Windows**
 
-Run: `npm run build && npm test && npm run test:extension`
-Expected: PASS with zero failed unit/integration tests; manual checklist records Windows version, VS Code version, theme, high contrast, keybinding reassignment, and two-window conflict observations.
+Run: `npm run build && npm test && npm run test:extension:current && npm run test:extension:min`
+Expected: PASS with zero failed unit/integration tests in both runtime lanes; the VS Code 1.96.0 lane passes activation, Webview, TXT, 2048, and Boss Mode smoke. Only this PASS permits retaining `engines.vscode: ^1.96.0`. The manual checklist records Windows version, VS Code version, theme, high contrast, keybinding reassignment, and two-window conflict observations.
 
 - [ ] **Step 5: Commit**
 
@@ -1159,12 +1172,12 @@ for (const entry of vsixEntries) {
 }
 ```
 
-Set `.vscodeignore` to exclude sources not required at runtime, tests, caches, logs, maps if not shipped, secrets, and docs not intended for users. `npm run package` must run format check, lint, unit tests, extension tests, build, secret scan, `vsce ls`, package, inspect archive, and isolated install smoke without publishing.
+Set `.vscodeignore` to exclude sources not required at runtime, tests, caches, logs, maps if not shipped, secrets, and docs not intended for users. `npm run package` must run format check, lint, unit tests, both current and minimum-version extension lanes, build, secret scan, `vsce ls`, package, inspect archive, and isolated install smoke without publishing.
 
 - [ ] **Step 4: Run full clean-checkout regression**
 
-Run in a fresh worktree: `npm ci && npm run format:check && npm run lint && npm test && npm run build && npm run test:extension && npm run package`
-Expected: every command exits 0; one VSIX is produced; archive inspection finds no forbidden file; isolated install opens Moyu and completes TXT, EPUB, 2048, boss, and restart smoke flows.
+Run in a fresh worktree: `npm ci && npm run format:check && npm run lint && npm test && npm run build && npm run test:extension:current && npm run test:extension:min && npm run package`
+Expected: every command exits 0; one VSIX is produced; archive inspection finds no forbidden file; isolated current and VS Code 1.96.0 installs open Moyu, and the minimum install completes activation, Webview, TXT, 2048, and Boss Mode smoke. Failure of that minimum lane blocks the `^1.96.0` compatibility claim.
 
 - [ ] **Step 5: Commit**
 
@@ -1178,12 +1191,12 @@ git commit -m "docs: complete V1 packaging and user guide"
 ### Spec coverage
 
 - Product entry, Sidebar/Panel topology, Webview lifecycle, typed protocol, CSP, commands, keybindings, and debug flow: Tasks 1, 2, 5, 6, 20, and 22.
-- Cross-process locked persistence, module merges, refresh limitations, migrations, and corruption recovery: Tasks 3, 4, 9, 11, 14, 21, and 22.
+- Cross-process lease persistence, heartbeat/liveness rules, evidence-gated quarantine, short locked mutations, module merges, refresh limitations, migrations, and crash recovery: Tasks 3, 4, 9, 11, 14, 21, and 22.
 - TXT encoding confirmation, large-file streaming, logical progress, and continuous safe UI: Tasks 12–15 and 18–19.
 - EPUB numerical security boundary, text-only capability, chapters, cache, and progress: Tasks 16–18.
 - Pure/testable 2048, persistence, keyboard UI, victory/game-over, and restore: Tasks 8–10 and 22.
 - Boss state machine, Overlay, focus/title/context restoration, absent no-op, and state identity: Tasks 7 and 20.
-- Windows acceptance, F5, clean build/test, documentation, VSIX contents, and isolated install: Tasks 1, 22, and 23.
+- Runtime separation (Node 22 tools, Node 20.18 Extension Host, Chromium 128 Webview), Windows acceptance, current/minimum VS Code lanes, F5, clean build/test, documentation, VSIX contents, and isolated install: Tasks 1, 22, and 23.
 - Cross-platform-friendly paths and future readiness are enforced globally and verified through platform-injected Task 11 tests; macOS/Linux are not V1 acceptance targets.
 
 ### Type and interface consistency

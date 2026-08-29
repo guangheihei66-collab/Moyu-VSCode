@@ -8,6 +8,10 @@ Target platform: Windows 10 and Windows 11
 
 Minimum VS Code engine: `^1.96.0`
 
+Development runtime: Node.js 22 LTS for npm, build, test, lint, and packaging only
+
+Production runtime boundary: VS Code 1.96.x Extension Host compatibility (Node 20.18); Webview compatibility with its Chromium 128 browser runtime
+
 ## 1. Product Goals
 
 Moyu VS Code is a local-only leisure center that feels like a restrained VS Code feature. V1 provides:
@@ -259,14 +263,18 @@ Conflict-sensitive state is stored as separate versioned JSON files beneath `glo
 
 ### Cross-process file transaction
 
-Each critical state file has its own short-lived lock file. Every critical read-modify-write operation follows this Windows V1 protocol:
+Each critical state file has its own short-lived lease lock file. Lock metadata is `{ ownerToken, pid, acquiredAt, renewedAt }`, where `ownerToken` is a UUID and is the authoritative lock identity. Every critical read-modify-write operation follows this Windows V1 protocol:
 
-1. Acquire the module lock using exclusive file creation (`wx`) with a random owner token, process ID, and lease timestamp.
-2. If the lock exists, retry with bounded jitter for up to 5 seconds. A lock older than 15 seconds is not deleted directly: the contender attempts to atomically rename it to a unique stale-lock name. Exactly one contender can win that rename, remove the quarantined stale file, and retry acquisition.
-3. While holding the lock, recover any interrupted prior transaction, read the latest validated state, compare the caller's `baseVersion`, and apply the module-specific merge or rejection rule.
-4. Write the complete next envelope to a same-directory uniquely named temporary file, flush and close it, rotate the prior validated file to a recovery backup, and atomically rename the temporary file to the canonical module filename.
-5. Re-read and validate the committed envelope before returning it.
-6. Release only the lock whose on-disk owner token matches the holder's token. Cleanup failures are logged; the lease mechanism permits recovery after process termination.
+1. Acquire the module lock using exclusive file creation (`wx`). If it exists, retry with bounded jitter for at most 5 seconds. Failure returns `STATE_LOCK_TIMEOUT`; reaching the timeout never authorizes takeover.
+2. A holder renews `renewedAt` about every 2 seconds. A lease is stale only after 30 seconds without renewal. Any unexpired lease is never taken over, including when its holder is live but slow.
+3. Stale recovery first reads the owner metadata. PID/liveness is auxiliary evidence only; a contender may proceed only when the lease has expired and the owner is clearly absent. If owner death cannot be determined reliably, it does not force recovery and returns `STATE_LOCK_TIMEOUT` after the acquisition deadline.
+4. Recovery contenders atomically rename `module.lock` to `module.lock.stale.<uuid>`. Only the contender whose rename succeeds performs recovery; it then returns to the normal exclusive-acquire path. No contender blindly deletes or overwrites the canonical lock.
+5. Under the acquired lock, recover an interrupted transaction, read the latest validated state, validate the caller's `baseVersion`, and apply the module-specific merge or rejection rule.
+6. Write the complete next envelope to a same-directory uniquely named temporary file, flush and close it, rotate the prior validated file to a recovery backup, and atomically rename the temporary file to the canonical module filename.
+7. Re-read and validate the committed generation before returning it.
+8. Before release, re-read the canonical lock and delete it only when its on-disk `ownerToken` exactly equals the holder token. A mismatched or unreadable token must not release the lock.
+
+The critical mutation sequence is therefore: acquire, read latest, validate `baseVersion`, merge or reject, write a unique temporary file, flush/close, rotate the recovery backup, same-directory rename, re-read/validate the committed generation, then release. Large TXT indexing, EPUB parsing, large-file scanning, UI waits, and user-input waits are always completed outside the critical lock; the lock protects only short state transactions.
 
 Critical readers also acquire the same module lock, so they never observe the brief Windows replacement sequence. On startup or lock acquisition, recovery selects the highest valid generation from canonical, backup, and completed temporary candidates; invalid candidates are quarantined rather than silently accepted. All transaction paths are confined to `globalStorageUri` and use same-volume renames. No IPC server, daemon, Registry, or OS-global mutex is introduced.
 
@@ -327,6 +335,7 @@ Services return typed result objects or throw typed domain errors at adapter bou
 - `EPUB_LIMIT_EXCEEDED`
 - `EPUB_UNSUPPORTED_DRM`
 - `STATE_CONFLICT`
+- `STATE_LOCK_TIMEOUT`
 - `STATE_CORRUPT`
 - `GAME_SESSION_STALE`
 - `PROTOCOL_INVALID`
@@ -343,12 +352,12 @@ Required suites include:
 - TXT BOM detection, strict UTF-8, mandatory first-confirmation previews after invalid UTF-8, manual UTF/GB18030/GBK selection, no silent GB candidate commit, streaming decoder boundaries, indexing, block reads, large-file behavior, empty file, invalid path, file mutation, logical progress, relocation, and boundary navigation.
 - EPUB container/OPF/spine/title/text extraction, missing resources, chapter navigation, progress, path traversal, external entities, scripts, event attributes, remote resources, images, malformed markup, and each numeric security limit at `limit - 1`, `limit`, and `limit + 1`. Size tests use mocked metadata or sparse fixtures where allocating the full limit would be wasteful.
 - Persistence serialization, module migrations, corrupt module fallback, tombstones, per-book progress merge, settings last-write-wins, best-score max, and game-session rejection.
-- Cross-process transactions with competing writers, exclusive acquisition, 5-second acquisition timeout, 15-second stale-lock quarantine, owner-token release, stale `baseVersion`, same-module serialization, different-module independence, temp-write failure, crash after backup rotation, crash before canonical rename, corrupt canonical recovery, and highest-valid-generation selection.
+- Cross-process transactions verify exclusive acquisition, a 5-second timeout returning `STATE_LOCK_TIMEOUT`, 2-second heartbeat prevention of false stale takeover, a 30-second stale threshold, crashed-owner recovery, no takeover of a live but slow owner, refusal when owner death is uncertain, exactly one stale-quarantine winner, wrong-token release refusal, competing-process serialization, stale `baseVersion`, same-module serialization, different-module independence, temp-write failure, every commit crash window, corrupt canonical recovery, and recovery of the highest valid generation.
 - Boss enter, exit, rapid toggles, hidden/absent no-op, title restoration, focus token restoration, timer pause/resume, and reader/game identity preservation.
 - Protocol valid mappings, unknown version/type, malformed payload, exactly 1 MiB payload acceptance, over-1-MiB rejection, stale session, and safe error mapping.
 - Extension integration for activation, commands, context keys, file picker cancellation, Sidebar-to-Panel navigation, serializer restoration, and VSIX smoke installation.
 
-Windows 10 and Windows 11 manual acceptance covers F5, import, reading, restart recovery, 2048 recovery, boss toggle, keybinding reassignment, theme variants, high contrast, and multiple VS Code windows.
+The runtime matrix has two mandatory lanes. The current development VS Code is used for daily F5 and integration coverage. An isolated downloaded VS Code `1.96.0` test instance runs activation compatibility plus Webview, TXT, 2048, and Boss Mode smoke tests. Windows 10 and Windows 11 manual acceptance additionally covers import, reading, restart recovery, keybinding reassignment, theme variants, high contrast, and multiple VS Code windows. The project may continue to declare `engines.vscode: ^1.96.0` only while the minimum-version smoke lane passes.
 
 ## 19. Project Structure
 
@@ -411,7 +420,13 @@ The structure is planned, not created in the design phase. Large responsibilitie
 
 ## 20. Build / Debug
 
-Node-based Extension Host and browser-targeted Webview assets have separate TypeScript/esbuild entry points. Shared protocol and pure domain types compile under both targets without importing environment-specific APIs.
+Extension Host and Webview assets have separate TypeScript/esbuild entry points and deliberately different runtime targets:
+
+- Extension Host bundle: esbuild `platform: 'node'`, `target: 'node20.18'`; TypeScript `target: 'ES2022'`, `lib: ['ES2022']`, with Node 20.18 and VS Code 1.96 typings. Production code must not use Node 22-only runtime APIs.
+- Webview bundle: esbuild `platform: 'browser'`, `target: 'chrome128'`; TypeScript `target: 'ES2022'`, `lib: ['ES2022', 'DOM', 'DOM.Iterable']`, without Node types.
+- Node.js 22 LTS is only the reproducible development toolchain for npm, build, test, lint, and package. It is not the production Extension Host runtime.
+
+Shared protocol and pure domain types compile under both targets without importing environment-specific APIs. The two bundles are not unified under `esnext`.
 
 Planned scripts include:
 
@@ -444,10 +459,10 @@ V1 is accepted on Windows 10/11 when all of the following are demonstrated:
 7. 2048 supports arrows/WASD, valid merges, scoring, best score, new game, victory/continue, game over, and exact recovery after restart.
 8. `Ctrl+M`, while the Moyu panel is visible, instantly overlays the selected disguise without reconstructing reader or game state; the second toggle restores module, position, title, and focus.
 9. `Ctrl+M` while Moyu is absent or hidden does not open Moyu or change the real editor. Users can rebind the command.
-10. Competing Windows Extension Host processes serialize critical module transactions through per-module lock files; crash-recovery tests pass, and conflicts cannot silently lower best score, resurrect books, lose newer progress, or overwrite a newer game session.
+10. Competing Windows Extension Host processes serialize critical module transactions through the specified lease locks; heartbeat, live-slow-holder, timeout, single-winner quarantine, wrong-token release, competing-process, commit-crash, and highest-generation recovery tests pass, and conflicts cannot silently lower best score, resurrect books, lose newer progress, or overwrite a newer game session.
 11. Light, dark, high-contrast, keyboard, and reduced-motion checks pass.
 12. `npm test`, `npm run build`, lint, formatting checks, extension integration tests, and VSIX packaging pass from a clean checkout.
-13. The VSIX installs in an isolated supported VS Code profile and completes the core reader, 2048, and boss-mode smoke flow offline.
+13. The VSIX installs in isolated current-development and VS Code 1.96.0 profiles. VS Code 1.96.0 passes activation, Webview, TXT, 2048, and Boss Mode smoke flows offline; only then may `engines.vscode: ^1.96.0` remain declared.
 
 ## 23. Cross-platform Readiness
 
@@ -479,9 +494,10 @@ These extensions must reuse the typed protocol, storage repositories, CSP, modul
 - **Security:** Novel and EPUB input never becomes executable HTML; CSP grants only packaged styles and nonce scripts, with no image, font, frame, object, form, or network source. Every parser and message limit is numeric and boundary-testable.
 - **EPUB complexity:** The design stops at ordered, sanitized text chapters and deliberately omits layout and images.
 - **Boss restoration:** The normal module is retained, durable state is independent of DOM lifetime, and focus/scroll restoration use logical tokens.
-- **Cross-process race:** Critical state uses per-module exclusive lock files; latest read, validation/merge, durable temporary write, same-directory rename, validation, and release occur inside the lock. Readers share the lock and interrupted generations have deterministic recovery. `globalState` is not presented as CAS.
+- **Cross-process race:** Critical state uses per-module exclusive lease locks with 2-second heartbeat and 30-second expiry. A 5-second wait never authorizes takeover; expired locks require clear owner absence and atomic single-winner quarantine. Latest read, validation/merge, durable temporary write, same-directory rename, validation, and token-checked release occur inside the lock. Readers share the lock and interrupted generations recover the highest valid generation. `globalState` is not presented as CAS.
 - **TXT encoding:** Invalid UTF-8 only creates a GB18030 preview candidate. First import requires confirmation, and no successful decode is treated as high-confidence detection.
 - **EPUB limits:** Source, ZIP, XML, OPF, chapter, text, nesting, ratio, and protocol limits are concrete and tested at boundaries.
+- **Runtime compatibility:** Node 22 is development-only; Extension Host and Webview bundles target Node 20.18 and Chromium 128 separately. The `^1.96.0` claim is gated by an isolated VS Code 1.96.0 activation/Webview/TXT/2048/Boss smoke lane.
 - **Multi-window complexity:** Conflicts are module-specific, refresh is honest about cross-process limits, and no IPC subsystem is introduced.
 - **Ambiguity:** Minimum VS Code version, supported encodings, storage placement, conflict rules, commands, platform acceptance, and non-goals are concrete.
 

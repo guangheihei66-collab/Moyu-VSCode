@@ -14,7 +14,7 @@ Design and implementation planning only. No feature source, package manifest, de
 - One main WebviewPanel per VS Code window hosts the reader, 2048, and boss overlay.
 - Extension Host owns commands, file access, persistence, lifecycle, indexing, and parsing.
 - Webview owns rendering and interaction and has no Node.js file access.
-- Conflict-sensitive user data is globally shared through per-module locked file transactions under `globalStorageUri`; panel and boss state are window-local.
+- Conflict-sensitive user data is globally shared through per-module lease-locked file transactions under `globalStorageUri`; locks wait at most 5 seconds, heartbeat every 2 seconds, and become stale only after 30 seconds. Panel and boss state are window-local.
 
 ## Completed work
 
@@ -31,6 +31,7 @@ Design and implementation planning only. No feature source, package manifest, de
 
 - Windows 10/11 are the only V1 acceptance platforms; core logic remains cross-platform friendly.
 - Vanilla TypeScript, HTML, CSS, and esbuild; no frontend framework.
+- Node.js 22 LTS is development tooling only. Production Extension Host code targets the Node 20.18 runtime boundary of minimum VS Code 1.96.x; Webview code targets Chromium 128 separately.
 - EPUB is safe text-only chapter reading with no original HTML rendering or images.
 - TXT supports UTF-8, UTF-16LE/BE, GB18030, and GBK with explicit encoding confirmation.
 - Boss mode overlays the existing Moyu Webview without changing the user's real editor layout.
