@@ -20,11 +20,12 @@ Design and implementation planning only. No feature source, package manifest, de
 
 - Product and architecture decisions approved.
 - V1 design specification approved subject to four review corrections, which are incorporated.
+- V1 implementation plan prepared as 23 independently reviewable TDD tasks and self-reviewed.
 
 ## Pending work
 
-- Detailed implementation plan.
-- Implementation is explicitly not started in this phase.
+- User approval before executing Task 1.
+- Implementation remains explicitly not started.
 
 ## Important decisions
 
