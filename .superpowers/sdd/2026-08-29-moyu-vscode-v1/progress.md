@@ -163,3 +163,10 @@ Tests: 6 focused TXT index tests; full regression 124/124; format check, lint, b
 Review: streaming encoded-unit boundary accounting handles UTF-8, UTF-16, GB18030/GBK, BOMs, CR/LF normalization, and cross-chunk characters without whole-file reads. Index entries carry byte ranges, decoded lengths, paragraph counts, and fingerprints; manifests bind book identity and source metadata. IndexStore uses a safe book-specific directory, same-directory temporary publication, cancellation cleanup, and exact metadata invalidation.
 Known issue: coverage is unavailable because `@vitest/coverage-v8` is not in the existing dependency set; no dependency was installed.
 Next: Task 14
+
+Task 14: complete
+Commit: 5a04790
+Tests: 7 focused reader/TXT tests, full regression 134/134; format check, lint, build, and strict reader/TXT/protocol typecheck PASS.
+Review: bounded file-handle range reads decode incrementally, normalize CR/LF paragraphs, verify block fingerprints and decoded counts, detect missing/changed sources, and keep an LRU cache capped by entry count. ReaderService persists logical TXT locators with per-book percentage and restores by matching content fingerprint before clamped percentage fallback. ProgressRepository validates checkpoints and preserves stale-window merges for different books while rejecting stale same-book writes.
+Known issue: coverage is unavailable because `@vitest/coverage-v8` is not in the existing dependency set; no dependency was installed.
+Next: Task 15

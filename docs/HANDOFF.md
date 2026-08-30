@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `4eb8e15 feat: add reusable streaming TXT index`; working tree is clean.
+HEAD: `5a04790 feat: add bounded TXT reading and logical progress`; working tree is clean.
 
 ### Completed Tasks
 
@@ -22,14 +22,15 @@ HEAD: `4eb8e15 feat: add reusable streaming TXT index`; working tree is clean.
 - Task 11: implementation complete; book identity/service tests, full regression, format check, lint, build, and strict book source typecheck pass.
 - Task 12: implementation complete and committed as `44969e6`; TXT encoding tests, full regression, format check, lint, build, and strict TXT source typecheck pass.
 - Task 13: implementation complete and committed as `4eb8e15`; streaming byte-aware TXT indexing, normalized paragraph boundaries, book-bound manifest validation, safe cache paths, atomic publication, reuse invalidation, cancellation, and cross-chunk encoding tests pass.
+- Task 14: implementation complete and committed as `5a04790`; bounded indexed TXT reads, source-change detection, fixed-size decoded-block caching, logical locator recovery, per-book progress merge, and `reader/saveProgress` protocol validation pass.
 
 ### Current Task
 
-Task 14 — Bounded TXT Reads and Logical Progress.
+Task 15 — Continuous Reader Webview.
 
 ### Current Task Status
 
-Task 13 is GREEN and committed. Task 14 is ready to start.
+Task 14 is GREEN and committed. Task 15 is ready to start.
 
 ### Uncommitted Changes
 
@@ -37,12 +38,12 @@ Task 13 is GREEN and committed. Task 14 is ready to start.
 
 ### Passing Tests
 
-- Full regression: 27 test files, 124/124 tests.
-- `npm test -- --run test/unit/txt/TxtIndexer.test.ts test/unit/txt/indexInvalidation.test.ts`: 6/6.
+- Full regression: 30 test files, 134/134 tests.
+- `npm test -- --run test/unit/txt/TxtBlockReader.test.ts test/unit/reader`: 7/7.
 - `npm run format:check`
 - `npm run lint`
 - `npm run build`
-- Strict TXT source typecheck for domain and infrastructure index/encoding modules.
+- Strict TXT/reader source typecheck for domain, application, infrastructure, and protocol modules.
 
 ### Failing Tests
 
@@ -50,8 +51,8 @@ Task 13 is GREEN and committed. Task 14 is ready to start.
 
 ### Last Good Commit
 
-`4eb8e15 feat: add reusable streaming TXT index`
+`5a04790 feat: add bounded TXT reading and logical progress`
 
 ### Next Exact Action
 
-Read the complete Task 14 plan section, then add RED tests for bounded indexed reads, start/end behavior, empty files, invalid indexes, and logical progress recovery.
+Read the complete Task 15 plan section, then add RED tests for safe text rendering, incremental block mounting, logical anchors, page movement, and pause/resume.
