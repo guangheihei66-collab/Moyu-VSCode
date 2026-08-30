@@ -49,6 +49,21 @@ describe('validateHostRequest', () => {
     expect(result).toEqual({ ok: true, value: { ...envelope, ...request } });
   });
 
+  it('rejects a syntactically valid request from a stale receiving session', () => {
+    const result = validateHostRequest(
+      { ...envelope, type: 'books/list', payload: {} },
+      { expectedSessionId: 'current-webview-session' },
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: 'STALE_SESSION',
+        message: 'Webview session is no longer current.',
+      },
+    });
+  });
+
   it.each([
     [{ ...envelope, protocol: 2, type: 'books/list', payload: {} }, 'UNSUPPORTED_PROTOCOL'],
     [{ ...envelope, type: 'unknown/run', payload: {} }, 'UNKNOWN_REQUEST_TYPE'],
@@ -126,6 +141,46 @@ describe('validateHostRequest', () => {
       },
       'INVALID_PAYLOAD',
     ],
+    [
+      {
+        ...envelope,
+        type: 'game2048/save',
+        payload: {
+          baseVersion: 3,
+          state: {
+            board: [
+              [4_294_967_297, 0, 0, 0],
+              [0, 0, 0, 0],
+              [0, 0, 0, 0],
+              [0, 0, 0, 0],
+            ],
+            score: 12,
+            status: 'playing',
+          },
+        },
+      },
+      'INVALID_PAYLOAD',
+    ],
+    [
+      {
+        ...envelope,
+        type: 'game2048/save',
+        payload: {
+          baseVersion: 3,
+          state: {
+            board: [
+              [2 ** 53, 0, 0, 0],
+              [0, 0, 0, 0],
+              [0, 0, 0, 0],
+              [0, 0, 0, 0],
+            ],
+            score: 12,
+            status: 'playing',
+          },
+        },
+      },
+      'INVALID_PAYLOAD',
+    ],
   ])('rejects unsafe input with safe $1 errors', (value, code) => {
     const result = validateHostRequest(value);
 
@@ -133,5 +188,27 @@ describe('validateHostRequest', () => {
     if (!result.ok) {
       expect(result.error.message).not.toMatch(/request-1|webview-session-1|book-1/);
     }
+  });
+
+  it('accepts the largest safe integer power-of-two board tile', () => {
+    const result = validateHostRequest({
+      ...envelope,
+      type: 'game2048/save',
+      payload: {
+        baseVersion: 3,
+        state: {
+          board: [
+            [2 ** 52, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+          score: 12,
+          status: 'playing',
+        },
+      },
+    });
+
+    expect(result).toMatchObject({ ok: true });
   });
 });

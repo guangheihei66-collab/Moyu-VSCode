@@ -54,7 +54,10 @@ export type ProtocolErrorCode =
   | 'INVALID_ENVELOPE'
   | 'UNSUPPORTED_PROTOCOL'
   | 'INVALID_SESSION'
+  | 'STALE_SESSION'
   | 'UNKNOWN_REQUEST_TYPE'
+  | 'UNKNOWN_RESPONSE_TYPE'
+  | 'UNKNOWN_EVENT_TYPE'
   | 'INVALID_PAYLOAD';
 
 export interface ProtocolError {
@@ -63,7 +66,7 @@ export interface ProtocolError {
 }
 
 export type HostResponse =
-  | Envelope<'response/success', { requestId: string; data: unknown }>
+  | Envelope<'response/success', { requestId: string }>
   | Envelope<'response/error', { requestId: string; error: ProtocolError }>;
 
 export type HostEvent =
