@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `5a04790 feat: add bounded TXT reading and logical progress`; working tree is clean.
+HEAD: `3e7fb62 feat: add safe continuous reader Webview`; working tree is clean.
 
 ### Completed Tasks
 
@@ -23,14 +23,15 @@ HEAD: `5a04790 feat: add bounded TXT reading and logical progress`; working tree
 - Task 12: implementation complete and committed as `44969e6`; TXT encoding tests, full regression, format check, lint, build, and strict TXT source typecheck pass.
 - Task 13: implementation complete and committed as `4eb8e15`; streaming byte-aware TXT indexing, normalized paragraph boundaries, book-bound manifest validation, safe cache paths, atomic publication, reuse invalidation, cancellation, and cross-chunk encoding tests pass.
 - Task 14: implementation complete and committed as `5a04790`; bounded indexed TXT reads, source-change detection, fixed-size decoded-block caching, logical locator recovery, per-book progress merge, and `reader/saveProgress` protocol validation pass.
+- Task 15: implementation complete and committed as `3e7fb62`; safe text-only rendering, bounded deduplicated block mounting, logical focus anchors, viewport paging, pause/resume, theme styling, and route subscription pass.
 
 ### Current Task
 
-Task 15 — Continuous Reader Webview.
+Task 16 — Bounded EPUB Container and Parser Security Boundary.
 
 ### Current Task Status
 
-Task 14 is GREEN and committed. Task 15 is ready to start.
+Task 15 is GREEN and committed. Task 16 is ready to start.
 
 ### Uncommitted Changes
 
@@ -38,12 +39,12 @@ Task 14 is GREEN and committed. Task 15 is ready to start.
 
 ### Passing Tests
 
-- Full regression: 30 test files, 134/134 tests.
-- `npm test -- --run test/unit/txt/TxtBlockReader.test.ts test/unit/reader`: 7/7.
+- Full regression: 32 test files, 138/138 tests.
+- `npm test -- --run test/unit/webview/readerView.test.ts test/unit/webview/blockWindow.test.ts`: 4/4.
 - `npm run format:check`
 - `npm run lint`
 - `npm run build`
-- Strict TXT/reader source typecheck for domain, application, infrastructure, and protocol modules.
+- Webview TypeScript typecheck.
 
 ### Failing Tests
 
@@ -51,8 +52,8 @@ Task 14 is GREEN and committed. Task 15 is ready to start.
 
 ### Last Good Commit
 
-`5a04790 feat: add bounded TXT reading and logical progress`
+`3e7fb62 feat: add safe continuous reader Webview`
 
 ### Next Exact Action
 
-Read the complete Task 15 plan section, then add RED tests for safe text rendering, incremental block mounting, logical anchors, page movement, and pause/resume.
+Audit the exact Task 16 dependency versions and licenses, then add RED N-1/N/N+1 EPUB boundary tests and hostile-markup fixtures before installing the three pinned project-local production packages.

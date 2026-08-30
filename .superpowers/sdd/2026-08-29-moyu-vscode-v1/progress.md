@@ -170,3 +170,10 @@ Tests: 7 focused reader/TXT tests, full regression 134/134; format check, lint, 
 Review: bounded file-handle range reads decode incrementally, normalize CR/LF paragraphs, verify block fingerprints and decoded counts, detect missing/changed sources, and keep an LRU cache capped by entry count. ReaderService persists logical TXT locators with per-book percentage and restores by matching content fingerprint before clamped percentage fallback. ProgressRepository validates checkpoints and preserves stale-window merges for different books while rejecting stale same-book writes.
 Known issue: coverage is unavailable because `@vitest/coverage-v8` is not in the existing dependency set; no dependency was installed.
 Next: Task 15
+
+Task 15: complete
+Commit: 3e7fb62
+Tests: 4 focused Reader Webview tests, full regression 138/138; format check, lint, build, and Webview typecheck PASS.
+Review: structured ReaderBlock paragraphs are rendered exclusively through textContent; the mounted block window is bounded and deduplicated; focus/progress checkpoints use logical block IDs; paging uses viewport height; pause/resume, focus restore, VS Code theme variables, reduced motion, and route subscriptions are implemented without raw HTML or pixel-based persistence.
+Known issue: coverage is unavailable because `@vitest/coverage-v8` is not in the existing dependency set; no dependency was installed.
+Next: Task 16
