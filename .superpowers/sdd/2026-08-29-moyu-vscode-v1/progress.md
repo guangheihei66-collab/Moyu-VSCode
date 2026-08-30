@@ -109,7 +109,7 @@ Review: local implementation covers versioned envelopes, per-module transaction 
 Next: Task 5
 
 Task 5: complete
-Commit: pending
+Commit: da2687a
 Tests: 3/3 focused Webview tests PASS; prior full suite 80/80; lint, build, Extension Host typecheck, and Webview typecheck PASS.
 Review: secure deny-by-default CSP with nonce and packaged assets, single-section router, correlated message requests with timeout/disposal rejection, and minimal single-panel controller are implemented.
 Next: Task 6
