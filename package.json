@@ -77,7 +77,10 @@
     "package": "npm run build && vsce package --no-yarn"
   },
   "dependencies": {
-    "iconv-lite": "0.7.3"
+    "@zip.js/zip.js": "2.8.60",
+    "iconv-lite": "0.7.3",
+    "parse5": "8.0.1",
+    "saxes": "6.0.0"
   },
   "devDependencies": {
     "@types/node": "20.17.30",
