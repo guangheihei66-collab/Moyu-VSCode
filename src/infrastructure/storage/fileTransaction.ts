@@ -34,12 +34,16 @@ export class StateTransactionError extends Error {
   }
 }
 
+export type MaintenanceErrorReporter = (
+  error: unknown,
+) => void | PromiseLike<void>;
+
 export interface JsonTransactionDependencies extends RecoveryDependencies {
   fileOps: FileOperations;
   acquireFileLock: typeof acquireFileLock;
   uuid: () => string;
   // Best-effort maintenance diagnostics are intentionally outside commit semantics.
-  reportMaintenanceError?: (error: unknown) => void;
+  reportMaintenanceError?: MaintenanceErrorReporter;
 }
 
 // Mutation callbacks run while the module lease is held. Callers must precompute
@@ -124,14 +128,16 @@ async function releasePreservingError(
   }
 }
 
-function reportMaintenanceError(
+async function reportMaintenanceErrors(
   dependencies: JsonTransactionDependencies,
-  error: unknown,
-): void {
-  try {
-    dependencies.reportMaintenanceError?.(error);
-  } catch {
-    // Post-commit diagnostics cannot turn a durable commit into a rejection.
+  errors: readonly unknown[],
+): Promise<void> {
+  for (const error of errors) {
+    try {
+      await dependencies.reportMaintenanceError?.(error);
+    } catch {
+      // Post-commit diagnostics cannot turn a durable commit into a rejection.
+    }
   }
 }
 
@@ -142,6 +148,7 @@ async function retirePostCommitResidue<T>(
   dependencies: JsonTransactionDependencies,
 ): Promise<void> {
   let maintenanceLock: LockHandle | undefined;
+  const maintenanceErrors: unknown[] = [];
   try {
     maintenanceLock = await dependencies.acquireFileLock(paths.lock);
     await maintenanceLock.assertOwned();
@@ -153,16 +160,17 @@ async function retirePostCommitResidue<T>(
     );
     await maintenanceLock.assertOwned();
   } catch (error) {
-    reportMaintenanceError(dependencies, error);
+    maintenanceErrors.push(error);
   } finally {
     if (maintenanceLock !== undefined) {
       try {
         await maintenanceLock.release();
       } catch (releaseError) {
-        reportMaintenanceError(dependencies, releaseError);
+        maintenanceErrors.push(releaseError);
       }
     }
   }
+  await reportMaintenanceErrors(dependencies, maintenanceErrors);
 }
 
 export function createJsonTransactionManager(

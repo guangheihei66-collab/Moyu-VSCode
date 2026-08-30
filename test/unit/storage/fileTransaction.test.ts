@@ -5,7 +5,10 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { build } from 'esbuild';
 import { describe, expect, it } from 'vitest';
 
-import { createFileLockManager } from '../../../src/infrastructure/storage/fileLock';
+import {
+  DEFAULT_FILE_LOCK_OPTIONS,
+  createFileLockManager,
+} from '../../../src/infrastructure/storage/fileLock';
 import {
   StateTransactionError,
   createJsonTransactionManager,
@@ -62,7 +65,7 @@ function managerWith(
     let index = 0;
     return () => uuidValues[index++] ?? uuidValues.at(-1)!;
   })(),
-  reportMaintenanceError?: (error: unknown) => void,
+  reportMaintenanceError?: (error: unknown) => void | PromiseLike<void>,
 ) {
   const lockManager = createFileLockManager({ fileOps, uuid });
   return createJsonTransactionManager({
@@ -381,6 +384,117 @@ describe('transactJson', () => {
       await expect(
         managerWith().recoverJsonState(paths, isTestState),
       ).resolves.toEqual(state(4));
+    });
+  });
+
+  it('reports ordered maintenance failures only after its lease releases and reenters', async () => {
+    await withStorageDirectory(async (directory) => {
+      const paths = storagePaths(directory);
+      const residuePath = `${paths.lock}.stale.${claimTokens[0]!}`;
+      const cleanupFailure = new Error('injected residue cleanup failure');
+      const releaseFailure = new Error('injected maintenance release failure');
+      await writeState(paths.current, state(3));
+      await writeRaw(residuePath, '{"owner":"dead"}');
+      const fileOps = new InstrumentedFileOperations((event) => {
+        if (event.operation === 'unlink' && event.path === residuePath) {
+          return cleanupFailure;
+        }
+        return undefined;
+      });
+      const lockManager = createFileLockManager({ fileOps });
+      let acquisitionCount = 0;
+      let maintenanceLeaseReleased = false;
+      const acquireTracked: typeof lockManager.acquireFileLock = async (
+        lockUri,
+        options,
+      ) => {
+        const lock = await lockManager.acquireFileLock(lockUri, options);
+        acquisitionCount += 1;
+        const acquisition = acquisitionCount;
+        return {
+          ownerToken: lock.ownerToken,
+          assertOwned: () => lock.assertOwned(),
+          async release() {
+            await lock.release();
+            if (acquisition === 2) {
+              maintenanceLeaseReleased = true;
+              throw releaseFailure;
+            }
+          },
+        };
+      };
+      const reported: unknown[] = [];
+      const reporterLeaseStates: boolean[] = [];
+      let reenteredCount = 0;
+      const reporterTasks: Promise<void>[] = [];
+      const transactions = createJsonTransactionManager({
+        fileOps,
+        acquireFileLock: acquireTracked,
+        reportMaintenanceError: (error) => {
+          const task = (async () => {
+            reported.push(error);
+            reporterLeaseStates.push(maintenanceLeaseReleased);
+            const reentered = await acquireTracked(paths.lock, {
+              ...DEFAULT_FILE_LOCK_OPTIONS,
+              acquireTimeoutMs: 200,
+            });
+            try {
+              reenteredCount += 1;
+              await reentered.assertOwned();
+            } finally {
+              await reentered.release();
+            }
+          })();
+          reporterTasks.push(task);
+          return task;
+        },
+      });
+
+      await expect(
+        transactions.transactJson(paths, isTestState, () => state(4)),
+      ).resolves.toEqual(state(4));
+      await Promise.all(reporterTasks);
+      expect(reported).toEqual([cleanupFailure, releaseFailure]);
+      expect(reporterLeaseStates).toEqual([true, true]);
+      expect(reenteredCount).toBe(2);
+    });
+  });
+
+  it('settles a rejecting async maintenance reporter without rejecting the durable commit', async () => {
+    await withStorageDirectory(async (directory) => {
+      const paths = storagePaths(directory);
+      const residuePath = `${paths.lock}.stale.${claimTokens[0]!}`;
+      const cleanupFailure = new Error('injected residue cleanup failure');
+      const reporterFailure = new Error('injected reporter rejection');
+      const reported: unknown[] = [];
+      const unhandled: unknown[] = [];
+      const onUnhandledRejection = (reason: unknown): void => {
+        unhandled.push(reason);
+      };
+      await writeState(paths.current, state(3));
+      await writeRaw(residuePath, '{"owner":"dead"}');
+      const fileOps = new InstrumentedFileOperations((event) => {
+        if (event.operation === 'unlink' && event.path === residuePath) {
+          return cleanupFailure;
+        }
+        return undefined;
+      });
+      process.on('unhandledRejection', onUnhandledRejection);
+      try {
+        await expect(
+          managerWith(fileOps, undefined, async (error) => {
+            reported.push(error);
+            throw reporterFailure;
+          }).transactJson(paths, isTestState, () => state(4)),
+        ).resolves.toEqual(state(4));
+        await new Promise<void>((resolvePromise) => {
+          setImmediate(resolvePromise);
+        });
+        expect(reported).toEqual([cleanupFailure]);
+        expect(unhandled).toEqual([]);
+      } finally {
+        process.off('unhandledRejection', onUnhandledRejection);
+      }
     });
   });
 
