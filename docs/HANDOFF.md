@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: Task 11 changes are ready to commit; no unrelated changes detected.
+HEAD: Task 12 changes are ready to commit; no unrelated changes detected.
 
 ### Completed Tasks
 
@@ -20,10 +20,11 @@ HEAD: Task 11 changes are ready to commit; no unrelated changes detected.
 - Task 9: implementation complete; session service and concurrency tests, full regression, format check, lint, build, and strict service typecheck pass.
 - Task 10: implementation complete; 2048 Webview keyboard/DOM tests, full regression, format check, lint, build, and Webview typecheck pass.
 - Task 11: implementation complete; book identity/service tests, full regression, format check, lint, build, and strict book source typecheck pass.
+- Task 12: implementation complete; TXT encoding tests, full regression, format check, lint, build, and strict TXT source typecheck pass.
 
 ### Current Task
 
-Task 11 — Book Metadata, URI Identity, Tombstones, and Relocation.
+Task 12 — TXT Encoding Detection, Preview, and Confirmation.
 
 ### Current Task Status
 
@@ -31,7 +32,7 @@ GREEN complete. Ready to commit.
 
 ### Uncommitted Changes
 
-- Task 11 UUID book metadata, platform-aware URI identity, duplicate import touch, tombstone removal, safe relocation, and index invalidation.
+- Task 12 BOM/strict UTF-8 inspection, GB18030 candidate flow, bounded iconv previews, explicit confirmation, and encoding persistence.
 
 ### Passing Tests
 
@@ -51,4 +52,4 @@ GREEN complete. Ready to commit.
 
 ### Next Exact Action
 
-Commit Task 11 as `feat: add safe bookshelf identity and relocation`, then start Task 12 RED tests for TXT encoding detection and confirmation.
+Commit Task 12 as `feat: add confirmed Chinese TXT encoding flow`, then start Task 13 RED tests for streaming TXT indexing.

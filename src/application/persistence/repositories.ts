@@ -27,6 +27,7 @@ export type BookshelfOperation =
   | { kind: 'add'; book: BookRecord }
   | { kind: 'remove'; bookId: string; removedAt?: number }
   | { kind: 'touch'; bookId: string; lastOpenedAt: number }
+  | { kind: 'setEncoding'; bookId: string; encoding: string }
   | {
       kind: 'relocate';
       bookId: string;

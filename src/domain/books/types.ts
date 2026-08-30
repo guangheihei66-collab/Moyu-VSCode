@@ -1,11 +1,12 @@
 export type BookType = 'txt' | 'epub';
+export type TxtEncoding = 'utf8' | 'utf16le' | 'utf16be' | 'gb18030' | 'gbk';
 
 export interface BookMetadata {
   id: string;
   title: string;
   uri: string;
   type: BookType;
-  encoding?: string;
+  encoding?: TxtEncoding;
   fingerprint: string;
   size: number;
   modifiedAt: number;

@@ -6,7 +6,7 @@ Moyu VS Code is a local-only VS Code leisure center for Windows 10/11. V1 contai
 
 ## Current phase
 
-Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–11 are complete; Task 12 is next.
+Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–12 are complete; Task 13 is next.
 
 ## Approved architecture
 
@@ -25,7 +25,7 @@ Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–11 are
 
 ## Pending work
 
-- Task 12: TXT encoding detection, preview, and confirmation.
+- Task 13: streaming TXT block index.
 
 ## Important decisions
 

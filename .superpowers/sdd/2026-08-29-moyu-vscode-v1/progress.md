@@ -145,7 +145,14 @@ Review: accessible 16-cell board rendering uses DOM textContent, arrows/WASD are
 Next: Task 11
 
 Task 11: complete
-Commit: pending
+Commit: 5aee414
 Tests: book identity/service tests PASS; full regression, format check, lint, build, and strict book source typecheck PASS.
 Review: UUID-backed metadata, Windows case-insensitive and non-Windows case-sensitive URI identity, duplicate touch, source-safe tombstone removal, type-preserving relocation, fingerprint updates, and index invalidation are implemented.
 Next: Task 12
+
+Task 12: complete
+Commit: pending
+Tests: 4 TXT encoding tests, full regression 118/118, format check, lint, build, and strict TXT source typecheck PASS.
+Review: BOM detection, strict UTF-8 and incomplete-prefix handling, GB18030 candidate confirmation, GBK/UTF-16 previews through iconv-lite, 4,000-character bounded decoding, and confirmation-only metadata mutation are implemented.
+Known issue: coverage is unavailable because `@vitest/coverage-v8` is not in the existing dependency set; no dependency was installed.
+Next: Task 13
