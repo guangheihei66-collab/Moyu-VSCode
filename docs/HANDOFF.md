@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: Task 8 changes are ready to commit; no unrelated changes detected.
+HEAD: Task 9 changes are ready to commit; no unrelated changes detected.
 
 ### Completed Tasks
 
@@ -17,10 +17,11 @@ HEAD: Task 8 changes are ready to commit; no unrelated changes detected.
 - Task 6: implementation complete and committed as `770ffe1`; 83/83 tests, format check, lint, build, and Extension Host typecheck pass.
 - Task 7: implementation complete; Boss tests, lint, build, and strict Boss source typecheck pass.
 - Task 8: implementation complete; 13 game-engine tests, full regression, format check, lint, build, and strict game source typecheck pass.
+- Task 9: implementation complete; session service and concurrency tests, full regression, format check, lint, build, and strict service typecheck pass.
 
 ### Current Task
 
-Task 8 — Pure 2048 Game Engine.
+Task 9 — 2048 Session Persistence and Conflict Rules.
 
 ### Current Task Status
 
@@ -28,7 +29,7 @@ GREEN complete. Ready to commit.
 
 ### Uncommitted Changes
 
-- Task 8 pure game engine and tests.
+- Task 9 session service, game commands, protocol requests, repository new-game path, and concurrency tests.
 
 ### Passing Tests
 
@@ -48,4 +49,4 @@ GREEN complete. Ready to commit.
 
 ### Next Exact Action
 
-Commit Task 8 as `feat: add deterministic 2048 engine`, then start Task 9 RED tests for session persistence and conflicts.
+Commit Task 9 as `feat: persist 2048 sessions safely`, then start Task 10 RED tests for the 2048 Webview UI and keyboard scope.

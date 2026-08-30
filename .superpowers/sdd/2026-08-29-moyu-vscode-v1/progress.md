@@ -125,3 +125,15 @@ Commit: e46cb5b
 Tests: Boss state-machine tests PASS; full unit regression PASS; format check, lint, build, and strict Boss source typecheck PASS.
 Review: in-memory NORMAL/BOSS_MODE transitions retain route/module/focus/scroll snapshots, service toggles serialize, absent/hidden panels no-op, acknowledgements gate title/context updates, and timeout failures restore the prior stable mode without persistence.
 Next: Task 8
+
+Task 8: complete
+Commit: 1b4eb60
+Tests: 13 focused game-engine tests, full regression, format check, lint, build, and strict game source typecheck PASS. Coverage command unavailable because `@vitest/coverage-v8` is not in the existing dependency set; no dependency changes made.
+Review: immutable 4x4 directional transforms, one-merge-per-tile scoring, injected spawn RNG, victory/game-over detection, continue-after-win behavior, move events, and deterministic new-game state are implemented.
+Next: Task 9
+
+Task 9: complete
+Commit: pending
+Tests: session service and concurrency tests PASS; full regression, format check, lint, build, and strict service typecheck PASS.
+Review: explicit new sessions atomically replace the active session, service restores durable state, ordered moves reject stale sessions/sequences, and stale-session score can raise bestScore without replacing the active board.
+Next: Task 10

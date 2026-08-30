@@ -37,6 +37,33 @@ export class GameRepository implements Repository<GameData> {
       guard,
     );
   }
+
+  async newGame(
+    baseVersion: number,
+    state: PersistedGameState,
+  ): Promise<VersionedEnvelope<GameData>> {
+    return this.tx.transactJson(
+      createModuleTransactionPaths(this.storageRoot, 'game2048'),
+      guard,
+      (current) => {
+        if (current !== undefined && current.version !== baseVersion)
+          throw new StateConflict();
+        const bestScore = Math.max(
+          current?.data.state.bestScore ?? 0,
+          state.bestScore,
+        );
+        return nextEnvelope(
+          current,
+          {
+            activeSessionId: state.gameSessionId,
+            state: { ...state, bestScore },
+          },
+          this.now(),
+        );
+      },
+    );
+  }
+
   async save(
     baseVersion: number,
     state: PersistedGameState,
@@ -47,8 +74,27 @@ export class GameRepository implements Repository<GameData> {
         createModuleTransactionPaths(this.storageRoot, 'game2048'),
         guard,
         (current) => {
-          if (current !== undefined && current.version !== baseVersion)
+          if (current !== undefined && current.version !== baseVersion) {
+            if (state.gameSessionId !== current.data.activeSessionId) {
+              staleSession = true;
+              return nextEnvelope(
+                current,
+                {
+                  activeSessionId: current.data.activeSessionId,
+                  state: {
+                    ...current.data.state,
+                    bestScore: Math.max(
+                      current.data.state.bestScore,
+                      state.bestScore,
+                      state.score,
+                    ),
+                  },
+                },
+                this.now(),
+              );
+            }
             throw new StateConflict();
+          }
           const old = current?.data;
           if (old && state.gameSessionId !== old.activeSessionId) {
             staleSession = true;

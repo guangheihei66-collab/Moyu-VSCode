@@ -33,6 +33,8 @@ export interface Game2048State {
   status: 'playing' | 'won' | 'lost';
 }
 
+export type GameDirection = 'left' | 'right' | 'up' | 'down';
+
 export type HostRequest =
   | Envelope<'app/ready', Record<string, never>>
   | Envelope<'app/navigate', { section: AppSection }>
@@ -44,6 +46,17 @@ export type HostRequest =
         anchor: LogicalLocator;
         direction: 'before' | 'after';
         limit: number;
+      }
+    >
+  | Envelope<'game2048/load', Record<string, never>>
+  | Envelope<'game2048/newGame', { baseVersion: number }>
+  | Envelope<
+      'game2048/move',
+      {
+        baseVersion: number;
+        sessionId: string;
+        moveSequence: number;
+        direction: GameDirection;
       }
     >
   | Envelope<'game2048/save', { baseVersion: number; state: Game2048State }>;
