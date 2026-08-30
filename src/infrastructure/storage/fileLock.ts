@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { basename } from 'node:path';
 
 import {
   fileErrorCode,
@@ -75,6 +76,7 @@ export class StateLockError extends Error {
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_QUARANTINE_CLAIM_DEPTH = 2;
 
 const defaultScheduler: IntervalScheduler = {
   setInterval(callback, milliseconds) {
@@ -183,6 +185,11 @@ async function acquireQuarantineClaim(
   deadline: number,
   options: FileLockTimingOptions,
 ): Promise<LockHandle | undefined> {
+  // A claim can itself become stale. Bound recursive claims so lock recovery
+  // fails closed rather than producing an unbounded residue-name chain.
+  if (quarantineClaimDepth(lockPath) >= MAX_QUARANTINE_CLAIM_DEPTH) {
+    return undefined;
+  }
   const remaining = deadline - dependencies.now();
   if (remaining <= 0) {
     return undefined;
@@ -201,6 +208,10 @@ async function acquireQuarantineClaim(
     }
     throw error;
   }
+}
+
+function quarantineClaimDepth(lockPath: string): number {
+  return [...basename(lockPath).matchAll(/\.claim(?=\.|$)/g)].length;
 }
 
 async function releaseQuarantineClaim(

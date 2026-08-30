@@ -38,6 +38,8 @@ export interface JsonTransactionDependencies extends RecoveryDependencies {
   fileOps: FileOperations;
   acquireFileLock: typeof acquireFileLock;
   uuid: () => string;
+  // Best-effort maintenance diagnostics are intentionally outside commit semantics.
+  reportMaintenanceError?: (error: unknown) => void;
 }
 
 // Mutation callbacks run while the module lease is held. Callers must precompute
@@ -122,6 +124,47 @@ async function releasePreservingError(
   }
 }
 
+function reportMaintenanceError(
+  dependencies: JsonTransactionDependencies,
+  error: unknown,
+): void {
+  try {
+    dependencies.reportMaintenanceError?.(error);
+  } catch {
+    // Post-commit diagnostics cannot turn a durable commit into a rejection.
+  }
+}
+
+async function retirePostCommitResidue<T>(
+  paths: ReturnType<typeof normalizeTransactionPaths>,
+  validate: JsonValidator<T>,
+  committedGeneration: number,
+  dependencies: JsonTransactionDependencies,
+): Promise<void> {
+  let maintenanceLock: LockHandle | undefined;
+  try {
+    maintenanceLock = await dependencies.acquireFileLock(paths.lock);
+    await maintenanceLock.assertOwned();
+    await retireRecoveryResidue(
+      paths,
+      validate,
+      committedGeneration,
+      dependencies,
+    );
+    await maintenanceLock.assertOwned();
+  } catch (error) {
+    reportMaintenanceError(dependencies, error);
+  } finally {
+    if (maintenanceLock !== undefined) {
+      try {
+        await maintenanceLock.release();
+      } catch (releaseError) {
+        reportMaintenanceError(dependencies, releaseError);
+      }
+    }
+  }
+}
+
 export function createJsonTransactionManager(
   overrides: Partial<JsonTransactionDependencies> = {},
 ): {
@@ -151,8 +194,12 @@ export function createJsonTransactionManager(
       mutate: JsonMutation<T>,
     ): Promise<T> {
       const normalized = normalizeTransactionPaths(paths);
+      await dependencies.fileOps.ensureDirectory(normalized.stateDirectory);
       const lock = await dependencies.acquireFileLock(normalized.lock);
       let primaryError: unknown;
+      let committed = false;
+      let committedValue!: T;
+      let committedGeneration = -1;
       try {
         await lock.assertOwned();
         const current = await recoverJsonStateUnlocked(
@@ -186,15 +233,15 @@ export function createJsonTransactionManager(
         await dependencies.fileOps.rename(tempPath, normalized.current);
         await lock.assertOwned();
 
-        const committed = await readValidatedJsonCandidate(
+        const committedCandidate = await readValidatedJsonCandidate(
           normalized.current,
           validate,
           dependencies,
         );
         if (
-          committed === undefined ||
-          committed.generation !== nextGeneration ||
-          committed.serialized !== serialized
+          committedCandidate === undefined ||
+          committedCandidate.generation !== nextGeneration ||
+          committedCandidate.serialized !== serialized
         ) {
           throw new StateTransactionError(
             'STATE_COMMIT_VALIDATION_FAILED',
@@ -202,20 +249,25 @@ export function createJsonTransactionManager(
           );
         }
         await lock.assertOwned();
-        await retireRecoveryResidue(
-          normalized,
-          validate,
-          committed.generation,
-          dependencies,
-        );
-        await lock.assertOwned();
-        return committed.value;
+        committed = true;
+        committedValue = committedCandidate.value;
+        committedGeneration = committedCandidate.generation;
       } catch (error) {
         primaryError = error;
         throw error;
       } finally {
         await releasePreservingError(lock, primaryError);
       }
+      if (!committed) {
+        throw new Error('Unreachable: transaction completed without a commit.');
+      }
+      await retirePostCommitResidue(
+        normalized,
+        validate,
+        committedGeneration,
+        dependencies,
+      );
+      return committedValue;
     },
   };
 }

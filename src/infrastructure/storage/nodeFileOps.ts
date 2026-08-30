@@ -1,8 +1,9 @@
 import {
   lstat,
+  mkdir,
   open,
+  opendir,
   readFile,
-  readdir,
   rename,
   unlink,
 } from 'node:fs/promises';
@@ -20,9 +21,10 @@ export interface FileOperations {
   openExclusive(path: string): Promise<DurableFileHandle>;
   readUtf8(path: string): Promise<string>;
   entryKind(path: string): Promise<FileEntryKind>;
+  ensureDirectory(path: string): Promise<void>;
   rename(source: string, destination: string): Promise<void>;
   unlink(path: string): Promise<void>;
-  list(directory: string): Promise<string[]>;
+  iterateDirectory(directory: string): AsyncIterable<string>;
 }
 
 class NodeDurableFileHandle implements DurableFileHandle {
@@ -77,14 +79,21 @@ export function createNodeFileOperations(): FileOperations {
         throw error;
       }
     },
+    async ensureDirectory(path) {
+      await mkdir(path, { recursive: true });
+    },
     async rename(source, destination) {
       await rename(source, destination);
     },
     async unlink(path) {
       await unlink(path);
     },
-    async list(directory) {
-      return readdir(directory);
+    async *iterateDirectory(directory) {
+      const handle = await opendir(directory);
+      // Dir's async iterator closes the handle on completion and on early exit.
+      for await (const entry of handle) {
+        yield entry.name;
+      }
     },
   };
 }

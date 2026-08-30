@@ -406,15 +406,16 @@ describe('acquireFileLock', () => {
       async entryKind() {
         return 'symbolic-link';
       },
+      async ensureDirectory() {
+        throw new Error('not used');
+      },
       async rename() {
         throw new Error('must not quarantine an uncertain entry');
       },
       async unlink() {
         throw new Error('not used');
       },
-      async list() {
-        return [];
-      },
+      async *iterateDirectory(): AsyncIterable<string> {},
     };
     const manager = createFileLockManager({
       fileOps,
@@ -448,15 +449,16 @@ describe('acquireFileLock', () => {
       async entryKind() {
         return 'file';
       },
+      async ensureDirectory() {
+        throw new Error('not used');
+      },
       async rename() {
         throw new Error('injected quarantine failure');
       },
       async unlink() {
         throw new Error('not used');
       },
-      async list() {
-        return [];
-      },
+      async *iterateDirectory(): AsyncIterable<string> {},
     };
     const manager = createFileLockManager({ fileOps });
 
@@ -536,6 +538,39 @@ describe('acquireFileLock', () => {
       } finally {
         await Promise.allSettled(acquired.map((handle) => handle.release()));
       }
+    });
+  });
+
+  it('fails closed instead of creating a third nested stale-claim lock', async () => {
+    await withStorageDirectory(async (directory) => {
+      const lockPath = join(directory, 'module.lock');
+      const nestedClaimLock = `${lockPath}.stale.10000000-0000-4000-8000-000000000001.claim.stale.20000000-0000-4000-8000-000000000002.claim`;
+      const time = new ManualTime();
+      time.value = 1_000;
+      await writeLockMetadata(nestedClaimLock, staleOwner);
+      const base = createNodeFileOperations();
+      const openedPaths: string[] = [];
+      const fileOps: FileOperations = {
+        ...base,
+        async openExclusive(path) {
+          openedPaths.push(path);
+          return base.openExclusive(path);
+        },
+      };
+      const manager = createFileLockManager({
+        fileOps,
+        now: time.now,
+        sleep: time.sleep,
+        liveness: async () => 'dead',
+      });
+
+      await expect(
+        manager.acquireFileLock(nestedClaimLock, quickOptions),
+      ).rejects.toMatchObject({ code: 'STATE_LOCK_TIMEOUT' });
+      expect(openedPaths).not.toContain(
+        `${nestedClaimLock}.stale.${staleOwner.ownerToken}.claim`,
+      );
+      await expect(base.entryKind(nestedClaimLock)).resolves.toBe('file');
     });
   });
 

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { basename, dirname, isAbsolute, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
 import { acquireFileLock, type LockHandle } from './fileLock';
 import {
@@ -9,6 +9,7 @@ import {
 } from './nodeFileOps';
 
 export interface JsonTransactionPaths {
+  // A dedicated per-module directory beneath the injected storage root.
   stateDirectory: string;
   current: string;
   backup: string;
@@ -35,7 +36,8 @@ export type StateRecoveryErrorCode =
   | 'STATE_INVALID_GENERATION'
   | 'STATE_GENERATION_CONFLICT'
   | 'STATE_RECOVERY_ISOLATION_FAILED'
-  | 'STATE_RECOVERY_RESIDUE_LIMIT';
+  | 'STATE_RECOVERY_RESIDUE_LIMIT'
+  | 'STATE_RECOVERY_ENTRY_BUDGET_EXCEEDED';
 
 export class StateRecoveryError extends Error {
   constructor(
@@ -52,9 +54,31 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const MAX_COMPLETED_TEMP_CANDIDATES = 64;
+const MAX_INSPECTED_TRANSACTION_ENTRIES = 128;
+const MAX_CLAIM_RESIDUE_DEPTH = 2;
+const MODULE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 
 function comparablePath(path: string): string {
   return process.platform === 'win32' ? path.toLocaleLowerCase('en-US') : path;
+}
+
+export function createModuleTransactionPaths(
+  storageRoot: string,
+  moduleName: string,
+): JsonTransactionPaths {
+  if (!isAbsolute(storageRoot) || !MODULE_NAME_PATTERN.test(moduleName)) {
+    throw new StateRecoveryError(
+      'STATE_PATH_OUTSIDE_STORAGE',
+      'The storage root must be absolute and the module name must be a safe path segment.',
+    );
+  }
+  const stateDirectory = resolve(storageRoot, 'transactions', moduleName);
+  return {
+    stateDirectory,
+    current: join(stateDirectory, 'state.json'),
+    backup: join(stateDirectory, 'state.json.backup'),
+    lock: join(stateDirectory, 'state.lock'),
+  };
 }
 
 export function normalizeTransactionPaths(
@@ -184,21 +208,26 @@ function completedTempNames(currentPath: string, names: string[]): string[] {
 
 function quarantineResidueNames(lockPath: string, names: string[]): string[] {
   const lockBase = basename(lockPath);
-  const stalePrefix = `${lockBase}.stale.`;
-  const failedPrefix = `${lockBase}.failed.`;
   const uuidContent = UUID_PATTERN.source.slice(1, -1);
   const staleClaimResidue = new RegExp(
-    `^${escapeRegExp(lockBase)}\\.stale\\.${uuidContent}\\.claim\\.(?:stale|failed)\\.${uuidContent}$`,
+    `^${escapeRegExp(lockBase)}\\.(?:stale|failed)\\.${uuidContent}(?<claims>(?:\\.claim\\.(?:stale|failed)\\.${uuidContent})*)$`,
     'i',
   );
-  return names.filter(
-    (name) =>
-      (name.startsWith(stalePrefix) &&
-        UUID_PATTERN.test(name.slice(stalePrefix.length))) ||
-      (name.startsWith(failedPrefix) &&
-        UUID_PATTERN.test(name.slice(failedPrefix.length))) ||
-      staleClaimResidue.test(name),
-  );
+  return names.flatMap((name) => {
+    const match = staleClaimResidue.exec(name);
+    if (match === null) {
+      return [];
+    }
+    const claims = match.groups?.claims ?? '';
+    const depth = claims === '' ? 0 : claims.split('.claim.').length - 1;
+    if (depth > MAX_CLAIM_RESIDUE_DEPTH) {
+      throw new StateRecoveryError(
+        'STATE_RECOVERY_RESIDUE_LIMIT',
+        'Stale lock claim residue exceeds the supported nesting bound.',
+      );
+    }
+    return [name];
+  });
 }
 
 function invalidCandidateNames(
@@ -235,19 +264,54 @@ async function unlinkIfRegularFile(
   }
 }
 
-export async function recoverJsonStateUnlocked<T>(
+interface RecoveryResidueNames {
+  temporary: string[];
+  quarantine: string[];
+  invalid: string[];
+}
+
+async function inspectRecoveryResidue(
   paths: NormalizedJsonTransactionPaths,
-  validate: JsonValidator<T>,
-  dependencies: Pick<RecoveryDependencies, 'fileOps' | 'uuid'>,
-): Promise<T | undefined> {
-  const names = await dependencies.fileOps.list(paths.stateDirectory);
-  const temporaryNames = completedTempNames(paths.current, names);
-  if (temporaryNames.length > MAX_COMPLETED_TEMP_CANDIDATES) {
+  dependencies: Pick<RecoveryDependencies, 'fileOps'>,
+): Promise<RecoveryResidueNames> {
+  const names: string[] = [];
+  let inspected = 0;
+  for await (const name of dependencies.fileOps.iterateDirectory(
+    paths.stateDirectory,
+  )) {
+    inspected += 1;
+    if (inspected > MAX_INSPECTED_TRANSACTION_ENTRIES) {
+      throw new StateRecoveryError(
+        'STATE_RECOVERY_ENTRY_BUDGET_EXCEEDED',
+        'The per-module transaction directory exceeds the safe inspection budget.',
+      );
+    }
+    names.push(name);
+  }
+
+  const temporary = completedTempNames(paths.current, names);
+  if (temporary.length > MAX_COMPLETED_TEMP_CANDIDATES) {
     throw new StateRecoveryError(
       'STATE_RECOVERY_RESIDUE_LIMIT',
       'Too many completed temporary state candidates require manual recovery.',
     );
   }
+  return {
+    temporary,
+    quarantine: quarantineResidueNames(paths.lock, names),
+    invalid: invalidCandidateNames(paths, names),
+  };
+}
+
+export async function recoverJsonStateUnlocked<T>(
+  paths: NormalizedJsonTransactionPaths,
+  validate: JsonValidator<T>,
+  dependencies: Pick<RecoveryDependencies, 'fileOps' | 'uuid'>,
+): Promise<T | undefined> {
+  const { temporary: temporaryNames } = await inspectRecoveryResidue(
+    paths,
+    dependencies,
+  );
   const candidates = [
     await readCandidate(paths.current, 0, validate, dependencies),
     await readCandidate(paths.backup, 2, validate, dependencies),
@@ -294,14 +358,11 @@ export async function retireRecoveryResidue<T>(
   committedGeneration: number,
   dependencies: Pick<RecoveryDependencies, 'fileOps' | 'uuid'>,
 ): Promise<void> {
-  const names = await dependencies.fileOps.list(paths.stateDirectory);
-  const temporaryNames = completedTempNames(paths.current, names);
-  if (temporaryNames.length > MAX_COMPLETED_TEMP_CANDIDATES) {
-    throw new StateRecoveryError(
-      'STATE_RECOVERY_RESIDUE_LIMIT',
-      'Too many completed temporary state candidates require manual recovery.',
-    );
-  }
+  const {
+    temporary: temporaryNames,
+    quarantine,
+    invalid,
+  } = await inspectRecoveryResidue(paths, dependencies);
 
   for (const name of temporaryNames) {
     const candidatePath = resolve(paths.stateDirectory, name);
@@ -319,10 +380,7 @@ export async function retireRecoveryResidue<T>(
     }
   }
 
-  for (const name of [
-    ...quarantineResidueNames(paths.lock, names),
-    ...invalidCandidateNames(paths, names),
-  ]) {
+  for (const name of [...quarantine, ...invalid]) {
     await unlinkIfRegularFile(
       resolve(paths.stateDirectory, name),
       dependencies,
@@ -367,6 +425,7 @@ export function createJsonRecoveryManager(
       validate: JsonValidator<T>,
     ): Promise<T | undefined> {
       const normalized = normalizeTransactionPaths(paths);
+      await dependencies.fileOps.ensureDirectory(normalized.stateDirectory);
       const lock = await dependencies.acquireFileLock(normalized.lock);
       let primaryError: unknown;
       try {

@@ -11,7 +11,10 @@ import {
   type DurableFileHandle,
   type FileOperations,
 } from '../../../src/infrastructure/storage/nodeFileOps';
-import type { JsonTransactionPaths } from '../../../src/infrastructure/storage/recovery';
+import {
+  createModuleTransactionPaths,
+  type JsonTransactionPaths,
+} from '../../../src/infrastructure/storage/recovery';
 
 export interface TestState {
   generation: number;
@@ -31,15 +34,10 @@ export async function withStorageDirectory<T>(
 }
 
 export function storagePaths(
-  stateDirectory: string,
+  storageRoot: string,
   moduleName = 'module',
 ): JsonTransactionPaths {
-  return {
-    stateDirectory,
-    current: join(stateDirectory, `${moduleName}.json`),
-    backup: join(stateDirectory, `${moduleName}.json.backup`),
-    lock: join(stateDirectory, `${moduleName}.lock`),
-  };
+  return createModuleTransactionPaths(storageRoot, moduleName);
 }
 
 export function isTestState(value: unknown): value is TestState {
@@ -117,9 +115,10 @@ export type FileOperationName =
   | 'close'
   | 'readUtf8'
   | 'entryKind'
+  | 'ensureDirectory'
   | 'rename'
   | 'unlink'
-  | 'list';
+  | 'iterateDirectory';
 
 export interface FileOperationEvent {
   operation: FileOperationName;
@@ -172,6 +171,11 @@ export class InstrumentedFileOperations implements FileOperations {
     return this.base.entryKind(path);
   }
 
+  async ensureDirectory(path: string): Promise<void> {
+    this.record({ operation: 'ensureDirectory', path });
+    await this.base.ensureDirectory(path);
+  }
+
   async rename(source: string, destination: string): Promise<void> {
     this.record({ operation: 'rename', path: source, destination });
     await this.base.rename(source, destination);
@@ -182,8 +186,10 @@ export class InstrumentedFileOperations implements FileOperations {
     await this.base.unlink(path);
   }
 
-  async list(directory: string): Promise<string[]> {
-    this.record({ operation: 'list', path: directory });
-    return this.base.list(directory);
+  async *iterateDirectory(directory: string): AsyncIterable<string> {
+    this.record({ operation: 'iterateDirectory', path: directory });
+    for await (const name of this.base.iterateDirectory(directory)) {
+      yield name;
+    }
   }
 }

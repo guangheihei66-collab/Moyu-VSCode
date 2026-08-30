@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { access, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 
 import { build } from 'esbuild';
@@ -12,7 +12,10 @@ import {
   transactJson,
 } from '../../../src/infrastructure/storage/fileTransaction';
 import { createNodeFileOperations } from '../../../src/infrastructure/storage/nodeFileOps';
-import { recoverJsonState } from '../../../src/infrastructure/storage/recovery';
+import {
+  createModuleTransactionPaths,
+  recoverJsonState,
+} from '../../../src/infrastructure/storage/recovery';
 import {
   InstrumentedFileOperations,
   isTestState,
@@ -35,23 +38,49 @@ function state(generation: number, value = generation): TestState {
   return { generation, version: generation, value };
 }
 
+const claimTokens = [
+  '80000000-0000-4000-8000-000000000008',
+  '90000000-0000-4000-8000-000000000009',
+  'a0000000-0000-4000-8000-00000000000a',
+  'b0000000-0000-4000-8000-00000000000b',
+  'c0000000-0000-4000-8000-00000000000c',
+  'd0000000-0000-4000-8000-00000000000d',
+];
+
+function nestedClaimResidue(lockPath: string, claimDepth: number): string {
+  let path = `${lockPath}.stale.${claimTokens[0]!}`;
+  for (let index = 0; index < claimDepth; index += 1) {
+    const kind = index % 2 === 0 ? 'stale' : 'failed';
+    path = `${path}.claim.${kind}.${claimTokens[index + 1]!}`;
+  }
+  return path;
+}
+
 function managerWith(
   fileOps = createNodeFileOperations(),
   uuid: () => string = (() => {
     let index = 0;
     return () => uuidValues[index++] ?? uuidValues.at(-1)!;
   })(),
+  reportMaintenanceError?: (error: unknown) => void,
 ) {
   const lockManager = createFileLockManager({ fileOps, uuid });
   return createJsonTransactionManager({
     fileOps,
     acquireFileLock: lockManager.acquireFileLock,
     uuid,
+    reportMaintenanceError,
   });
 }
 
 async function writeState(path: string, value: TestState): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
   await writeFile(path, JSON.stringify(value), 'utf8');
+}
+
+async function writeRaw(path: string, content: string): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, content, 'utf8');
 }
 
 function temporaryEvents(
@@ -97,8 +126,9 @@ async function runChild(
   await startChild(executable, script, args).completed;
 }
 
-async function waitForFile(path: string): Promise<void> {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
+async function waitForFile(path: string, timeoutMs = 5_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
     try {
       await access(path);
       return;
@@ -108,7 +138,9 @@ async function waitForFile(path: string): Promise<void> {
       });
     }
   }
-  throw new Error(`Timed out waiting for child-process signal: ${path}`);
+  throw new Error(
+    `Timed out waiting for child-process signal within ${timeoutMs}ms: ${path}`,
+  );
 }
 
 describe('transactJson', () => {
@@ -154,7 +186,9 @@ describe('transactJson', () => {
         'rename',
       ]);
       expect(
-        (await listNames(directory)).filter((name) => name.includes('.tmp.')),
+        (await listNames(paths.stateDirectory)).filter((name) =>
+          name.includes('.tmp.'),
+        ),
       ).toEqual([]);
     });
   });
@@ -262,10 +296,10 @@ describe('transactJson', () => {
       await expect(recoverJsonState(paths, isTestState)).resolves.toEqual(
         state(4),
       );
-      expect(await listNames(directory)).toEqual(
+      expect(await listNames(paths.stateDirectory)).toEqual(
         expect.arrayContaining([
-          'module.json',
-          'module.json.tmp.20000000-0000-4000-8000-000000000002',
+          'state.json',
+          'state.json.tmp.20000000-0000-4000-8000-000000000002',
         ]),
       );
     });
@@ -283,30 +317,70 @@ describe('transactJson', () => {
         `${paths.current}.tmp.70000000-0000-4000-8000-000000000007`,
         state(2),
       );
-      await writeFile(
+      await writeRaw(
         `${paths.lock}.stale.80000000-0000-4000-8000-000000000008`,
         '{"owner":"dead"}',
-        'utf8',
       );
-      await writeFile(
+      await writeRaw(
         `${paths.lock}.stale.90000000-0000-4000-8000-000000000009.claim.stale.a0000000-0000-4000-8000-00000000000a`,
         '{"claim":"dead"}',
-        'utf8',
       );
-      await writeFile(
+      await writeRaw(
         `${paths.lock}.failed.b0000000-0000-4000-8000-00000000000b`,
         '{"lock":"incomplete"}',
-        'utf8',
       );
 
       await expect(
         managerWith().transactJson(paths, isTestState, () => state(4)),
       ).resolves.toEqual(state(4));
 
-      expect(await listNames(directory)).toEqual([
-        'module.json',
-        'module.json.backup',
+      expect(await listNames(paths.stateDirectory)).toEqual([
+        'state.json',
+        'state.json.backup',
       ]);
+    });
+  });
+
+  it('retires bounded nested stale-claim residue after a durable commit', async () => {
+    await withStorageDirectory(async (directory) => {
+      const paths = storagePaths(directory);
+      const residuePath = nestedClaimResidue(paths.lock, 2);
+      await writeState(paths.current, state(3));
+      await writeRaw(residuePath, '{"claim":"orphaned"}');
+
+      await expect(
+        managerWith().transactJson(paths, isTestState, () => state(4)),
+      ).resolves.toEqual(state(4));
+      await expect(
+        createNodeFileOperations().entryKind(residuePath),
+      ).resolves.toBe('missing');
+    });
+  });
+
+  it('returns the durable commit when post-commit residue cleanup fails', async () => {
+    await withStorageDirectory(async (directory) => {
+      const paths = storagePaths(directory);
+      const residuePath = `${paths.lock}.stale.${claimTokens[0]!}`;
+      const cleanupFailure = new Error('injected residue cleanup failure');
+      const maintenanceErrors: unknown[] = [];
+      await writeState(paths.current, state(3));
+      await writeRaw(residuePath, '{"owner":"dead"}');
+      const fileOps = new InstrumentedFileOperations((event) => {
+        if (event.operation === 'unlink' && event.path === residuePath) {
+          return cleanupFailure;
+        }
+        return undefined;
+      });
+
+      await expect(
+        managerWith(fileOps, undefined, (error) => {
+          maintenanceErrors.push(error);
+        }).transactJson(paths, isTestState, () => state(4)),
+      ).resolves.toEqual(state(4));
+      expect(maintenanceErrors).toEqual([cleanupFailure]);
+      await expect(
+        managerWith().recoverJsonState(paths, isTestState),
+      ).resolves.toEqual(state(4));
     });
   });
 
@@ -335,7 +409,7 @@ describe('transactJson', () => {
     });
   });
 
-  it('holds an acquired child-process lock until a waiting child is released', async () => {
+  it('releases a held child-process lock only after the contender reports EEXIST', async () => {
     await withStorageDirectory(async (directory) => {
       const script = join(directory, 'transaction-child.cjs');
       await build({
@@ -350,6 +424,7 @@ describe('transactJson', () => {
       const readyPath = join(directory, 'holder-ready');
       const releasePath = join(directory, 'holder-release');
       const contenderStartedPath = join(directory, 'contender-started');
+      const contentionPath = join(directory, 'contender-eexist');
       const holder = startChild(process.execPath, script, [
         'hold-lock',
         directory,
@@ -361,24 +436,16 @@ describe('transactJson', () => {
       let contender: ReturnType<typeof startChild> | undefined;
       try {
         await waitForFile(readyPath);
-        let contenderCompleted = false;
         contender = startChild(process.execPath, script, [
           directory,
           'held',
           '1',
           contenderStartedPath,
+          contentionPath,
         ]);
-        void contender.completed
-          .then(() => {
-            contenderCompleted = true;
-          })
-          .catch(() => undefined);
         await waitForFile(contenderStartedPath);
-
-        await new Promise<void>((resolvePromise) => {
-          setTimeout(resolvePromise, 100);
-        });
-        expect(contenderCompleted).toBe(false);
+        await waitForFile(contentionPath);
+        await expect(readFile(contentionPath, 'utf8')).resolves.toBe('EEXIST');
         await expect(
           createNodeFileOperations().entryKind(
             storagePaths(directory, 'held').current,
@@ -403,19 +470,30 @@ describe('transactJson', () => {
 });
 
 describe('recoverJsonState', () => {
+  it('scopes each module to its dedicated transaction directory', async () => {
+    await withStorageDirectory(async (directory) => {
+      expect(createModuleTransactionPaths(directory, 'reader')).toEqual({
+        stateDirectory: join(directory, 'transactions', 'reader'),
+        current: join(directory, 'transactions', 'reader', 'state.json'),
+        backup: join(directory, 'transactions', 'reader', 'state.json.backup'),
+        lock: join(directory, 'transactions', 'reader', 'state.lock'),
+      });
+    });
+  });
+
   it('quarantines corrupt canonical JSON and returns a valid backup', async () => {
     await withStorageDirectory(async (directory) => {
       const paths = storagePaths(directory);
-      await writeFile(paths.current, '{not-json', 'utf8');
+      await writeRaw(paths.current, '{not-json');
       await writeState(paths.backup, state(4));
 
       await expect(recoverJsonState(paths, isTestState)).resolves.toEqual(
         state(4),
       );
-      expect(await listNames(directory)).toEqual(
+      expect(await listNames(paths.stateDirectory)).toEqual(
         expect.arrayContaining([
-          'module.json.backup',
-          expect.stringMatching(/^module\.json\.invalid\./),
+          'state.json.backup',
+          expect.stringMatching(/^state\.json\.invalid\./),
         ]),
       );
     });
@@ -424,13 +502,13 @@ describe('recoverJsonState', () => {
   it('returns undefined after isolating the only invalid JSON candidate', async () => {
     await withStorageDirectory(async (directory) => {
       const paths = storagePaths(directory);
-      await writeFile(paths.current, 'null', 'utf8');
+      await writeRaw(paths.current, 'null');
 
       await expect(
         recoverJsonState(paths, isTestState),
       ).resolves.toBeUndefined();
-      expect(await listNames(directory)).toEqual([
-        expect.stringMatching(/^module\.json\.invalid\./),
+      expect(await listNames(paths.stateDirectory)).toEqual([
+        expect.stringMatching(/^state\.json\.invalid\./),
       ]);
     });
   });
@@ -462,9 +540,9 @@ describe('recoverJsonState', () => {
       await expect(
         managerWith(fileOps).recoverJsonState(paths, isTestState),
       ).rejects.toMatchObject({ code: 'EIO' });
-      expect(await listNames(directory)).toEqual([
-        'module.json',
-        'module.json.backup',
+      expect(await listNames(paths.stateDirectory)).toEqual([
+        'state.json',
+        'state.json.backup',
       ]);
     });
   });
@@ -484,7 +562,61 @@ describe('recoverJsonState', () => {
       await expect(
         managerWith().recoverJsonState(paths, isTestState),
       ).rejects.toMatchObject({ code: 'STATE_RECOVERY_RESIDUE_LIMIT' });
-      expect(await listNames(directory)).toHaveLength(66);
+      expect(await listNames(paths.stateDirectory)).toHaveLength(66);
+    });
+  });
+
+  it('fails closed within the inspected-entry budget before accepting arbitrary residue', async () => {
+    await withStorageDirectory(async (directory) => {
+      const paths = storagePaths(directory);
+      await writeState(paths.current, state(0));
+      const entries = Array.from(
+        { length: 129 },
+        (_unused, index) => `unrecognized-residue-${index}`,
+      );
+      let inspected = 0;
+      const base = createNodeFileOperations();
+      const fileOps = {
+        ...base,
+        async list(): Promise<string[]> {
+          throw new Error('Recovery must not materialize a directory listing.');
+        },
+        async *iterateDirectory(): AsyncIterable<string> {
+          for (const name of entries) {
+            inspected += 1;
+            yield name;
+          }
+        },
+      };
+
+      await expect(
+        managerWith(fileOps).recoverJsonState(paths, isTestState),
+      ).rejects.toMatchObject({
+        code: 'STATE_RECOVERY_ENTRY_BUDGET_EXCEEDED',
+      });
+      expect(inspected).toBe(129);
+    });
+  });
+
+  it('fails closed when a stale-claim residue exceeds the supported nesting bound', async () => {
+    await withStorageDirectory(async (directory) => {
+      const paths = storagePaths(directory);
+      await writeState(paths.current, state(0));
+      const deeplyNestedName = basename(nestedClaimResidue(paths.lock, 5));
+      const base = createNodeFileOperations();
+      const fileOps = {
+        ...base,
+        async list(): Promise<string[]> {
+          return [deeplyNestedName];
+        },
+        async *iterateDirectory(): AsyncIterable<string> {
+          yield deeplyNestedName;
+        },
+      };
+
+      await expect(
+        managerWith(fileOps).recoverJsonState(paths, isTestState),
+      ).rejects.toMatchObject({ code: 'STATE_RECOVERY_RESIDUE_LIMIT' });
     });
   });
 
@@ -497,16 +629,15 @@ describe('recoverJsonState', () => {
         `${paths.current}.tmp.10000000-0000-4000-8000-000000000001`,
         state(5),
       );
-      await writeFile(
+      await writeRaw(
         `${paths.current}.tmp.20000000-0000-4000-8000-000000000002`,
         '{broken',
-        'utf8',
       );
 
       await expect(recoverJsonState(paths, isTestState)).resolves.toEqual(
         state(5),
       );
-      expect(await listNames(directory)).toEqual(
+      expect(await listNames(paths.stateDirectory)).toEqual(
         expect.arrayContaining([expect.stringMatching(/\.invalid\./)]),
       );
     });

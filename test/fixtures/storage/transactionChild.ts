@@ -2,7 +2,11 @@ import { access, writeFile } from 'node:fs/promises';
 
 import { createFileLockManager } from '../../../src/infrastructure/storage/fileLock';
 import { createJsonTransactionManager } from '../../../src/infrastructure/storage/fileTransaction';
-import { createNodeFileOperations } from '../../../src/infrastructure/storage/nodeFileOps';
+import {
+  createNodeFileOperations,
+  fileErrorCode,
+  type FileOperations,
+} from '../../../src/infrastructure/storage/nodeFileOps';
 import { isTestState, storagePaths } from './storageTestHarness';
 
 async function waitForRelease(path: string): Promise<void> {
@@ -23,6 +27,7 @@ async function runTransactions(
   moduleName: string,
   countText: string,
   startedPath?: string,
+  contentionPath?: string,
 ): Promise<void> {
   if (
     stateDirectory.length === 0 ||
@@ -36,14 +41,30 @@ async function runTransactions(
     throw new Error('Count must be a positive integer.');
   }
 
-  const fileOps = createNodeFileOperations();
+  const paths = storagePaths(stateDirectory, moduleName);
+  const baseFileOps = createNodeFileOperations();
+  const fileOps: FileOperations = {
+    ...baseFileOps,
+    async openExclusive(path) {
+      try {
+        return await baseFileOps.openExclusive(path);
+      } catch (error) {
+        if (
+          contentionPath !== undefined &&
+          path === paths.lock &&
+          fileErrorCode(error) === 'EEXIST'
+        ) {
+          await writeFile(contentionPath, 'EEXIST', 'utf8');
+        }
+        throw error;
+      }
+    },
+  };
   const lockManager = createFileLockManager({ fileOps });
   const transactions = createJsonTransactionManager({
     fileOps,
     acquireFileLock: lockManager.acquireFileLock,
   });
-  const paths = storagePaths(stateDirectory, moduleName);
-
   if (startedPath !== undefined) {
     await writeFile(startedPath, 'starting', 'utf8');
   }
@@ -64,10 +85,10 @@ async function holdLock(
   releasePath: string,
 ): Promise<void> {
   const fileOps = createNodeFileOperations();
+  const paths = storagePaths(stateDirectory, moduleName);
+  await fileOps.ensureDirectory(paths.stateDirectory);
   const lockManager = createFileLockManager({ fileOps });
-  const lock = await lockManager.acquireFileLock(
-    storagePaths(stateDirectory, moduleName).lock,
-  );
+  const lock = await lockManager.acquireFileLock(paths.lock);
   try {
     await writeFile(readyPath, 'acquired', 'utf8');
     await waitForRelease(releasePath);
@@ -94,7 +115,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const [moduleName, countText, startedPath] = rest;
+  const [moduleName, countText, startedPath, contentionPath] = rest;
   if (
     first === undefined ||
     moduleName === undefined ||
@@ -102,7 +123,13 @@ async function main(): Promise<void> {
   ) {
     throw new Error('Expected state directory, module name, and count.');
   }
-  await runTransactions(first, moduleName, countText, startedPath);
+  await runTransactions(
+    first,
+    moduleName,
+    countText,
+    startedPath,
+    contentionPath,
+  );
 }
 
 void main().catch((error: unknown) => {
