@@ -6,7 +6,7 @@ Moyu VS Code is a local-only VS Code leisure center for Windows 10/11. V1 contai
 
 ## Current phase
 
-Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–7 are complete; Task 8 is next.
+Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–8 are complete; Task 9 is next.
 
 ## Approved architecture
 
@@ -25,7 +25,7 @@ Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–7 are 
 
 ## Pending work
 
-- Task 8: pure 2048 game engine.
+- Task 9: 2048 session persistence and conflict rules.
 
 ## Important decisions
 

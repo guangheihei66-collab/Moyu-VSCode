@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: Task 7 changes are ready to commit; no unrelated changes detected.
+HEAD: Task 8 changes are ready to commit; no unrelated changes detected.
 
 ### Completed Tasks
 
@@ -16,10 +16,11 @@ HEAD: Task 7 changes are ready to commit; no unrelated changes detected.
 - Task 5: implementation complete and committed as `da2687a`; Webview tests, lint, build, and dual target type checks pass.
 - Task 6: implementation complete and committed as `770ffe1`; 83/83 tests, format check, lint, build, and Extension Host typecheck pass.
 - Task 7: implementation complete; Boss tests, lint, build, and strict Boss source typecheck pass.
+- Task 8: implementation complete; 13 game-engine tests, full regression, format check, lint, build, and strict game source typecheck pass.
 
 ### Current Task
 
-Task 7 — Boss Mode State Machine.
+Task 8 — Pure 2048 Game Engine.
 
 ### Current Task Status
 
@@ -27,7 +28,7 @@ GREEN complete. Ready to commit.
 
 ### Uncommitted Changes
 
-- Task 7 Boss Mode machine, service, and tests.
+- Task 8 pure game engine and tests.
 
 ### Passing Tests
 
@@ -39,12 +40,12 @@ GREEN complete. Ready to commit.
 
 ### Failing Tests
 
-- None. `npm run format:check` still reports pre-existing formatting differences in earlier Task 2 files; Task 4 files were individually formatted.
+- Coverage is unavailable because the existing dependency set does not include `@vitest/coverage-v8`; no dependency was installed or upgraded.
 
 ### Last Good Commit
 
-`770ffe1 feat: add Moyu Sidebar and panel lifecycle`
+`e46cb5b feat: add reversible boss mode state machine`
 
 ### Next Exact Action
 
-Commit Task 7 as `feat: add reversible boss mode state machine`, then start Task 8 RED tests for the pure 2048 engine.
+Commit Task 8 as `feat: add deterministic 2048 engine`, then start Task 9 RED tests for session persistence and conflicts.

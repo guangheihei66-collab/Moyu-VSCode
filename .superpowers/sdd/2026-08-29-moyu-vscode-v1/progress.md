@@ -121,7 +121,7 @@ Review: Activity Bar and Sidebar contributions, five commands, three context key
 Next: Task 7
 
 Task 7: complete
-Commit: pending
+Commit: e46cb5b
 Tests: Boss state-machine tests PASS; full unit regression PASS; format check, lint, build, and strict Boss source typecheck PASS.
 Review: in-memory NORMAL/BOSS_MODE transitions retain route/module/focus/scroll snapshots, service toggles serialize, absent/hidden panels no-op, acknowledgements gate title/context updates, and timeout failures restore the prior stable mode without persistence.
 Next: Task 8
