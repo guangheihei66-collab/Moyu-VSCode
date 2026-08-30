@@ -1,3 +1,5 @@
+@import '../reader/reader.css';
+
 :root {
   color-scheme: light dark;
   font-family: var(--vscode-font-family, sans-serif);

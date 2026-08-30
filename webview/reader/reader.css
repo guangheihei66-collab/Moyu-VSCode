@@ -1,0 +1,35 @@
+.moyu-reader,
+[role='feed'][aria-label='Reader'] {
+  box-sizing: border-box;
+  height: 100%;
+  overflow-y: auto;
+  padding: clamp(1rem, 4vw, 3rem);
+  color: var(--vscode-editor-foreground);
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
+  font-size: var(--vscode-editor-font-size, 14px);
+  line-height: 1.75;
+  scroll-behavior: smooth;
+}
+
+[data-reader-block] {
+  width: min(100%, 72ch);
+  margin: 0 auto 2rem;
+}
+
+[data-block-id] {
+  margin: 0 0 1em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+[role='feed'][data-paused='true'] {
+  opacity: 0.72;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moyu-reader,
+  [role='feed'][aria-label='Reader'] {
+    scroll-behavior: auto;
+  }
+}
