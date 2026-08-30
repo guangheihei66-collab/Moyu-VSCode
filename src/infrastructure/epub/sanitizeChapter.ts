@@ -17,6 +17,8 @@ const blocked = new Set([
   'track',
   'canvas',
   'template',
+  'head',
+  'title',
 ]);
 const blocks = new Set([
   'address',
@@ -61,6 +63,28 @@ export function sanitizeChapter(markup: string): string[] {
     );
   }
   return paragraphs;
+}
+
+export function extractChapterTitle(markup: string): string | undefined {
+  const fragment = parseFragment(markup);
+  const title = findTitle(fragment.childNodes, 1);
+  return title === undefined ? undefined : normalize(title) || undefined;
+}
+
+function findTitle(nodes: readonly Node[], depth: number): string | undefined {
+  assertWithinLimit('chapter markup depth', depth, EPUB_LIMITS.markupDepth);
+  for (const node of nodes) {
+    if ('tagName' in node && node.tagName.toLowerCase() === 'title') {
+      return node.childNodes
+        .map((child) => ('value' in child ? child.value : ''))
+        .join(' ');
+    }
+    if ('childNodes' in node) {
+      const found = findTitle(node.childNodes, depth + 1);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
 }
 
 function visit(

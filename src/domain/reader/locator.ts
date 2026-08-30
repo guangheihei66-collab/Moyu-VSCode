@@ -7,6 +7,14 @@ export interface TxtLocator {
   contentFingerprint: string;
 }
 
+export interface EpubLocator {
+  kind: 'epub';
+  chapterId: string;
+  paragraphIndex: number;
+  characterOffset: number;
+  contentFingerprint: string;
+}
+
 export interface ReaderBlock {
   id: string;
   paragraphs: readonly string[];
@@ -27,6 +35,22 @@ export function isTxtLocator(value: unknown): value is TxtLocator {
     candidate.kind === 'txt' &&
     typeof candidate.blockId === 'string' &&
     candidate.blockId.length > 0 &&
+    Number.isSafeInteger(candidate.characterOffset) &&
+    (candidate.characterOffset ?? -1) >= 0 &&
+    typeof candidate.contentFingerprint === 'string' &&
+    candidate.contentFingerprint.length > 0
+  );
+}
+
+export function isEpubLocator(value: unknown): value is EpubLocator {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<EpubLocator>;
+  return (
+    candidate.kind === 'epub' &&
+    typeof candidate.chapterId === 'string' &&
+    candidate.chapterId.length > 0 &&
+    Number.isSafeInteger(candidate.paragraphIndex) &&
+    (candidate.paragraphIndex ?? -1) >= 0 &&
     Number.isSafeInteger(candidate.characterOffset) &&
     (candidate.characterOffset ?? -1) >= 0 &&
     typeof candidate.contentFingerprint === 'string' &&

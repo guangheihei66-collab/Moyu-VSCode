@@ -1,6 +1,7 @@
-import type { TxtLocator } from '../../domain/reader/locator';
+import type { EpubLocator, TxtLocator } from '../../domain/reader/locator';
 
 export type {
+  EpubLocator,
   ReaderBlock,
   ReaderBlockBatch,
   TxtLocator,
@@ -16,14 +17,6 @@ export interface Envelope<Type extends string, Payload> {
   sessionId: string;
   type: Type;
   payload: Payload;
-}
-
-export interface EpubLocator {
-  kind: 'epub';
-  chapterId: string;
-  paragraphIndex: number;
-  characterOffset: number;
-  contentFingerprint: string;
 }
 
 export type LogicalLocator = TxtLocator | EpubLocator;
