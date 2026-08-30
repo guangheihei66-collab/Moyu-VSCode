@@ -103,7 +103,7 @@ Rulings: deterministic owner-token claim serializes stale quarantine; uncertain 
 Next: Task 4
 
 Task 4: complete
-Commit: pending
+Commit: 770ffe1
 Tests: 80/80 full unit tests PASS; Task 4 repository and migration tests PASS; lint, build, and Extension Host typecheck PASS. Global format check remains non-zero because of pre-existing Task 2 formatting differences; only Task 4 files were formatted.
 Review: local implementation covers versioned envelopes, per-module transaction repositories, tombstone protection, per-book progress merge, 2048 session rejection with best-score preservation, preferences adapter, and version-by-version migrations.
 Next: Task 5
