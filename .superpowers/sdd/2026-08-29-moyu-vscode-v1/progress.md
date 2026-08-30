@@ -115,7 +115,13 @@ Review: secure deny-by-default CSP with nonce and packaged assets, single-sectio
 Next: Task 6
 
 Task 6: complete
-Commit: pending
+Commit: 770ffe1
 Tests: 83/83 full unit tests PASS; format check, lint, build, Extension Host typecheck, and Webview typecheck PASS.
 Review: Activity Bar and Sidebar contributions, five commands, three context keys, one-panel-per-window registry, disposal/visibility state propagation, serializer registration, and navigation tests are implemented. Boss command remains a visibility-gated no-op as required before Task 7.
 Next: Task 7
+
+Task 7: complete
+Commit: pending
+Tests: Boss state-machine tests PASS; full unit regression PASS; format check, lint, build, and strict Boss source typecheck PASS.
+Review: in-memory NORMAL/BOSS_MODE transitions retain route/module/focus/scroll snapshots, service toggles serialize, absent/hidden panels no-op, acknowledgements gate title/context updates, and timeout failures restore the prior stable mode without persistence.
+Next: Task 8

@@ -7,8 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `770ffe1 feat: add Moyu Sidebar and panel lifecycle`
-Git status: clean after Task 6 commit; no unrelated changes detected.
+HEAD: Task 7 changes are ready to commit; no unrelated changes detected.
 
 ### Completed Tasks
 
@@ -16,18 +15,19 @@ Git status: clean after Task 6 commit; no unrelated changes detected.
 - Task 4: implementation complete and committed as `4389d6c`.
 - Task 5: implementation complete and committed as `da2687a`; Webview tests, lint, build, and dual target type checks pass.
 - Task 6: implementation complete and committed as `770ffe1`; 83/83 tests, format check, lint, build, and Extension Host typecheck pass.
+- Task 7: implementation complete; Boss tests, lint, build, and strict Boss source typecheck pass.
 
 ### Current Task
 
-Task 6 — Native Sidebar, Commands, Context Keys, and Single-Panel Lifecycle.
+Task 7 — Boss Mode State Machine.
 
 ### Current Task Status
 
-Task 6 GREEN complete and committed. Task 7 is next.
+GREEN complete. Ready to commit.
 
 ### Uncommitted Changes
 
-None.
+- Task 7 Boss Mode machine, service, and tests.
 
 ### Passing Tests
 
@@ -47,4 +47,4 @@ None.
 
 ### Next Exact Action
 
-Start Task 7 RED tests for Boss Mode state transitions.
+Commit Task 7 as `feat: add reversible boss mode state machine`, then start Task 8 RED tests for the pure 2048 engine.
