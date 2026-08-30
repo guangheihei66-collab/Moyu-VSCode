@@ -1,3 +1,11 @@
+import type { TxtLocator } from '../../domain/reader/locator';
+
+export type {
+  ReaderBlock,
+  ReaderBlockBatch,
+  TxtLocator,
+} from '../../domain/reader/locator';
+
 export const PROTOCOL_VERSION = 1 as const;
 
 export type AppSection = 'books' | 'reader' | 'game2048' | 'settings';
@@ -8,13 +16,6 @@ export interface Envelope<Type extends string, Payload> {
   sessionId: string;
   type: Type;
   payload: Payload;
-}
-
-export interface TxtLocator {
-  kind: 'txt';
-  blockId: string;
-  characterOffset: number;
-  contentFingerprint: string;
 }
 
 export interface EpubLocator {
@@ -50,6 +51,10 @@ export type HostRequest =
         direction: 'before' | 'after';
         limit: number;
       }
+    >
+  | Envelope<
+      'reader/saveProgress',
+      { bookId: string; baseVersion: number; locator: LogicalLocator }
     >
   | Envelope<'game2048/load', Record<string, never>>
   | Envelope<'game2048/newGame', { baseVersion: number }>

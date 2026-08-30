@@ -66,6 +66,31 @@ describe('versioned module repositories', () => {
       expect(second.data.byBookId.a?.percentage).toBe(0.2);
     }));
 
+  it('merges a stale checkpoint for a different book but rejects the same book', async () =>
+    withStorageDirectory(async (root) => {
+      const repository = new ProgressRepository(root);
+      const first = await repository.save('a', 0, {
+        locator: { kind: 'txt', blockId: 'a-1' },
+        percentage: 0.1,
+        updatedAt: 10,
+      });
+      const merged = await repository.save('b', 0, {
+        locator: { kind: 'txt', blockId: 'b-1' },
+        percentage: 0.2,
+        updatedAt: 20,
+      });
+      expect(merged.data.byBookId).toHaveProperty('a');
+      expect(merged.data.byBookId).toHaveProperty('b');
+      await expect(
+        repository.save('a', 0, {
+          locator: { kind: 'txt', blockId: 'a-2' },
+          percentage: 0.3,
+          updatedAt: 30,
+        }),
+      ).rejects.toMatchObject({ code: 'STATE_VERSION_CONFLICT' });
+      expect(first.version).toBe(0);
+    }));
+
   it('rejects stale game sessions while preserving the best score', async () =>
     withStorageDirectory(async (root) => {
       const repository = new GameRepository(root);

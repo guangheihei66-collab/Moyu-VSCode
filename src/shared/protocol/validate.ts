@@ -176,6 +176,13 @@ function isPayloadForType(type: string, payload: unknown): boolean {
         payload.limit >= 1 &&
         payload.limit <= 100
       );
+    case 'reader/saveProgress':
+      return (
+        hasExactKeys(payload, ['bookId', 'baseVersion', 'locator']) &&
+        isNonEmptyString(payload.bookId) &&
+        isNonNegativeInteger(payload.baseVersion) &&
+        isLogicalLocator(payload.locator)
+      );
     case 'game2048/save':
       return (
         hasExactKeys(payload, ['baseVersion', 'state']) &&
@@ -294,6 +301,7 @@ export function validateHostRequest(
       envelope.value.type !== 'app/navigate' &&
       envelope.value.type !== 'books/list' &&
       envelope.value.type !== 'reader/readBlocks' &&
+      envelope.value.type !== 'reader/saveProgress' &&
       envelope.value.type !== 'game2048/save'
     ) {
       return protocolError('UNKNOWN_REQUEST_TYPE');

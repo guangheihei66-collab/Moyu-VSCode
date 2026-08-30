@@ -32,6 +32,19 @@ describe('validateHostRequest', () => {
       },
     },
     {
+      type: 'reader/saveProgress',
+      payload: {
+        bookId: 'book-1',
+        baseVersion: 3,
+        locator: {
+          kind: 'txt',
+          blockId: 'block-3',
+          characterOffset: 4,
+          contentFingerprint: 'fp-1',
+        },
+      },
+    },
+    {
       type: 'game2048/save',
       payload: {
         baseVersion: 3,
@@ -118,6 +131,23 @@ describe('validateHostRequest', () => {
           },
           direction: 'after',
           limit: 20,
+        },
+      },
+      'INVALID_PAYLOAD',
+    ],
+    [
+      {
+        ...envelope,
+        type: 'reader/saveProgress',
+        payload: {
+          bookId: 'book-1',
+          baseVersion: -1,
+          locator: {
+            kind: 'txt',
+            blockId: 'block-3',
+            characterOffset: 0,
+            contentFingerprint: 'fp-1',
+          },
         },
       },
       'INVALID_PAYLOAD',
