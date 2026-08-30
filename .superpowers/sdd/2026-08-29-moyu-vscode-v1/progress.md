@@ -206,3 +206,10 @@ Tests: Bookshelf Webview, service, storage, protocol, and Host smoke tests PASS;
 Review: all dynamic book data uses safe DOM APIs; native pickers restrict import/relocate to TXT/EPUB and cancellation is a no-op; duplicate/relocate identity remains delegated to Task 11. Removal requires explicit source-preserving confirmation, writes the bookshelf tombstone, removes only that book's progress and encoded derived TXT/EPUB cache directories, and never unlinks the source. TXT encoding choices use Task 12 bounded text previews and commit only after selection.
 Known issue: real Extension Host launch coverage remains Task 22; Task 18 adds a local Host workflow smoke to the existing contract script. parse5/entities compatibility and missing coverage provider remain tracked.
 Next: Task 19
+
+Task 19: complete
+Commit: 1a4ba01 feat: add reader settings and theme adaptation; 83e0b8f fix: align settings controls and error handling
+Tests: focused final 70/70 and full regression 209/209 PASS; format, lint, build, Host/Webview typechecks PASS under portable Node 22. Build retains pre-existing IndexStore/indexStore case warning.
+Review: inherited uncommitted implementation reviewed; Critical end-to-end wiring and validation/accessibility gaps fixed; two remaining Important findings fixed in round 1; scoped re-review Approved.
+Rulings: transactional preferences storage retained because Design permits but does not mandate globalState, while locked field merge prevents silent cross-window overwrite. Task19-local safe correlated errors do not expand Task21 recovery UX scope.
+Next: Task 20
