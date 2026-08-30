@@ -31,15 +31,51 @@ export function createApp(
   });
   let settingsVersion = 0;
   const settingsView = new SettingsView(root, (patch) => {
-    if (settingsClient !== undefined)
-      void settingsClient
-        .updateSettings(settingsVersion, patch)
-        .then(renderSettingsSnapshot);
+    void updateSettings(patch);
   });
+
   const renderSettingsSnapshot = (snapshot: ReaderSettingsSnapshot): void => {
     settingsVersion = snapshot.version;
     settingsView.render(snapshot.settings);
   };
+
+  const appendSettingsStatus = (message: string): void => {
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    status.textContent = message;
+    root.append(status);
+  };
+
+  const renderSettingsUnavailable = (): void => {
+    const heading = document.createElement('h1');
+    heading.textContent = 'Reader settings';
+    const status = document.createElement('p');
+    status.setAttribute('role', 'alert');
+    status.textContent = 'Reader settings are unavailable.';
+    root.replaceChildren(heading, status);
+  };
+
+  const loadSettings = async (status?: string): Promise<void> => {
+    if (settingsClient === undefined) return;
+    try {
+      renderSettingsSnapshot(await settingsClient.readSettings());
+      if (status !== undefined) appendSettingsStatus(status);
+    } catch {
+      renderSettingsUnavailable();
+    }
+  };
+
+  const updateSettings = async (patch: ReaderSettingsPatch): Promise<void> => {
+    if (settingsClient === undefined) return;
+    try {
+      renderSettingsSnapshot(
+        await settingsClient.updateSettings(settingsVersion, patch),
+      );
+    } catch {
+      await loadSettings('Settings were not saved.');
+    }
+  };
+
   const unregisterSettings = router.register('settings', () => {
     if (settingsClient === undefined) {
       renderSettingsSnapshot({
@@ -48,7 +84,7 @@ export function createApp(
       });
       return;
     }
-    void settingsClient.readSettings().then(renderSettingsSnapshot);
+    void loadSettings();
   });
 
   router.navigate(initialSection);

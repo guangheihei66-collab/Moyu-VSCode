@@ -31,7 +31,7 @@ export class SettingsView {
         'line-height',
         1.2,
         2.2,
-        0.1,
+        0.05,
         settings.lineHeight,
         (lineHeight) => ({ lineHeight }),
       ),

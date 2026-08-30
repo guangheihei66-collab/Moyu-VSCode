@@ -117,4 +117,39 @@ describe('MessageClient', () => {
       }),
     ).toBe(false);
   });
+
+  it('rejects a settings request from a safe correlated error before timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      const client = new MessageClient(
+        { postMessage: vi.fn() },
+        'session-1',
+        60_000,
+        () => 'settings-update-error-1',
+      );
+      const result = client.updateSettings(1, { fontSize: 20 });
+      expect(vi.getTimerCount()).toBe(1);
+
+      expect(
+        client.handleMessage({
+          protocol: 1,
+          id: 'response-error-1',
+          sessionId: 'session-1',
+          type: 'response/error',
+          payload: {
+            requestId: 'settings-update-error-1',
+            error: {
+              code: 'INVALID_PAYLOAD',
+              message: 'Request payload is invalid.',
+            },
+          },
+        }),
+      ).toBe(true);
+
+      await expect(result).rejects.toThrow('Request payload is invalid.');
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

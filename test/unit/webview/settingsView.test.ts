@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { DEFAULT_READER_SETTINGS } from '../../../src/domain/reader/settings';
+import {
+  DEFAULT_READER_SETTINGS,
+  validateSettings,
+} from '../../../src/domain/reader/settings';
 import { SettingsView } from '../../../webview/settings/SettingsView';
 import { createApp } from '../../../webview/shell/app';
 
@@ -92,8 +95,7 @@ function createRoot(): ElementStub {
 }
 
 async function flushPromises(): Promise<void> {
-  await Promise.resolve();
-  await Promise.resolve();
+  for (let turn = 0; turn < 6; turn += 1) await Promise.resolve();
 }
 
 describe('SettingsView', () => {
@@ -105,7 +107,7 @@ describe('SettingsView', () => {
 
     const controls = [
       ['font-size', 'range', '12', '32', '1'],
-      ['line-height', 'range', '1.2', '2.2', '0.1'],
+      ['line-height', 'range', '1.2', '2.2', '0.05'],
       ['content-width', 'range', '480', '1200', '20'],
       ['boss-template', '', '', '', ''],
     ] as const;
@@ -125,6 +127,18 @@ describe('SettingsView', () => {
     expect(
       root.findById('boss-template')?.children.map((option) => option.value),
     ).toEqual(['typescript', 'json', 'buildLog']);
+
+    const lineHeight = root.findById('line-height')!;
+    const stepOffset =
+      (Number(lineHeight.value) - Number(lineHeight.min)) /
+      Number(lineHeight.step);
+    expect(lineHeight.value).toBe('1.75');
+    expect(Number(stepOffset.toFixed(10))).toBe(
+      Math.round(Number(stepOffset.toFixed(10))),
+    );
+    expect(validateSettings({ lineHeight: Number(lineHeight.value) }).ok).toBe(
+      true,
+    );
   });
 
   it('emits typed setting patches from native change events', () => {
@@ -194,5 +208,58 @@ describe('SettingsView', () => {
         '--moyu-font-size',
       ),
     ).toBe('22px');
+  });
+
+  it('renders a safe local state when the initial settings read rejects', async () => {
+    const root = createRoot();
+    const client = {
+      readSettings: vi
+        .fn()
+        .mockRejectedValue(new Error('C:\\private\\settings.json: denied')),
+      updateSettings: vi.fn(),
+    };
+    const app = createApp(root as unknown as HTMLElement, client as never);
+
+    app.router.navigate('settings');
+    await flushPromises();
+
+    expect(root.fullText).toContain('Reader settings are unavailable.');
+    expect(root.fullText).not.toMatch(/private|settings\.json|denied/i);
+  });
+
+  it('recovers the durable snapshot and exposes a safe status when update rejects', async () => {
+    const root = createRoot();
+    const client = {
+      readSettings: vi
+        .fn()
+        .mockResolvedValueOnce({
+          version: 7,
+          settings: DEFAULT_READER_SETTINGS,
+        })
+        .mockResolvedValueOnce({
+          version: 8,
+          settings: { ...DEFAULT_READER_SETTINGS, fontSize: 18 },
+        }),
+      updateSettings: vi
+        .fn()
+        .mockRejectedValue(new Error('C:\\private\\settings.json: denied')),
+    };
+    const app = createApp(root as unknown as HTMLElement, client);
+    app.router.navigate('settings');
+    await flushPromises();
+
+    const fontSize = root.findById('font-size')!;
+    fontSize.value = '22';
+    fontSize.dispatch('change');
+    await flushPromises();
+
+    expect(client.readSettings).toHaveBeenCalledTimes(2);
+    expect(
+      root.ownerDocument.documentElement.style.properties.get(
+        '--moyu-font-size',
+      ),
+    ).toBe('18px');
+    expect(root.fullText).toContain('Settings were not saved.');
+    expect(root.fullText).not.toMatch(/private|settings\.json|denied/i);
   });
 });
