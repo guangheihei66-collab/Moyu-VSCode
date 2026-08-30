@@ -7,13 +7,13 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `4389d6c feat: add versioned module repositories`
-Git status: clean after Task 4 commit; no unrelated changes detected.
+HEAD: Task 5 changes are ready to commit; no unrelated changes detected.
 
 ### Completed Tasks
 
 - Tasks 1–3: complete and committed.
-- Task 4: implementation complete; repository, migration, lint, build, and type checks pass.
+- Task 4: implementation complete and committed as `4389d6c`.
+- Task 5: implementation complete; Webview tests, lint, build, and dual target type checks pass.
 
 ### Current Task
 
@@ -21,15 +21,17 @@ Task 5 — Secure Webview Shell, Router, and Message Client.
 
 ### Current Task Status
 
-Task 4 GREEN complete and committed. Task 5 is the next implementation target.
+GREEN complete. Ready to commit.
 
 ### Uncommitted Changes
 
-None.
+- Task 5 shell, panel, router, message client, theme, and Webview tests.
+- PROJECT_CONTEXT.md and this handoff.
 
 ### Passing Tests
 
-- `npm test`: 80/80
+- `npm test -- --run test/unit/webview`: 3/3
+- Prior full regression: 80/80
 - `npm run lint`
 - `npm run build`
 - `npx tsc -p tsconfig.extension.json --noEmit`
@@ -40,8 +42,8 @@ None.
 
 ### Last Good Commit
 
-`bc06062 fix: settle storage maintenance diagnostics`
+`44fbe04 docs: record V1 task 4 handoff`
 
 ### Next Exact Action
 
-Start Task 5 RED tests for the secure Webview shell, router, and message client.
+Commit Task 5 as `feat: add secure Webview shell and router`, then start Task 6 RED tests for panel lifecycle.

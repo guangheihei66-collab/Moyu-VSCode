@@ -21,11 +21,11 @@ Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–4 are 
 - Product and architecture decisions approved.
 - V1 design specification approved subject to four review corrections, which are incorporated.
 - V1 implementation plan prepared as 23 independently reviewable TDD tasks and self-reviewed.
-- Reproducible extension skeleton, validated message protocol, crash-safe storage transactions, and versioned module repositories are implemented and tested.
+- Reproducible extension skeleton, validated message protocol, crash-safe storage transactions, versioned module repositories, and the secure Webview shell are implemented and tested.
 
 ## Pending work
 
-- Task 5: secure Webview shell, router, and message client.
+- Task 6: native Sidebar, commands, context keys, and single-panel lifecycle.
 
 ## Important decisions
 

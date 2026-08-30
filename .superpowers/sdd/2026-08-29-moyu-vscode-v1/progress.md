@@ -107,3 +107,9 @@ Commit: pending
 Tests: 80/80 full unit tests PASS; Task 4 repository and migration tests PASS; lint, build, and Extension Host typecheck PASS. Global format check remains non-zero because of pre-existing Task 2 formatting differences; only Task 4 files were formatted.
 Review: local implementation covers versioned envelopes, per-module transaction repositories, tombstone protection, per-book progress merge, 2048 session rejection with best-score preservation, preferences adapter, and version-by-version migrations.
 Next: Task 5
+
+Task 5: complete
+Commit: pending
+Tests: 3/3 focused Webview tests PASS; prior full suite 80/80; lint, build, Extension Host typecheck, and Webview typecheck PASS.
+Review: secure deny-by-default CSP with nonce and packaged assets, single-section router, correlated message requests with timeout/disposal rejection, and minimal single-panel controller are implemented.
+Next: Task 6
