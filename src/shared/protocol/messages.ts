@@ -1,0 +1,71 @@
+export const PROTOCOL_VERSION = 1 as const;
+
+export type AppSection = 'books' | 'reader' | 'game2048' | 'settings';
+
+export interface Envelope<Type extends string, Payload> {
+  protocol: typeof PROTOCOL_VERSION;
+  id: string;
+  sessionId: string;
+  type: Type;
+  payload: Payload;
+}
+
+export interface TxtLocator {
+  kind: 'txt';
+  blockId: string;
+  characterOffset: number;
+  contentFingerprint: string;
+}
+
+export interface EpubLocator {
+  kind: 'epub';
+  chapterId: string;
+  paragraphIndex: number;
+  characterOffset: number;
+  contentFingerprint: string;
+}
+
+export type LogicalLocator = TxtLocator | EpubLocator;
+
+export interface Game2048State {
+  board: readonly (readonly number[])[];
+  score: number;
+  status: 'playing' | 'won' | 'lost';
+}
+
+export type HostRequest =
+  | Envelope<'app/ready', Record<string, never>>
+  | Envelope<'app/navigate', { section: AppSection }>
+  | Envelope<'books/list', Record<string, never>>
+  | Envelope<
+      'reader/readBlocks',
+      {
+        bookId: string;
+        anchor: LogicalLocator;
+        direction: 'before' | 'after';
+        limit: number;
+      }
+    >
+  | Envelope<'game2048/save', { baseVersion: number; state: Game2048State }>;
+
+export type ProtocolErrorCode =
+  | 'INVALID_MESSAGE'
+  | 'MESSAGE_TOO_LARGE'
+  | 'INVALID_ENVELOPE'
+  | 'UNSUPPORTED_PROTOCOL'
+  | 'INVALID_SESSION'
+  | 'UNKNOWN_REQUEST_TYPE'
+  | 'INVALID_PAYLOAD';
+
+export interface ProtocolError {
+  code: ProtocolErrorCode;
+  message: string;
+}
+
+export type HostResponse =
+  | Envelope<'response/success', { requestId: string; data: unknown }>
+  | Envelope<'response/error', { requestId: string; error: ProtocolError }>;
+
+export type HostEvent =
+  | Envelope<'app/error', { error: ProtocolError }>
+  | Envelope<'app/notice', { message: string }>;
