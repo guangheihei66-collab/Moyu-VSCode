@@ -7,8 +7,8 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `bc06062` before Task 4 commit
-Git status: Task 4 implementation and tests are uncommitted; no unrelated changes detected.
+HEAD: `4389d6c feat: add versioned module repositories`
+Git status: clean after Task 4 commit; no unrelated changes detected.
 
 ### Completed Tasks
 
@@ -17,21 +17,15 @@ Git status: Task 4 implementation and tests are uncommitted; no unrelated change
 
 ### Current Task
 
-Task 4 — Versioned Module Repositories and Migrations.
+Task 5 — Secure Webview Shell, Router, and Message Client.
 
 ### Current Task Status
 
-GREEN complete. Ready to commit after final focused verification.
+Task 4 GREEN complete and committed. Task 5 is the next implementation target.
 
 ### Uncommitted Changes
 
-- `src/domain/persistence/envelope.ts`
-- `src/application/persistence/repositories.ts`
-- `src/infrastructure/storage/*Repository.ts` and `migrations.ts`
-- `test/unit/storage/repositories.test.ts`
-- `test/unit/storage/migrations.test.ts`
-- `PROJECT_CONTEXT.md`
-- this handoff and progress ledger
+None.
 
 ### Passing Tests
 
@@ -50,4 +44,4 @@ GREEN complete. Ready to commit after final focused verification.
 
 ### Next Exact Action
 
-Commit Task 4 as `feat: add versioned module repositories`, then start Task 5 RED tests for the secure Webview shell, router, and message client.
+Start Task 5 RED tests for the secure Webview shell, router, and message client.
