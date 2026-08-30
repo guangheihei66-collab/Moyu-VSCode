@@ -25,7 +25,8 @@ export interface BookshelfServiceOptions {
   uuid?: () => string;
   clock?: () => number;
   fileStats: FileStatProvider;
-  onIndexInvalidated?: (bookId: string) => void;
+  onIndexInvalidated?: (bookId: string) => void | Promise<void>;
+  onBookRemoved?: (bookId: string) => void | Promise<void>;
 }
 
 function titleFromUri(uri: string): string {
@@ -97,6 +98,7 @@ export class BookshelfService {
       bookId,
       removedAt: this.clock(),
     });
+    await this.options.onBookRemoved?.(bookId);
   }
 
   async relocate(bookId: string, uri: BookUri): Promise<BookMetadata> {
@@ -118,7 +120,7 @@ export class BookshelfService {
       modifiedAt: stat.modifiedAt,
     };
     const result = await this.repository.mutate(state.version, operation);
-    this.options.onIndexInvalidated?.(bookId);
+    await this.options.onIndexInvalidated?.(bookId);
     return (result.data.books.find((book) => book.id === bookId) ??
       current) as unknown as BookMetadata;
   }

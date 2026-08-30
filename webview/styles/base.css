@@ -1,4 +1,5 @@
 @import '../reader/reader.css';
+@import '../books/bookshelf.css';
 
 :root {
   color-scheme: light dark;

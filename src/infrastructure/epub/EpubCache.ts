@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import path from 'node:path';
+import * as path from 'node:path';
 import type { BookMetadata } from '../../domain/books/types';
 import type { EpubBookIndex } from '../../domain/reader/epub';
 
@@ -12,6 +12,9 @@ interface CacheEnvelope {
 
 export class EpubCache {
   constructor(private readonly root: string) {}
+  async remove(bookId: string): Promise<void> {
+    await rm(path.dirname(this.file(bookId)), { recursive: true, force: true });
+  }
   async load(book: BookMetadata): Promise<EpubBookIndex | undefined> {
     try {
       const value = JSON.parse(

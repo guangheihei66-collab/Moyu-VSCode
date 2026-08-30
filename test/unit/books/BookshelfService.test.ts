@@ -27,16 +27,19 @@ describe('BookshelfService', () => {
 
   it('removes only bookshelf state and never the source file', async () =>
     withStorageDirectory(async (root) => {
+      const removed = vi.fn();
       const repository = new BookshelfRepository(root);
       const service = new BookshelfService(repository, {
         fileStats: stats,
         uuid: () => 'book-1',
         clock: () => 1,
+        onBookRemoved: removed,
       });
       const book = await service.import('file:///books/a.txt');
       await service.remove(book.id);
       expect((await repository.read())?.data.books).toEqual([]);
       expect(stats.stat).toHaveBeenCalledOnce();
+      expect(removed).toHaveBeenCalledWith(book.id);
     }));
 
   it('relocates while retaining id and invalidates the derived index', async () =>

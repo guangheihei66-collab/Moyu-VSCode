@@ -166,6 +166,20 @@ function isPayloadForType(type: string, payload: unknown): boolean {
         typeof payload.section === 'string' &&
         APP_SECTIONS.has(payload.section as AppSection)
       );
+    case 'books/import':
+      return hasExactKeys(payload, ['uri']) && isNonEmptyString(payload.uri);
+    case 'books/remove':
+    case 'books/selectEncoding':
+    case 'reader/open':
+      return (
+        hasExactKeys(payload, ['bookId']) && isNonEmptyString(payload.bookId)
+      );
+    case 'books/relocate':
+      return (
+        hasExactKeys(payload, ['bookId', 'uri']) &&
+        isNonEmptyString(payload.bookId) &&
+        isNonEmptyString(payload.uri)
+      );
     case 'reader/readBlocks':
       return (
         hasExactKeys(payload, ['bookId', 'anchor', 'direction', 'limit']) &&
@@ -300,6 +314,11 @@ export function validateHostRequest(
       envelope.value.type !== 'app/ready' &&
       envelope.value.type !== 'app/navigate' &&
       envelope.value.type !== 'books/list' &&
+      envelope.value.type !== 'books/import' &&
+      envelope.value.type !== 'books/remove' &&
+      envelope.value.type !== 'books/relocate' &&
+      envelope.value.type !== 'books/selectEncoding' &&
+      envelope.value.type !== 'reader/open' &&
       envelope.value.type !== 'reader/readBlocks' &&
       envelope.value.type !== 'reader/saveProgress' &&
       envelope.value.type !== 'game2048/save'

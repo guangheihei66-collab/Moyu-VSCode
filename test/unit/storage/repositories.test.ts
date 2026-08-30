@@ -91,6 +91,25 @@ describe('versioned module repositories', () => {
       expect(first.version).toBe(0);
     }));
 
+  it('removes progress for one bookshelf book without affecting another', async () =>
+    withStorageDirectory(async (root) => {
+      const repository = new ProgressRepository(root);
+      await repository.save('a', 0, {
+        locator: { kind: 'txt' },
+        percentage: 0.1,
+        updatedAt: 10,
+      });
+      await repository.save('b', 0, {
+        locator: { kind: 'txt' },
+        percentage: 0.2,
+        updatedAt: 20,
+      });
+      await repository.remove('a');
+      const state = await repository.read();
+      expect(state?.data.byBookId).not.toHaveProperty('a');
+      expect(state?.data.byBookId).toHaveProperty('b');
+    }));
+
   it('rejects stale game sessions while preserving the best score', async () =>
     withStorageDirectory(async (root) => {
       const repository = new GameRepository(root);

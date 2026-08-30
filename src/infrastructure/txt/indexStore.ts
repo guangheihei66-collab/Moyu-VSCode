@@ -13,6 +13,13 @@ function indexDirectory(root: string, bookId: string): string {
 export class IndexStore {
   constructor(private readonly storageRoot: string) {}
 
+  async remove(bookId: string): Promise<void> {
+    await rm(indexDirectory(this.storageRoot, bookId), {
+      recursive: true,
+      force: true,
+    });
+  }
+
   async save(manifest: TxtIndexManifest, signal?: AbortSignal): Promise<void> {
     if (signal?.aborted)
       throw signal.reason ?? new Error('Index build was cancelled.');

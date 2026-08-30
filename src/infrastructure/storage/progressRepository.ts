@@ -62,6 +62,22 @@ export class ProgressRepository implements Repository<ProgressData> {
       guard,
     );
   }
+  async remove(bookId: string): Promise<void> {
+    if (typeof bookId !== 'string' || bookId.length === 0)
+      throw new TypeError('The book id is invalid.');
+    await this.tx.transactJson(
+      createModuleTransactionPaths(this.storageRoot, 'progress'),
+      guard,
+      (current) => {
+        const data = structuredClone(
+          current?.data ?? { byBookId: {}, versions: {} },
+        );
+        delete data.byBookId[bookId];
+        delete data.versions[bookId];
+        return nextEnvelope(current, data, this.now());
+      },
+    );
+  }
   async save(
     bookId: string,
     baseVersion: number,

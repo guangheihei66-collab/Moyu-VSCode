@@ -36,6 +36,8 @@ describe('EpubCache', () => {
       await expect(
         cache.load({ ...book, fingerprint: 'changed' }),
       ).resolves.toBeUndefined();
+      await cache.remove(book.id);
+      await expect(cache.load(book)).resolves.toBeUndefined();
     });
   });
 });

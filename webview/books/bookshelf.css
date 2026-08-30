@@ -1,0 +1,23 @@
+.moyu-bookshelf {
+  display: grid;
+  gap: 1rem;
+}
+
+[data-book-id] {
+  padding: 1rem;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 0.35rem;
+  background: var(--vscode-sideBar-background);
+}
+
+[data-book-id] h2,
+[data-book-id] p {
+  margin-block: 0 0.6rem;
+  overflow-wrap: anywhere;
+}
+
+[data-book-actions] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

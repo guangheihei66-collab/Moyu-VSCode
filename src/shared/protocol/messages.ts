@@ -36,6 +36,8 @@ export type HostRequest =
   | Envelope<'books/import', { uri: string }>
   | Envelope<'books/remove', { bookId: string }>
   | Envelope<'books/relocate', { bookId: string; uri: string }>
+  | Envelope<'books/selectEncoding', { bookId: string }>
+  | Envelope<'reader/open', { bookId: string }>
   | Envelope<
       'reader/readBlocks',
       {
