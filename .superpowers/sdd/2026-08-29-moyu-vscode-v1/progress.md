@@ -139,7 +139,13 @@ Review: explicit new sessions atomically replace the active session, service res
 Next: Task 10
 
 Task 10: complete
-Commit: pending
+Commit: 95c6f7e
 Tests: Webview 2048 keyboard and view tests PASS; full regression, format check, lint, build, and Webview typecheck PASS.
 Review: accessible 16-cell board rendering uses DOM textContent, arrows/WASD are scoped to focused board and ignored while paused, no-op moves avoid persistence, modal actions support continue/new game, and controller exposes pause/resume/dispose/focus restoration.
 Next: Task 11
+
+Task 11: complete
+Commit: pending
+Tests: book identity/service tests PASS; full regression, format check, lint, build, and strict book source typecheck PASS.
+Review: UUID-backed metadata, Windows case-insensitive and non-Windows case-sensitive URI identity, duplicate touch, source-safe tombstone removal, type-preserving relocation, fingerprint updates, and index invalidation are implemented.
+Next: Task 12

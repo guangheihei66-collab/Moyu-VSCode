@@ -26,7 +26,15 @@ export interface BookshelfData {
 export type BookshelfOperation =
   | { kind: 'add'; book: BookRecord }
   | { kind: 'remove'; bookId: string; removedAt?: number }
-  | { kind: 'relocate'; bookId: string; uri: string };
+  | { kind: 'touch'; bookId: string; lastOpenedAt: number }
+  | {
+      kind: 'relocate';
+      bookId: string;
+      uri: string;
+      fingerprint?: string;
+      size?: number;
+      modifiedAt?: number;
+    };
 
 export interface ReadingCheckpoint {
   locator: unknown;

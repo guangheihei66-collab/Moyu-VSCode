@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: Task 10 changes are ready to commit; no unrelated changes detected.
+HEAD: Task 11 changes are ready to commit; no unrelated changes detected.
 
 ### Completed Tasks
 
@@ -19,10 +19,11 @@ HEAD: Task 10 changes are ready to commit; no unrelated changes detected.
 - Task 8: implementation complete; 13 game-engine tests, full regression, format check, lint, build, and strict game source typecheck pass.
 - Task 9: implementation complete; session service and concurrency tests, full regression, format check, lint, build, and strict service typecheck pass.
 - Task 10: implementation complete; 2048 Webview keyboard/DOM tests, full regression, format check, lint, build, and Webview typecheck pass.
+- Task 11: implementation complete; book identity/service tests, full regression, format check, lint, build, and strict book source typecheck pass.
 
 ### Current Task
 
-Task 10 — 2048 Webview UI and Keyboard Scope.
+Task 11 — Book Metadata, URI Identity, Tombstones, and Relocation.
 
 ### Current Task Status
 
@@ -30,7 +31,7 @@ GREEN complete. Ready to commit.
 
 ### Uncommitted Changes
 
-- Task 10 Webview controller/view, scoped keyboard handling, accessible cells, modal actions, pause/resume, and focus restoration.
+- Task 11 UUID book metadata, platform-aware URI identity, duplicate import touch, tombstone removal, safe relocation, and index invalidation.
 
 ### Passing Tests
 
@@ -50,4 +51,4 @@ GREEN complete. Ready to commit.
 
 ### Next Exact Action
 
-Commit Task 10 as `feat: add accessible 2048 Webview`, then start Task 11 RED tests for book identity and relocation.
+Commit Task 11 as `feat: add safe bookshelf identity and relocation`, then start Task 12 RED tests for TXT encoding detection and confirmation.

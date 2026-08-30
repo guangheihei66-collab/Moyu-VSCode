@@ -73,9 +73,19 @@ export class BookshelfRepository implements Repository<BookshelfData> {
               removedAt,
               version: (current?.version ?? -1) + 1,
             });
+        } else if (operation.kind === 'relocate') {
+          const book = data.books.find((item) => item.id === operation.bookId);
+          if (book) {
+            book.uri = operation.uri;
+            if (operation.fingerprint !== undefined)
+              book.fingerprint = operation.fingerprint;
+            if (operation.size !== undefined) book.size = operation.size;
+            if (operation.modifiedAt !== undefined)
+              book.modifiedAt = operation.modifiedAt;
+          }
         } else {
           const book = data.books.find((item) => item.id === operation.bookId);
-          if (book) book.uri = operation.uri;
+          if (book) book.lastOpenedAt = operation.lastOpenedAt;
         }
         return nextEnvelope(current, data, this.now());
       },

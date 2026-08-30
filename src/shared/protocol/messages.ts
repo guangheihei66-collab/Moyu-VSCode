@@ -39,6 +39,9 @@ export type HostRequest =
   | Envelope<'app/ready', Record<string, never>>
   | Envelope<'app/navigate', { section: AppSection }>
   | Envelope<'books/list', Record<string, never>>
+  | Envelope<'books/import', { uri: string }>
+  | Envelope<'books/remove', { bookId: string }>
+  | Envelope<'books/relocate', { bookId: string; uri: string }>
   | Envelope<
       'reader/readBlocks',
       {
