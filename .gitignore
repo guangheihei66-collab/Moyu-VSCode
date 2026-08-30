@@ -4,6 +4,7 @@ coverage/
 *.vsix
 .vscode-test/
 .superpowers/
+.tools/
 .worktrees/
 *.log
 .env
