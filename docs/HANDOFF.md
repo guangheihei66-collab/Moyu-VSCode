@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `6876d1a docs: record V1 task 17 handoff`; working tree has the Task 18 RED test listed below.
+HEAD: `fcb6185 feat: add local bookshelf workflows`; working tree is clean.
 
 ### Completed Tasks
 
@@ -26,23 +26,24 @@ HEAD: `6876d1a docs: record V1 task 17 handoff`; working tree has the Task 18 RE
 - Task 15: implementation complete and committed as `3e7fb62`; safe text-only rendering, bounded deduplicated block mounting, logical focus anchors, viewport paging, pause/resume, theme styling, and route subscription pass.
 - Task 16: implementation complete and committed as `6a5cc19`; all twelve EPUB limits, lazy bounded ZIP access, canonical paths, metadata and expansion checks, entity-free bounded XML, hostile-markup text extraction, and exact dependency audit pass.
 - Task 17: implementation complete and committed as `b92d493`; container/OPF/spine parsing, ordered sanitized chapters, source-bound atomic cache, chapter navigation, domain EPUB locator reuse, and logical progress restore pass.
+- Task 18: implementation complete and committed as `fcb6185`; safe Bookshelf cards/controller, native TXT/EPUB picker, relocation, bounded encoding previews, explicit removal confirmation, source-preserving cleanup, protocol validation, and Host smoke pass.
 
 ### Current Task
 
-Task 18 — Bookshelf Webview and Import Workflows.
+Task 19 — Reader Settings and Theme Accessibility.
 
 ### Current Task Status
 
-Task 18 is IN PROGRESS. The Webview RED test is written and fails for the expected missing BookshelfController/BookshelfView modules. Production implementation and Extension Host import smoke are not started.
+Task 18 is GREEN and committed. Task 19 is ready to start.
 
 ### Uncommitted Changes
 
-- `test/unit/webview/bookshelf.test.ts` — RED tests for safe text rendering, removal wording, and cancelled picker behavior.
+- None.
 
 ### Passing Tests
 
-- Full regression: 38 test files, 162/162 tests.
-- `npm test -- --run test/unit/epub test/unit/reader`: 27/27.
+- Full regression: 40 test files, 168/168 tests.
+- Focused final Bookshelf/service/storage/Host tests: 14/14.
 - `npm run format:check`
 - `npm run lint`
 - `npm run build`
@@ -51,14 +52,13 @@ Task 18 is IN PROGRESS. The Webview RED test is written and fails for the expect
 
 ### Failing Tests
 
-- `npm test -- --run test/unit/webview/bookshelf.test.ts` fails because `webview/books/BookshelfController.ts` and `BookshelfView.ts` do not exist yet (expected Task 18 RED).
 - Coverage is unavailable because the dependency set does not include `@vitest/coverage-v8`; no coverage dependency was installed.
 - `parse5@8.0.1` resolves `entities@8.0.0`, whose package metadata declares Node >=20.19 while the minimum VS Code 1.96 runtime is Node 20.18; esbuild bundles it and current tests/build pass, but Task 22 Extension Host acceptance must explicitly verify this path.
 
 ### Last Good Commit
 
-`6876d1a docs: record V1 task 17 handoff`
+`fcb6185 feat: add local bookshelf workflows`
 
 ### Next Exact Action
 
-Implement `webview/books/bookCard.ts`, `BookshelfView.ts`, and `BookshelfController.ts` until `test/unit/webview/bookshelf.test.ts` is GREEN; then add the Host picker/confirmation flow in `src/extension/commands.ts` and create the missing `test/extension/suite/bookImport.test.ts` smoke without weakening cancellation behavior.
+Write Task 19 RED tests for validated reader settings, field-level merge persistence, accessible controls, and VS Code theme-token-only Reader CSS, then implement the planned domain/service/view modules.

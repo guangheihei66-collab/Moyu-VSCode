@@ -199,3 +199,10 @@ Not done: Bookshelf Webview modules, styles/router wiring, Extension Host TXT/EP
 Current test result: focused Task 18 test fails because BookshelfController and BookshelfView do not exist, as expected for RED.
 Uncommitted files: test/unit/webview/bookshelf.test.ts
 Next exact action: implement webview/books/bookCard.ts, BookshelfView.ts, and BookshelfController.ts against the RED test, then run the focused test before touching Host flows.
+
+Task 18: complete
+Commit: fcb6185
+Tests: Bookshelf Webview, service, storage, protocol, and Host smoke tests PASS; full regression 168/168; format, lint, dual typechecks, build, and production audit PASS.
+Review: all dynamic book data uses safe DOM APIs; native pickers restrict import/relocate to TXT/EPUB and cancellation is a no-op; duplicate/relocate identity remains delegated to Task 11. Removal requires explicit source-preserving confirmation, writes the bookshelf tombstone, removes only that book's progress and encoded derived TXT/EPUB cache directories, and never unlinks the source. TXT encoding choices use Task 12 bounded text previews and commit only after selection.
+Known issue: real Extension Host launch coverage remains Task 22; Task 18 adds a local Host workflow smoke to the existing contract script. parse5/entities compatibility and missing coverage provider remain tracked.
+Next: Task 19
