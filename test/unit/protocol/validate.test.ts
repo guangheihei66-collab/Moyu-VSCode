@@ -17,6 +17,14 @@ describe('validateHostRequest', () => {
     { type: 'app/ready', payload: {} },
     { type: 'app/navigate', payload: { section: 'books' } },
     { type: 'books/list', payload: {} },
+    { type: 'settings/read', payload: {} },
+    {
+      type: 'settings/update',
+      payload: {
+        baseVersion: 2,
+        patch: { fontSize: 18, bossTemplate: 'buildLog' },
+      },
+    },
     {
       type: 'reader/readBlocks',
       payload: {
@@ -115,6 +123,25 @@ describe('validateHostRequest', () => {
     ],
     [
       { ...envelope, type: 'books/list', payload: { unexpected: true } },
+      'INVALID_PAYLOAD',
+    ],
+    [
+      {
+        ...envelope,
+        type: 'settings/update',
+        payload: { baseVersion: 0, patch: { fontSize: 18.5 } },
+      },
+      'INVALID_PAYLOAD',
+    ],
+    [
+      {
+        ...envelope,
+        type: 'settings/update',
+        payload: {
+          baseVersion: 0,
+          patch: { contentWidth: 720, unexpected: true },
+        },
+      },
       'INVALID_PAYLOAD',
     ],
     [

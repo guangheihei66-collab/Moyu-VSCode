@@ -11,6 +11,10 @@ import {
   PROTOCOL_VERSION,
 } from './messages';
 import { failure, success, type Result } from './result';
+import {
+  isReaderSettings,
+  validateSettings,
+} from '../../domain/reader/settings';
 
 const ERROR_MESSAGES: Readonly<Record<ProtocolErrorCode, string>> = {
   INVALID_MESSAGE: 'Message could not be processed.',
@@ -180,6 +184,15 @@ function isPayloadForType(type: string, payload: unknown): boolean {
         isNonEmptyString(payload.bookId) &&
         isNonEmptyString(payload.uri)
       );
+    case 'settings/read':
+      return hasExactKeys(payload, []);
+    case 'settings/update':
+      return (
+        hasExactKeys(payload, ['baseVersion', 'patch']) &&
+        isNonNegativeInteger(payload.baseVersion) &&
+        isRecord(payload.patch) &&
+        validateSettings(payload.patch).ok
+      );
     case 'reader/readBlocks':
       return (
         hasExactKeys(payload, ['bookId', 'anchor', 'direction', 'limit']) &&
@@ -230,6 +243,15 @@ function isResponsePayloadForType(type: string, payload: unknown): boolean {
         hasExactKeys(payload, ['requestId']) &&
         isNonEmptyString(payload.requestId)
       );
+    case 'settings/snapshot':
+      return (
+        hasExactKeys(payload, ['requestId', 'snapshot']) &&
+        isNonEmptyString(payload.requestId) &&
+        isRecord(payload.snapshot) &&
+        hasExactKeys(payload.snapshot, ['version', 'settings']) &&
+        isNonNegativeInteger(payload.snapshot.version) &&
+        isReaderSettings(payload.snapshot.settings)
+      );
     case 'response/error':
       return (
         hasExactKeys(payload, ['requestId', 'error']) &&
@@ -253,6 +275,12 @@ function isEventPayloadForType(type: string, payload: unknown): boolean {
       return (
         hasExactKeys(payload, ['message']) &&
         typeof payload.message === 'string'
+      );
+    case 'app/navigate':
+      return (
+        hasExactKeys(payload, ['section']) &&
+        typeof payload.section === 'string' &&
+        APP_SECTIONS.has(payload.section as AppSection)
       );
     default:
       return false;
@@ -319,6 +347,8 @@ export function validateHostRequest(
       envelope.value.type !== 'books/relocate' &&
       envelope.value.type !== 'books/selectEncoding' &&
       envelope.value.type !== 'reader/open' &&
+      envelope.value.type !== 'settings/read' &&
+      envelope.value.type !== 'settings/update' &&
       envelope.value.type !== 'reader/readBlocks' &&
       envelope.value.type !== 'reader/saveProgress' &&
       envelope.value.type !== 'game2048/save'
@@ -348,6 +378,7 @@ export function validateHostResponse(
     }
     if (
       envelope.value.type !== 'response/success' &&
+      envelope.value.type !== 'settings/snapshot' &&
       envelope.value.type !== 'response/error'
     ) {
       return protocolError('UNKNOWN_RESPONSE_TYPE');
@@ -375,7 +406,8 @@ export function validateHostEvent(
     }
     if (
       envelope.value.type !== 'app/error' &&
-      envelope.value.type !== 'app/notice'
+      envelope.value.type !== 'app/notice' &&
+      envelope.value.type !== 'app/navigate'
     ) {
       return protocolError('UNKNOWN_EVENT_TYPE');
     }

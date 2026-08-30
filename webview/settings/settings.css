@@ -1,0 +1,42 @@
+[aria-label='Reader settings'] {
+  display: grid;
+  gap: 1rem;
+  max-width: 42rem;
+}
+[aria-label='Reader settings'] > div {
+  display: grid;
+  gap: 0.4rem;
+}
+[aria-label='Reader settings'] input,
+[aria-label='Reader settings'] select {
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, var(--vscode-contrastBorder));
+}
+
+[aria-label='Reader settings'] input:focus-visible,
+[aria-label='Reader settings'] select:focus-visible {
+  outline: 2px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+body.vscode-high-contrast [aria-label='Reader settings'] input,
+body.vscode-high-contrast [aria-label='Reader settings'] select,
+body.vscode-high-contrast-light [aria-label='Reader settings'] input,
+body.vscode-high-contrast-light [aria-label='Reader settings'] select {
+  border-color: var(--vscode-contrastBorder);
+}
+
+@media (prefers-contrast: more) {
+  [aria-label='Reader settings'] input,
+  [aria-label='Reader settings'] select {
+    border-color: var(--vscode-contrastBorder);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [aria-label='Reader settings'] * {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

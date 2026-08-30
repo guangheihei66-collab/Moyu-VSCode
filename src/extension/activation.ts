@@ -12,12 +12,17 @@ import { EncodingSelectionService } from '../application/reader/EncodingSelectio
 import { ProgressRepository } from '../infrastructure/storage/progressRepository';
 import { IndexStore } from '../infrastructure/txt/IndexStore';
 import { EpubCache } from '../infrastructure/epub/EpubCache';
+import { ReaderSettingsService } from '../application/reader/ReaderSettingsService';
+import { PreferencesRepository } from '../infrastructure/storage/preferencesRepository';
 
 export function activate(context: vscode.ExtensionContext): void {
   const windowId = String(vscode.env.sessionId);
   const contextKeys = new ContextKeys();
+  const settings = new ReaderSettingsService(
+    new PreferencesRepository(context.globalStorageUri.fsPath),
+  );
   const registry = new PanelRegistry(
-    (_, onStateChange) => new PanelController(context, onStateChange),
+    (_, onStateChange) => new PanelController(context, settings, onStateChange),
     contextKeys,
   );
   const bookshelfRepository = new BookshelfRepository(

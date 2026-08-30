@@ -1,4 +1,8 @@
 import type { EpubLocator, TxtLocator } from '../../domain/reader/locator';
+import type {
+  ReaderSettingsPatch,
+  ReaderSettingsSnapshot,
+} from '../../domain/reader/settings';
 
 export type {
   EpubLocator,
@@ -38,6 +42,11 @@ export type HostRequest =
   | Envelope<'books/relocate', { bookId: string; uri: string }>
   | Envelope<'books/selectEncoding', { bookId: string }>
   | Envelope<'reader/open', { bookId: string }>
+  | Envelope<'settings/read', Record<string, never>>
+  | Envelope<
+      'settings/update',
+      { baseVersion: number; patch: ReaderSettingsPatch }
+    >
   | Envelope<
       'reader/readBlocks',
       {
@@ -83,8 +92,13 @@ export interface ProtocolError {
 
 export type HostResponse =
   | Envelope<'response/success', { requestId: string }>
+  | Envelope<
+      'settings/snapshot',
+      { requestId: string; snapshot: ReaderSettingsSnapshot }
+    >
   | Envelope<'response/error', { requestId: string; error: ProtocolError }>;
 
 export type HostEvent =
   | Envelope<'app/error', { error: ProtocolError }>
-  | Envelope<'app/notice', { message: string }>;
+  | Envelope<'app/notice', { message: string }>
+  | Envelope<'app/navigate', { section: AppSection }>;

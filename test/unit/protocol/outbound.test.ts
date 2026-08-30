@@ -50,6 +50,95 @@ describe('outbound protocol validation', () => {
     expect(validateHostEvent(notice('Ready.'))).toMatchObject({ ok: true });
   });
 
+  it('accepts the typed settings snapshot and navigation event', () => {
+    expect(
+      validateHostResponse({
+        protocol: 1,
+        id: 'response-settings-1',
+        sessionId: 'webview-session-1',
+        type: 'settings/snapshot',
+        payload: {
+          requestId: 'request-1',
+          snapshot: {
+            version: 4,
+            settings: {
+              fontSize: 18,
+              lineHeight: 1.8,
+              contentWidth: 840,
+              bossTemplate: 'json',
+            },
+          },
+        },
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      validateHostEvent({
+        protocol: 1,
+        id: 'event-navigation-1',
+        sessionId: 'webview-session-1',
+        type: 'app/navigate',
+        payload: { section: 'settings' },
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
+  it.each([
+    {
+      protocol: 1,
+      id: 'response-settings-1',
+      sessionId: 'webview-session-1',
+      type: 'settings/snapshot',
+      payload: {
+        requestId: 'request-1',
+        snapshot: {
+          version: 4,
+          settings: {
+            fontSize: 18.5,
+            lineHeight: 1.8,
+            contentWidth: 840,
+            bossTemplate: 'json',
+          },
+        },
+      },
+    },
+    {
+      protocol: 1,
+      id: 'response-settings-2',
+      sessionId: 'webview-session-1',
+      type: 'settings/snapshot',
+      payload: {
+        requestId: 'request-1',
+        snapshot: {
+          version: 4,
+          settings: {
+            fontSize: 18,
+            lineHeight: 1.8,
+            contentWidth: 840,
+            bossTemplate: 'json',
+          },
+          extra: true,
+        },
+      },
+    },
+  ])('rejects malformed typed settings snapshots', (value) => {
+    expect(validateHostResponse(value)).toMatchObject({
+      ok: false,
+      error: { code: 'INVALID_PAYLOAD' },
+    });
+  });
+
+  it('keeps navigation events closed to exact sections and fields', () => {
+    expect(
+      validateHostEvent({
+        protocol: 1,
+        id: 'event-navigation-1',
+        sessionId: 'webview-session-1',
+        type: 'app/navigate',
+        payload: { section: 'settings', extra: true },
+      }),
+    ).toMatchObject({ ok: false, error: { code: 'INVALID_PAYLOAD' } });
+  });
+
   it.each([
     [
       validateHostResponse,

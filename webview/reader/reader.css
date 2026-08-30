@@ -1,3 +1,9 @@
+:root {
+  --moyu-font-size: var(--vscode-editor-font-size, 14px);
+  --moyu-line-height: 1.75;
+  --moyu-content-width: 720px;
+}
+
 .moyu-reader,
 [role='feed'][aria-label='Reader'] {
   box-sizing: border-box;
@@ -7,14 +13,21 @@
   color: var(--vscode-editor-foreground);
   background: var(--vscode-editor-background);
   font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
-  font-size: var(--vscode-editor-font-size, 14px);
-  line-height: 1.75;
+  font-size: var(--moyu-font-size);
+  line-height: var(--moyu-line-height);
   scroll-behavior: smooth;
 }
 
 [data-reader-block] {
-  width: min(100%, 72ch);
+  width: min(100%, var(--moyu-content-width));
   margin: 0 auto 2rem;
+}
+
+@media (prefers-contrast: more) {
+  [data-reader-block] {
+    outline: 1px solid var(--vscode-contrastBorder);
+    outline-offset: 0.5rem;
+  }
 }
 
 [data-block-id] {

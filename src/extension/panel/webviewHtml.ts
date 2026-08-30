@@ -1,10 +1,13 @@
 import * as crypto from 'node:crypto';
 import * as vscode from 'vscode';
+import type { AppSection } from '../../shared/protocol/messages';
 
 export function createWebviewHtml(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
   nonce = crypto.randomBytes(16).toString('hex'),
+  initialSection: AppSection = 'books',
+  sessionId: string = crypto.randomUUID(),
 ): string {
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'main.js'),
@@ -21,7 +24,7 @@ export function createWebviewHtml(
     <link rel="stylesheet" href="${styleUri}" />
     <title>Moyu</title>
   </head>
-  <body><main id="app" tabindex="-1" aria-live="polite"></main>
+  <body><main id="app" tabindex="-1" aria-live="polite" data-initial-section="${initialSection}" data-session-id="${sessionId}"></main>
     <script nonce="${nonce}" src="${scriptUri}"></script>
   </body>
 </html>`;
