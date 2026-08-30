@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `da2687a feat: add secure Webview shell and router`
+HEAD: `3f657dc docs: record V1 task 5 handoff`
 Git status: clean after Task 5 commit; no unrelated changes detected.
 
 ### Completed Tasks
