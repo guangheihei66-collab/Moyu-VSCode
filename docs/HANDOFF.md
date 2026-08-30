@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: Task 9 changes are ready to commit; no unrelated changes detected.
+HEAD: Task 10 changes are ready to commit; no unrelated changes detected.
 
 ### Completed Tasks
 
@@ -18,10 +18,11 @@ HEAD: Task 9 changes are ready to commit; no unrelated changes detected.
 - Task 7: implementation complete; Boss tests, lint, build, and strict Boss source typecheck pass.
 - Task 8: implementation complete; 13 game-engine tests, full regression, format check, lint, build, and strict game source typecheck pass.
 - Task 9: implementation complete; session service and concurrency tests, full regression, format check, lint, build, and strict service typecheck pass.
+- Task 10: implementation complete; 2048 Webview keyboard/DOM tests, full regression, format check, lint, build, and Webview typecheck pass.
 
 ### Current Task
 
-Task 9 — 2048 Session Persistence and Conflict Rules.
+Task 10 — 2048 Webview UI and Keyboard Scope.
 
 ### Current Task Status
 
@@ -29,7 +30,7 @@ GREEN complete. Ready to commit.
 
 ### Uncommitted Changes
 
-- Task 9 session service, game commands, protocol requests, repository new-game path, and concurrency tests.
+- Task 10 Webview controller/view, scoped keyboard handling, accessible cells, modal actions, pause/resume, and focus restoration.
 
 ### Passing Tests
 
@@ -49,4 +50,4 @@ GREEN complete. Ready to commit.
 
 ### Next Exact Action
 
-Commit Task 9 as `feat: persist 2048 sessions safely`, then start Task 10 RED tests for the 2048 Webview UI and keyboard scope.
+Commit Task 10 as `feat: add accessible 2048 Webview`, then start Task 11 RED tests for book identity and relocation.

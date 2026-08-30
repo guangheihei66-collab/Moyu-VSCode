@@ -133,7 +133,13 @@ Review: immutable 4x4 directional transforms, one-merge-per-tile scoring, inject
 Next: Task 9
 
 Task 9: complete
-Commit: pending
+Commit: 6004c95; follow-up type guard fix f761fe6
 Tests: session service and concurrency tests PASS; full regression, format check, lint, build, and strict service typecheck PASS.
 Review: explicit new sessions atomically replace the active session, service restores durable state, ordered moves reject stale sessions/sequences, and stale-session score can raise bestScore without replacing the active board.
 Next: Task 10
+
+Task 10: complete
+Commit: pending
+Tests: Webview 2048 keyboard and view tests PASS; full regression, format check, lint, build, and Webview typecheck PASS.
+Review: accessible 16-cell board rendering uses DOM textContent, arrows/WASD are scoped to focused board and ignored while paused, no-op moves avoid persistence, modal actions support continue/new game, and controller exposes pause/resume/dispose/focus restoration.
+Next: Task 11

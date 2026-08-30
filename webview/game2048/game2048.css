@@ -1,0 +1,18 @@
+[role='grid'] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(3rem, 1fr));
+  gap: 0.25rem;
+  max-width: 24rem;
+}
+[data-cell] {
+  align-items: center;
+  aspect-ratio: 1;
+  background: var(--vscode-editor-inactiveSelectionBackground);
+  display: flex;
+  justify-content: center;
+}
+[role='dialog'] {
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-focusBorder);
+  padding: 1rem;
+}
