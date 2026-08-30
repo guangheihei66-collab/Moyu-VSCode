@@ -26,13 +26,13 @@ export function isVersionedEnvelope<T>(
   const candidate = value as Partial<VersionedEnvelope<unknown>>;
   return (
     Number.isSafeInteger(candidate.schemaVersion) &&
-    candidate.schemaVersion >= 1 &&
+    (candidate.schemaVersion ?? 0) >= 1 &&
     Number.isSafeInteger(candidate.version) &&
-    candidate.version >= 0 &&
+    (candidate.version ?? -1) >= 0 &&
     Number.isSafeInteger(candidate.generation) &&
-    candidate.generation >= 0 &&
+    (candidate.generation ?? -1) >= 0 &&
     Number.isFinite(candidate.updatedAt) &&
-    candidate.updatedAt >= 0 &&
+    (candidate.updatedAt ?? -1) >= 0 &&
     dataGuard(candidate.data)
   );
 }
