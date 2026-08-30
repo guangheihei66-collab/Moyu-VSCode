@@ -7,26 +7,26 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `3f657dc docs: record V1 task 5 handoff`
-Git status: clean after Task 5 commit; no unrelated changes detected.
+HEAD: Task 6 changes are ready to commit; no unrelated changes detected.
 
 ### Completed Tasks
 
 - Tasks 1–3: complete and committed.
 - Task 4: implementation complete and committed as `4389d6c`.
 - Task 5: implementation complete and committed as `da2687a`; Webview tests, lint, build, and dual target type checks pass.
+- Task 6: implementation complete; 83/83 tests, format check, lint, build, and Extension Host typecheck pass.
 
 ### Current Task
 
-Task 5 — Secure Webview Shell, Router, and Message Client.
+Task 6 — Native Sidebar, Commands, Context Keys, and Single-Panel Lifecycle.
 
 ### Current Task Status
 
-Task 5 GREEN complete and committed. Task 6 is next.
+GREEN complete. Ready to commit.
 
 ### Uncommitted Changes
 
-None.
+- Task 6 implementation, Activity Bar icon, manifest contributions, and panel lifecycle tests.
 
 ### Passing Tests
 
@@ -42,8 +42,8 @@ None.
 
 ### Last Good Commit
 
-`da2687a feat: add secure Webview shell and router`
+`046350b chore: normalize existing formatting`
 
 ### Next Exact Action
 
-Commit Task 5 as `feat: add secure Webview shell and router`, then start Task 6 RED tests for panel lifecycle.
+Commit Task 6 as `feat: add Moyu Sidebar and panel lifecycle`, then start Task 7 RED tests for Boss Mode state transitions.

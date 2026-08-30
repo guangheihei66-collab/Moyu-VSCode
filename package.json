@@ -9,13 +9,55 @@
     "vscode": "^1.96.0"
   },
   "activationEvents": [
-    "onCommand:moyu.open"
+    "onCommand:moyu.open",
+    "onView:moyu.sidebar"
   ],
   "contributes": {
     "commands": [
       {
         "command": "moyu.open",
         "title": "Moyu: Open"
+      },
+      {
+        "command": "moyu.openBooks",
+        "title": "Moyu: Open Books"
+      },
+      {
+        "command": "moyu.open2048",
+        "title": "Moyu: Open 2048"
+      },
+      {
+        "command": "moyu.openSettings",
+        "title": "Moyu: Open Settings"
+      },
+      {
+        "command": "moyu.toggleBossMode",
+        "title": "Moyu: Toggle Boss Mode",
+        "enablement": "moyu.isOpen && moyu.isVisible"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "moyu",
+          "title": "Moyu",
+          "icon": "media/moyu.svg"
+        }
+      ]
+    },
+    "views": {
+      "moyu": [
+        {
+          "id": "moyu.sidebar",
+          "name": "Moyu"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "moyu.toggleBossMode",
+        "key": "ctrl+m",
+        "when": "moyu.isOpen && moyu.isVisible"
       }
     ]
   },

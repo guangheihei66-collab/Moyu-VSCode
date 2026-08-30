@@ -113,3 +113,9 @@ Commit: da2687a
 Tests: 3/3 focused Webview tests PASS; prior full suite 80/80; lint, build, Extension Host typecheck, and Webview typecheck PASS.
 Review: secure deny-by-default CSP with nonce and packaged assets, single-section router, correlated message requests with timeout/disposal rejection, and minimal single-panel controller are implemented.
 Next: Task 6
+
+Task 6: complete
+Commit: pending
+Tests: 83/83 full unit tests PASS; format check, lint, build, Extension Host typecheck, and Webview typecheck PASS.
+Review: Activity Bar and Sidebar contributions, five commands, three context keys, one-panel-per-window registry, disposal/visibility state propagation, serializer registration, and navigation tests are implemented. Boss command remains a visibility-gated no-op as required before Task 7.
+Next: Task 7
