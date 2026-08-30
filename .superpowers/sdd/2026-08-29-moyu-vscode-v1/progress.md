@@ -191,3 +191,11 @@ Tests: 27 focused EPUB/reader tests, full regression 162/162; format check, lint
 Review: container.xml and OPF are parsed only through the bounded XML boundary; manifest/spine order drives sanitized text chapters; title fallback, missing non-readable items, DRM rejection, and canonical relative hrefs are handled. Atomic cache envelopes bind fingerprint/size/mtime and contain no raw markup. EpubReaderService exposes chapterId-based output, previous/next navigation, and fingerprint-bound logical progress through the existing concurrent ProgressRepository.
 Known issue: parse5/entities Node engine compatibility requires explicit Task 22 Extension Host verification. Coverage remains unavailable because @vitest/coverage-v8 is not installed.
 Next: Task 18
+
+Task 18: in progress
+Last good commit: 6876d1a
+Done: Added RED Bookshelf Webview tests for inert title rendering, exact "Remove from bookshelf" wording, absence of destructive "Delete novel" wording, and picker cancellation with zero protocol requests.
+Not done: Bookshelf Webview modules, styles/router wiring, Extension Host TXT/EPUB picker and explicit removal confirmation, extension import smoke, GREEN/regression/review/commit.
+Current test result: focused Task 18 test fails because BookshelfController and BookshelfView do not exist, as expected for RED.
+Uncommitted files: test/unit/webview/bookshelf.test.ts
+Next exact action: implement webview/books/bookCard.ts, BookshelfView.ts, and BookshelfController.ts against the RED test, then run the focused test before touching Host flows.

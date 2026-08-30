@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `b92d493 feat: add text-only EPUB chapter reader`; working tree is clean.
+HEAD: `6876d1a docs: record V1 task 17 handoff`; working tree has the Task 18 RED test listed below.
 
 ### Completed Tasks
 
@@ -33,11 +33,11 @@ Task 18 — Bookshelf Webview and Import Workflows.
 
 ### Current Task Status
 
-Task 17 is GREEN and committed. Task 18 is ready to start.
+Task 18 is IN PROGRESS. The Webview RED test is written and fails for the expected missing BookshelfController/BookshelfView modules. Production implementation and Extension Host import smoke are not started.
 
 ### Uncommitted Changes
 
-- None.
+- `test/unit/webview/bookshelf.test.ts` — RED tests for safe text rendering, removal wording, and cancelled picker behavior.
 
 ### Passing Tests
 
@@ -51,13 +51,14 @@ Task 17 is GREEN and committed. Task 18 is ready to start.
 
 ### Failing Tests
 
+- `npm test -- --run test/unit/webview/bookshelf.test.ts` fails because `webview/books/BookshelfController.ts` and `BookshelfView.ts` do not exist yet (expected Task 18 RED).
 - Coverage is unavailable because the dependency set does not include `@vitest/coverage-v8`; no coverage dependency was installed.
 - `parse5@8.0.1` resolves `entities@8.0.0`, whose package metadata declares Node >=20.19 while the minimum VS Code 1.96 runtime is Node 20.18; esbuild bundles it and current tests/build pass, but Task 22 Extension Host acceptance must explicitly verify this path.
 
 ### Last Good Commit
 
-`b92d493 feat: add text-only EPUB chapter reader`
+`6876d1a docs: record V1 task 17 handoff`
 
 ### Next Exact Action
 
-Add Task 18 RED bookshelf wording and picker-cancellation tests, then implement safe text-only book cards and Extension Host TXT/EPUB picker flows with explicit removal confirmation.
+Implement `webview/books/bookCard.ts`, `BookshelfView.ts`, and `BookshelfController.ts` until `test/unit/webview/bookshelf.test.ts` is GREEN; then add the Host picker/confirmation flow in `src/extension/commands.ts` and create the missing `test/extension/suite/bookImport.test.ts` smoke without weakening cancellation behavior.
