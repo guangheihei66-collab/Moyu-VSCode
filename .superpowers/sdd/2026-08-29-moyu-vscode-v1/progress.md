@@ -103,7 +103,7 @@ Rulings: deterministic owner-token claim serializes stale quarantine; uncertain 
 Next: Task 4
 
 Task 4: complete
-Commit: 770ffe1
+Commit: 4389d6c
 Tests: 80/80 full unit tests PASS; Task 4 repository and migration tests PASS; lint, build, and Extension Host typecheck PASS. Global format check remains non-zero because of pre-existing Task 2 formatting differences; only Task 4 files were formatted.
 Review: local implementation covers versioned envelopes, per-module transaction repositories, tombstone protection, per-book progress merge, 2048 session rejection with best-score preservation, preferences adapter, and version-by-version migrations.
 Next: Task 5
@@ -151,8 +151,15 @@ Review: UUID-backed metadata, Windows case-insensitive and non-Windows case-sens
 Next: Task 12
 
 Task 12: complete
-Commit: pending
+Commit: 44969e6
 Tests: 4 TXT encoding tests, full regression 118/118, format check, lint, build, and strict TXT source typecheck PASS.
 Review: BOM detection, strict UTF-8 and incomplete-prefix handling, GB18030 candidate confirmation, GBK/UTF-16 previews through iconv-lite, 4,000-character bounded decoding, and confirmation-only metadata mutation are implemented.
 Known issue: coverage is unavailable because `@vitest/coverage-v8` is not in the existing dependency set; no dependency was installed.
 Next: Task 13
+
+Task 13: complete
+Commit: 4eb8e15
+Tests: 6 focused TXT index tests; full regression 124/124; format check, lint, build, and strict TXT index typecheck PASS.
+Review: streaming encoded-unit boundary accounting handles UTF-8, UTF-16, GB18030/GBK, BOMs, CR/LF normalization, and cross-chunk characters without whole-file reads. Index entries carry byte ranges, decoded lengths, paragraph counts, and fingerprints; manifests bind book identity and source metadata. IndexStore uses a safe book-specific directory, same-directory temporary publication, cancellation cleanup, and exact metadata invalidation.
+Known issue: coverage is unavailable because `@vitest/coverage-v8` is not in the existing dependency set; no dependency was installed.
+Next: Task 14

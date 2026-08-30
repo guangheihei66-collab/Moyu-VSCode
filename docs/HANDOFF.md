@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: Task 12 changes are ready to commit; no unrelated changes detected.
+HEAD: `4eb8e15 feat: add reusable streaming TXT index`; working tree is clean.
 
 ### Completed Tasks
 
@@ -20,27 +20,29 @@ HEAD: Task 12 changes are ready to commit; no unrelated changes detected.
 - Task 9: implementation complete; session service and concurrency tests, full regression, format check, lint, build, and strict service typecheck pass.
 - Task 10: implementation complete; 2048 Webview keyboard/DOM tests, full regression, format check, lint, build, and Webview typecheck pass.
 - Task 11: implementation complete; book identity/service tests, full regression, format check, lint, build, and strict book source typecheck pass.
-- Task 12: implementation complete; TXT encoding tests, full regression, format check, lint, build, and strict TXT source typecheck pass.
+- Task 12: implementation complete and committed as `44969e6`; TXT encoding tests, full regression, format check, lint, build, and strict TXT source typecheck pass.
+- Task 13: implementation complete and committed as `4eb8e15`; streaming byte-aware TXT indexing, normalized paragraph boundaries, book-bound manifest validation, safe cache paths, atomic publication, reuse invalidation, cancellation, and cross-chunk encoding tests pass.
 
 ### Current Task
 
-Task 12 — TXT Encoding Detection, Preview, and Confirmation.
+Task 14 — Bounded TXT Reads and Logical Progress.
 
 ### Current Task Status
 
-GREEN complete. Ready to commit.
+Task 13 is GREEN and committed. Task 14 is ready to start.
 
 ### Uncommitted Changes
 
-- Task 12 BOM/strict UTF-8 inspection, GB18030 candidate flow, bounded iconv previews, explicit confirmation, and encoding persistence.
+- None.
 
 ### Passing Tests
 
-- `npm test -- --run test/unit/webview`: 3/3
-- Prior full regression: 80/80
+- Full regression: 27 test files, 124/124 tests.
+- `npm test -- --run test/unit/txt/TxtIndexer.test.ts test/unit/txt/indexInvalidation.test.ts`: 6/6.
+- `npm run format:check`
 - `npm run lint`
 - `npm run build`
-- `npx tsc -p tsconfig.extension.json --noEmit`
+- Strict TXT source typecheck for domain and infrastructure index/encoding modules.
 
 ### Failing Tests
 
@@ -48,8 +50,8 @@ GREEN complete. Ready to commit.
 
 ### Last Good Commit
 
-`e46cb5b feat: add reversible boss mode state machine`
+`4eb8e15 feat: add reusable streaming TXT index`
 
 ### Next Exact Action
 
-Commit Task 12 as `feat: add confirmed Chinese TXT encoding flow`, then start Task 13 RED tests for streaming TXT indexing.
+Read the complete Task 14 plan section, then add RED tests for bounded indexed reads, start/end behavior, empty files, invalid indexes, and logical progress recovery.
