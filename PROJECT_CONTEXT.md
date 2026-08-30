@@ -6,7 +6,7 @@ Moyu VS Code is a local-only VS Code leisure center for Windows 10/11. V1 contai
 
 ## Current phase
 
-Design and implementation planning only. No feature source, package manifest, dependencies, or build output exist yet.
+Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–4 are complete; Task 5 is next.
 
 ## Approved architecture
 
@@ -21,11 +21,11 @@ Design and implementation planning only. No feature source, package manifest, de
 - Product and architecture decisions approved.
 - V1 design specification approved subject to four review corrections, which are incorporated.
 - V1 implementation plan prepared as 23 independently reviewable TDD tasks and self-reviewed.
+- Reproducible extension skeleton, validated message protocol, crash-safe storage transactions, and versioned module repositories are implemented and tested.
 
 ## Pending work
 
-- User approval before executing Task 1.
-- Implementation remains explicitly not started.
+- Task 5: secure Webview shell, router, and message client.
 
 ## Important decisions
 
