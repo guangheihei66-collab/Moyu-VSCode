@@ -34,7 +34,8 @@ export type StateRecoveryErrorCode =
   | 'STATE_PATH_OUTSIDE_STORAGE'
   | 'STATE_INVALID_GENERATION'
   | 'STATE_GENERATION_CONFLICT'
-  | 'STATE_RECOVERY_ISOLATION_FAILED';
+  | 'STATE_RECOVERY_ISOLATION_FAILED'
+  | 'STATE_RECOVERY_RESIDUE_LIMIT';
 
 export class StateRecoveryError extends Error {
   constructor(
@@ -49,6 +50,8 @@ export class StateRecoveryError extends Error {
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const MAX_COMPLETED_TEMP_CANDIDATES = 64;
 
 function comparablePath(path: string): string {
   return process.platform === 'win32' ? path.toLocaleLowerCase('en-US') : path;
@@ -142,10 +145,12 @@ async function readCandidate<T>(
     return undefined;
   }
 
+  // A read error says nothing about the candidate's validity. It propagates
+  // rather than falling back to an older generation or quarantining this file.
+  const serialized = await dependencies.fileOps.readUtf8(path);
+
   let value: unknown;
-  let serialized: string;
   try {
-    serialized = await dependencies.fileOps.readUtf8(path);
     value = JSON.parse(serialized) as unknown;
   } catch {
     await isolateInvalidCandidate(path, dependencies);
@@ -177,17 +182,77 @@ function completedTempNames(currentPath: string, names: string[]): string[] {
   });
 }
 
+function quarantineResidueNames(lockPath: string, names: string[]): string[] {
+  const lockBase = basename(lockPath);
+  const stalePrefix = `${lockBase}.stale.`;
+  const failedPrefix = `${lockBase}.failed.`;
+  const uuidContent = UUID_PATTERN.source.slice(1, -1);
+  const staleClaimResidue = new RegExp(
+    `^${escapeRegExp(lockBase)}\\.stale\\.${uuidContent}\\.claim\\.(?:stale|failed)\\.${uuidContent}$`,
+    'i',
+  );
+  return names.filter(
+    (name) =>
+      (name.startsWith(stalePrefix) &&
+        UUID_PATTERN.test(name.slice(stalePrefix.length))) ||
+      (name.startsWith(failedPrefix) &&
+        UUID_PATTERN.test(name.slice(failedPrefix.length))) ||
+      staleClaimResidue.test(name),
+  );
+}
+
+function invalidCandidateNames(
+  paths: NormalizedJsonTransactionPaths,
+  names: string[],
+): string[] {
+  const currentBase = basename(paths.current);
+  const backupBase = basename(paths.backup);
+  const exactPrefixes = [`${currentBase}.invalid.`, `${backupBase}.invalid.`];
+  const tempInvalid = new RegExp(
+    `^${escapeRegExp(currentBase)}\\.tmp\\.${UUID_PATTERN.source.slice(1, -1)}\\.invalid\\.${UUID_PATTERN.source.slice(1, -1)}$`,
+    'i',
+  );
+  return names.filter(
+    (name) =>
+      exactPrefixes.some(
+        (prefix) =>
+          name.startsWith(prefix) &&
+          UUID_PATTERN.test(name.slice(prefix.length)),
+      ) || tempInvalid.test(name),
+  );
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function unlinkIfRegularFile(
+  path: string,
+  dependencies: Pick<RecoveryDependencies, 'fileOps'>,
+): Promise<void> {
+  if ((await dependencies.fileOps.entryKind(path)) === 'file') {
+    await dependencies.fileOps.unlink(path);
+  }
+}
+
 export async function recoverJsonStateUnlocked<T>(
   paths: NormalizedJsonTransactionPaths,
   validate: JsonValidator<T>,
   dependencies: Pick<RecoveryDependencies, 'fileOps' | 'uuid'>,
 ): Promise<T | undefined> {
   const names = await dependencies.fileOps.list(paths.stateDirectory);
+  const temporaryNames = completedTempNames(paths.current, names);
+  if (temporaryNames.length > MAX_COMPLETED_TEMP_CANDIDATES) {
+    throw new StateRecoveryError(
+      'STATE_RECOVERY_RESIDUE_LIMIT',
+      'Too many completed temporary state candidates require manual recovery.',
+    );
+  }
   const candidates = [
     await readCandidate(paths.current, 0, validate, dependencies),
     await readCandidate(paths.backup, 2, validate, dependencies),
   ];
-  for (const name of completedTempNames(paths.current, names)) {
+  for (const name of temporaryNames) {
     candidates.push(
       await readCandidate(
         resolve(paths.stateDirectory, name),
@@ -221,6 +286,48 @@ export async function recoverJsonStateUnlocked<T>(
     );
   }
   return selected.value;
+}
+
+export async function retireRecoveryResidue<T>(
+  paths: NormalizedJsonTransactionPaths,
+  validate: JsonValidator<T>,
+  committedGeneration: number,
+  dependencies: Pick<RecoveryDependencies, 'fileOps' | 'uuid'>,
+): Promise<void> {
+  const names = await dependencies.fileOps.list(paths.stateDirectory);
+  const temporaryNames = completedTempNames(paths.current, names);
+  if (temporaryNames.length > MAX_COMPLETED_TEMP_CANDIDATES) {
+    throw new StateRecoveryError(
+      'STATE_RECOVERY_RESIDUE_LIMIT',
+      'Too many completed temporary state candidates require manual recovery.',
+    );
+  }
+
+  for (const name of temporaryNames) {
+    const candidatePath = resolve(paths.stateDirectory, name);
+    const candidate = await readCandidate(
+      candidatePath,
+      1,
+      validate,
+      dependencies,
+    );
+    if (
+      candidate !== undefined &&
+      candidate.generation <= committedGeneration
+    ) {
+      await unlinkIfRegularFile(candidatePath, dependencies);
+    }
+  }
+
+  for (const name of [
+    ...quarantineResidueNames(paths.lock, names),
+    ...invalidCandidateNames(paths, names),
+  ]) {
+    await unlinkIfRegularFile(
+      resolve(paths.stateDirectory, name),
+      dependencies,
+    );
+  }
 }
 
 async function releasePreservingError(

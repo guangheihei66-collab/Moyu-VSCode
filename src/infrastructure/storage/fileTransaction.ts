@@ -11,6 +11,7 @@ import {
   normalizeTransactionPaths,
   readValidatedJsonCandidate,
   recoverJsonStateUnlocked,
+  retireRecoveryResidue,
   type JsonTransactionPaths,
   type JsonValidator,
   type RecoveryDependencies,
@@ -200,6 +201,14 @@ export function createJsonTransactionManager(
             'The committed state could not be validated.',
           );
         }
+        await lock.assertOwned();
+        await retireRecoveryResidue(
+          normalized,
+          validate,
+          committed.generation,
+          dependencies,
+        );
+        await lock.assertOwned();
         return committed.value;
       } catch (error) {
         primaryError = error;

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   DEFAULT_FILE_LOCK_OPTIONS,
@@ -36,6 +36,23 @@ const staleOwner: LockMetadata = {
   acquiredAt: 0,
   renewedAt: 0,
 };
+
+function codedError(code: string): Error & { code: string } {
+  const error = new Error(`injected ${code}`) as Error & { code: string };
+  error.code = code;
+  return error;
+}
+
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolvePromise: (() => void) | undefined;
+  const promise = new Promise<void>((resolve) => {
+    resolvePromise = resolve;
+  });
+  return {
+    promise,
+    resolve: () => resolvePromise?.(),
+  };
+}
 
 describe('acquireFileLock', () => {
   it('renews the same owner identity so an unexpired lease is never stolen', async () => {
@@ -90,6 +107,194 @@ describe('acquireFileLock', () => {
     });
   });
 
+  it('never moves renewedAt backwards when the wall clock rolls back', async () => {
+    await withStorageDirectory(async (directory) => {
+      const lockPath = join(directory, 'module.lock');
+      const time = new ManualTime();
+      time.value = 100;
+      const scheduler = new ManualScheduler();
+      const manager = createFileLockManager({
+        now: time.now,
+        sleep: time.sleep,
+        scheduler,
+        uuid: () => '10000000-0000-4000-8000-000000000001',
+      });
+      const lock = await manager.acquireFileLock(lockPath, quickOptions);
+
+      time.value = 50;
+      await scheduler.runAll();
+
+      expect(
+        (JSON.parse(await readFile(lockPath, 'utf8')) as LockMetadata)
+          .renewedAt,
+      ).toBe(100);
+      await expect(lock.assertOwned()).resolves.toBeUndefined();
+      await expect(lock.release()).resolves.toBeUndefined();
+      expect(scheduler.activeCount).toBe(0);
+    });
+  });
+
+  it('treats default ESRCH liveness as clear death and EPERM as uncertainty', async () => {
+    await withStorageDirectory(async (directory) => {
+      const lockPath = join(directory, 'module.lock');
+      const time = new ManualTime();
+      time.value = 1_000;
+      await writeLockMetadata(lockPath, staleOwner);
+      const kill = vi.spyOn(process, 'kill');
+
+      try {
+        kill.mockImplementation(() => {
+          throw codedError('ESRCH');
+        });
+        const recovered = await createFileLockManager({
+          now: time.now,
+          sleep: time.sleep,
+          uuid: (() => {
+            const values = [
+              '20000000-0000-4000-8000-000000000002',
+              '30000000-0000-4000-8000-000000000003',
+            ];
+            return () =>
+              values.shift() ?? '40000000-0000-4000-8000-000000000004';
+          })(),
+        }).acquireFileLock(lockPath, quickOptions);
+        await recovered.release();
+
+        await writeLockMetadata(lockPath, staleOwner);
+        time.value = 1_000;
+        kill.mockImplementation(() => {
+          throw codedError('EPERM');
+        });
+        await expect(
+          createFileLockManager({
+            now: time.now,
+            sleep: time.sleep,
+          }).acquireFileLock(lockPath, quickOptions),
+        ).rejects.toMatchObject({ code: 'STATE_LOCK_TIMEOUT' });
+        expect(
+          (JSON.parse(await readFile(lockPath, 'utf8')) as LockMetadata)
+            .ownerToken,
+        ).toBe(staleOwner.ownerToken);
+      } finally {
+        kill.mockRestore();
+      }
+    });
+  });
+
+  it('propagates heartbeat write failure after closing resources and clearing its timer', async () => {
+    await withStorageDirectory(async (directory) => {
+      const lockPath = join(directory, 'module.lock');
+      const base = createNodeFileOperations();
+      let writes = 0;
+      let closes = 0;
+      const fileOps: FileOperations = {
+        ...base,
+        async openExclusive(path) {
+          const handle = await base.openExclusive(path);
+          return {
+            async writeUtf8(content) {
+              writes += 1;
+              if (writes === 2) {
+                throw new Error('injected heartbeat write failure');
+              }
+              await handle.writeUtf8(content);
+            },
+            sync: () => handle.sync(),
+            async close() {
+              closes += 1;
+              await handle.close();
+            },
+          };
+        },
+      };
+      const scheduler = new ManualScheduler();
+      const manager = createFileLockManager({ fileOps, scheduler });
+      const lock = await manager.acquireFileLock(lockPath, quickOptions);
+
+      await scheduler.runAll();
+
+      await expect(lock.assertOwned()).rejects.toMatchObject({
+        code: 'STATE_LOCK_OWNERSHIP_LOST',
+      });
+      await expect(lock.release()).rejects.toMatchObject({
+        code: 'STATE_LOCK_OWNERSHIP_LOST',
+      });
+      expect(scheduler.activeCount).toBe(0);
+      expect(closes).toBe(1);
+      await expect(base.entryKind(lockPath)).resolves.toBe('missing');
+    });
+  });
+
+  it('blocks a delayed stale contender before it can rename a fresh canonical owner', async () => {
+    await withStorageDirectory(async (directory) => {
+      const lockPath = join(directory, 'module.lock');
+      const time = new ManualTime();
+      time.value = 1_000;
+      await writeLockMetadata(lockPath, staleOwner);
+      const base = createNodeFileOperations();
+      const renameEntered = deferred();
+      const allowRename = deferred();
+      let renamedOwnerToken: string | undefined;
+      const delayedScheduler = new ManualScheduler();
+      const winnerScheduler = new ManualScheduler();
+      const delayedFileOps: FileOperations = {
+        ...base,
+        async rename(source, destination) {
+          if (source === lockPath && destination.includes('.stale.')) {
+            renameEntered.resolve();
+            await allowRename.promise;
+            renamedOwnerToken = (
+              JSON.parse(await readFile(lockPath, 'utf8')) as LockMetadata
+            ).ownerToken;
+          }
+          await base.rename(source, destination);
+        },
+      };
+      const delayed = createFileLockManager({
+        fileOps: delayedFileOps,
+        now: time.now,
+        sleep: time.sleep,
+        liveness: async () => 'dead',
+        scheduler: delayedScheduler,
+        uuid: () => '20000000-0000-4000-8000-000000000002',
+      });
+      const winner = createFileLockManager({
+        now: time.now,
+        sleep: time.sleep,
+        liveness: async () => 'dead',
+        scheduler: winnerScheduler,
+        uuid: () => '30000000-0000-4000-8000-000000000003',
+      });
+      const delayedAcquire = delayed.acquireFileLock(lockPath, quickOptions);
+      await renameEntered.promise;
+
+      const winnerResult = await winner
+        .acquireFileLock(lockPath, quickOptions)
+        .then(
+          (lock) => ({ lock }),
+          (error: unknown) => ({ error }),
+        );
+      allowRename.resolve();
+      const delayedResult = await delayedAcquire.then(
+        (lock) => ({ lock }),
+        (error: unknown) => ({ error }),
+      );
+
+      try {
+        expect(renamedOwnerToken).toBe(staleOwner.ownerToken);
+        expect(winnerResult).toHaveProperty('error');
+        expect(delayedResult).toHaveProperty('lock');
+      } finally {
+        await Promise.allSettled([
+          winnerResult.lock?.release() ?? Promise.resolve(),
+          delayedResult.lock?.release() ?? Promise.resolve(),
+        ]);
+      }
+      expect(delayedScheduler.activeCount).toBe(0);
+      expect(winnerScheduler.activeCount).toBe(0);
+    });
+  });
+
   it('recovers a crashed owner only after lease expiry and clear death', async () => {
     await withStorageDirectory(async (directory) => {
       const lockPath = join(directory, 'module.lock');
@@ -117,7 +322,7 @@ describe('acquireFileLock', () => {
       const lock = await manager.acquireFileLock(lockPath, quickOptions);
       expect(lock.ownerToken).toBe('30000000-0000-4000-8000-000000000003');
       expect(await listNames(directory)).toContain(
-        'module.lock.stale.20000000-0000-4000-8000-000000000002',
+        `module.lock.stale.${staleOwner.ownerToken}`,
       );
       await lock.release();
     });
@@ -334,7 +539,7 @@ describe('acquireFileLock', () => {
     });
   });
 
-  it('restores a newly-created live lock if a paused stale contender renames it', async () => {
+  it('does not disturb a live lock created after its stale source is quarantined', async () => {
     await withStorageDirectory(async (directory) => {
       const lockPath = join(directory, 'module.lock');
       const time = new ManualTime();
@@ -357,7 +562,9 @@ describe('acquireFileLock', () => {
             destination.includes('.stale.')
           ) {
             injected = true;
+            await base.rename(source, destination);
             await writeLockMetadata(lockPath, liveReplacement);
+            return;
           }
           await base.rename(source, destination);
         },

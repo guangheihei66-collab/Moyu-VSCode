@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { writeFile } from 'node:fs/promises';
+import { access, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 
 import { build } from 'esbuild';
@@ -62,12 +62,12 @@ function temporaryEvents(
   return events.filter((event) => basename(event.path).startsWith(prefix));
 }
 
-async function runChild(
+function startChild(
   executable: string,
   script: string,
   args: string[],
-): Promise<void> {
-  await new Promise<void>((resolvePromise, reject) => {
+): { completed: Promise<void> } {
+  const completed = new Promise<void>((resolvePromise, reject) => {
     const child = spawn(executable, [script, ...args], {
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
@@ -86,6 +86,29 @@ async function runChild(
       }
     });
   });
+  return { completed };
+}
+
+async function runChild(
+  executable: string,
+  script: string,
+  args: string[],
+): Promise<void> {
+  await startChild(executable, script, args).completed;
+}
+
+async function waitForFile(path: string): Promise<void> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    try {
+      await access(path);
+      return;
+    } catch {
+      await new Promise<void>((resolvePromise) => {
+        setTimeout(resolvePromise, 10);
+      });
+    }
+  }
+  throw new Error(`Timed out waiting for child-process signal: ${path}`);
 }
 
 describe('transactJson', () => {
@@ -248,6 +271,45 @@ describe('transactJson', () => {
     });
   });
 
+  it('retires completed temporary and stale-lock residue after a durable commit', async () => {
+    await withStorageDirectory(async (directory) => {
+      const paths = storagePaths(directory);
+      await writeState(paths.current, state(3));
+      await writeState(
+        `${paths.current}.tmp.60000000-0000-4000-8000-000000000006`,
+        state(1),
+      );
+      await writeState(
+        `${paths.current}.tmp.70000000-0000-4000-8000-000000000007`,
+        state(2),
+      );
+      await writeFile(
+        `${paths.lock}.stale.80000000-0000-4000-8000-000000000008`,
+        '{"owner":"dead"}',
+        'utf8',
+      );
+      await writeFile(
+        `${paths.lock}.stale.90000000-0000-4000-8000-000000000009.claim.stale.a0000000-0000-4000-8000-00000000000a`,
+        '{"claim":"dead"}',
+        'utf8',
+      );
+      await writeFile(
+        `${paths.lock}.failed.b0000000-0000-4000-8000-00000000000b`,
+        '{"lock":"incomplete"}',
+        'utf8',
+      );
+
+      await expect(
+        managerWith().transactJson(paths, isTestState, () => state(4)),
+      ).resolves.toEqual(state(4));
+
+      expect(await listNames(directory)).toEqual([
+        'module.json',
+        'module.json.backup',
+      ]);
+    });
+  });
+
   it('serializes competing Windows child processes without losing writes', async () => {
     await withStorageDirectory(async (directory) => {
       const script = join(directory, 'transaction-child.cjs');
@@ -270,6 +332,72 @@ describe('transactJson', () => {
       await expect(
         recoverJsonState(storagePaths(directory, 'shared'), isTestState),
       ).resolves.toEqual({ generation: 19, version: 20, value: 20 });
+    });
+  });
+
+  it('holds an acquired child-process lock until a waiting child is released', async () => {
+    await withStorageDirectory(async (directory) => {
+      const script = join(directory, 'transaction-child.cjs');
+      await build({
+        entryPoints: [resolve('test/fixtures/storage/transactionChild.ts')],
+        outfile: script,
+        bundle: true,
+        format: 'cjs',
+        platform: 'node',
+        target: 'node20.18',
+        logLevel: 'silent',
+      });
+      const readyPath = join(directory, 'holder-ready');
+      const releasePath = join(directory, 'holder-release');
+      const contenderStartedPath = join(directory, 'contender-started');
+      const holder = startChild(process.execPath, script, [
+        'hold-lock',
+        directory,
+        'held',
+        readyPath,
+        releasePath,
+      ]);
+      void holder.completed.catch(() => undefined);
+      let contender: ReturnType<typeof startChild> | undefined;
+      try {
+        await waitForFile(readyPath);
+        let contenderCompleted = false;
+        contender = startChild(process.execPath, script, [
+          directory,
+          'held',
+          '1',
+          contenderStartedPath,
+        ]);
+        void contender.completed
+          .then(() => {
+            contenderCompleted = true;
+          })
+          .catch(() => undefined);
+        await waitForFile(contenderStartedPath);
+
+        await new Promise<void>((resolvePromise) => {
+          setTimeout(resolvePromise, 100);
+        });
+        expect(contenderCompleted).toBe(false);
+        await expect(
+          createNodeFileOperations().entryKind(
+            storagePaths(directory, 'held').current,
+          ),
+        ).resolves.toBe('missing');
+
+        await writeFile(releasePath, 'release', 'utf8');
+        await holder.completed;
+        await contender.completed;
+        await expect(
+          recoverJsonState(storagePaths(directory, 'held'), isTestState),
+        ).resolves.toEqual({ generation: 0, version: 1, value: 1 });
+      } finally {
+        await writeFile(releasePath, 'release', 'utf8').catch(() => undefined);
+        await Promise.allSettled([
+          holder.completed,
+          contender?.completed ?? Promise.resolve(),
+        ]);
+      }
     });
   });
 });
@@ -304,6 +432,59 @@ describe('recoverJsonState', () => {
       expect(await listNames(directory)).toEqual([
         expect.stringMatching(/^module\.json\.invalid\./),
       ]);
+    });
+  });
+
+  it('propagates candidate read I/O without quarantining it or falling back', async () => {
+    await withStorageDirectory(async (directory) => {
+      const paths = storagePaths(directory);
+      await writeState(paths.current, state(5));
+      await writeState(paths.backup, state(4));
+      let injected = false;
+      const fileOps = new InstrumentedFileOperations((event) => {
+        if (
+          !injected &&
+          event.operation === 'readUtf8' &&
+          event.path === paths.current
+        ) {
+          injected = true;
+          const error = new Error(
+            'injected candidate read I/O failure',
+          ) as Error & {
+            code: string;
+          };
+          error.code = 'EIO';
+          return error;
+        }
+        return undefined;
+      });
+
+      await expect(
+        managerWith(fileOps).recoverJsonState(paths, isTestState),
+      ).rejects.toMatchObject({ code: 'EIO' });
+      expect(await listNames(directory)).toEqual([
+        'module.json',
+        'module.json.backup',
+      ]);
+    });
+  });
+
+  it('fails closed before scanning an unbounded completed-temp set', async () => {
+    await withStorageDirectory(async (directory) => {
+      const paths = storagePaths(directory);
+      await writeState(paths.current, state(0));
+      for (let index = 1; index <= 65; index += 1) {
+        const suffix = index.toString(16).padStart(12, '0');
+        await writeState(
+          `${paths.current}.tmp.60000000-0000-4000-8000-${suffix}`,
+          state(1),
+        );
+      }
+
+      await expect(
+        managerWith().recoverJsonState(paths, isTestState),
+      ).rejects.toMatchObject({ code: 'STATE_RECOVERY_RESIDUE_LIMIT' });
+      expect(await listNames(directory)).toHaveLength(66);
     });
   });
 

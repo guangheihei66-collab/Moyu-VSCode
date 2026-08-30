@@ -176,31 +176,47 @@ async function quarantineFailedAcquisition(
   );
 }
 
-async function restoreQuarantinedMetadataIfCanonicalIsAbsent(
+async function acquireQuarantineClaim(
   dependencies: FileLockDependencies,
   lockPath: string,
-  metadata: LockMetadata,
-): Promise<void> {
-  let fileHandle: DurableFileHandle;
-  try {
-    fileHandle = await dependencies.fileOps.openExclusive(lockPath);
-  } catch {
-    return;
+  ownerToken: string,
+  deadline: number,
+  options: FileLockTimingOptions,
+): Promise<LockHandle | undefined> {
+  const remaining = deadline - dependencies.now();
+  if (remaining <= 0) {
+    return undefined;
   }
-
   try {
-    await fileHandle.writeUtf8(JSON.stringify(metadata));
-    await fileHandle.sync();
-  } catch {
-    // A partial restoration remains a fail-closed canonical lock. The caller
-    // treats every metadata race as uncertain and never retries acquisition.
-  } finally {
-    try {
-      await fileHandle.close();
-    } catch {
-      // The restored path remains fail-closed even if its temporary handle
-      // cannot be reported closed by the operating system.
+    return await createFileLockManager(dependencies).acquireFileLock(
+      `${lockPath}.stale.${ownerToken}.claim`,
+      { ...options, acquireTimeoutMs: remaining },
+    );
+  } catch (error) {
+    if (
+      error instanceof StateLockError &&
+      error.code === 'STATE_LOCK_TIMEOUT'
+    ) {
+      return undefined;
     }
+    throw error;
+  }
+}
+
+async function releaseQuarantineClaim(
+  claim: LockHandle,
+  primaryError: unknown,
+): Promise<void> {
+  try {
+    await claim.release();
+  } catch (releaseError) {
+    if (primaryError !== undefined) {
+      throw new AggregateError(
+        [primaryError, releaseError],
+        'Quarantine claim work and release both failed.',
+      );
+    }
+    throw releaseError;
   }
 }
 
@@ -208,6 +224,7 @@ async function tryQuarantineStaleLock(
   lockPath: string,
   options: FileLockTimingOptions,
   dependencies: FileLockDependencies,
+  deadline: number,
 ): Promise<'none' | 'quarantined' | 'uncertain'> {
   const observed = await readMetadata(dependencies.fileOps, lockPath);
   if (
@@ -220,39 +237,53 @@ async function tryQuarantineStaleLock(
     return 'none';
   }
 
-  const confirmed = await readMetadata(dependencies.fileOps, lockPath);
-  if (
-    confirmed === undefined ||
-    confirmed.ownerToken !== observed.ownerToken ||
-    confirmed.renewedAt !== observed.renewedAt ||
-    dependencies.now() - confirmed.renewedAt <= options.staleAfterMs
-  ) {
+  const claim = await acquireQuarantineClaim(
+    dependencies,
+    lockPath,
+    observed.ownerToken,
+    deadline,
+    options,
+  );
+  if (claim === undefined) {
     return 'none';
   }
 
-  const quarantinePath = `${lockPath}.stale.${dependencies.uuid()}`;
+  let primaryError: unknown;
   try {
-    await dependencies.fileOps.rename(lockPath, quarantinePath);
-  } catch {
-    return 'none';
-  }
+    const confirmed = await readMetadata(dependencies.fileOps, lockPath);
+    if (
+      confirmed === undefined ||
+      confirmed.ownerToken !== observed.ownerToken ||
+      confirmed.renewedAt !== observed.renewedAt ||
+      dependencies.now() - confirmed.renewedAt <= options.staleAfterMs ||
+      (await dependencies.liveness(confirmed.pid)) !== 'dead'
+    ) {
+      return 'none';
+    }
 
-  const quarantined = await readMetadata(dependencies.fileOps, quarantinePath);
-  if (quarantined?.ownerToken === observed.ownerToken) {
-    return 'quarantined';
-  }
+    const quarantinePath = `${lockPath}.stale.${observed.ownerToken}`;
+    if ((await dependencies.fileOps.entryKind(quarantinePath)) !== 'missing') {
+      return 'uncertain';
+    }
+    try {
+      await dependencies.fileOps.rename(lockPath, quarantinePath);
+    } catch {
+      return 'none';
+    }
 
-  if (quarantined !== undefined) {
-    await restoreQuarantinedMetadataIfCanonicalIsAbsent(
-      dependencies,
-      lockPath,
-      quarantined,
+    const quarantined = await readMetadata(
+      dependencies.fileOps,
+      quarantinePath,
     );
+    return quarantined?.ownerToken === observed.ownerToken
+      ? 'quarantined'
+      : 'uncertain';
+  } catch (error) {
+    primaryError = error;
+    throw error;
+  } finally {
+    await releaseQuarantineClaim(claim, primaryError);
   }
-  // A metadata change after the second read is never proof of ownership. Do
-  // not use a replacement rename here: on filesystems that overwrite an
-  // existing destination it could evict a newly acquired canonical lock.
-  return 'uncertain';
 }
 
 class LeaseLockHandle implements LockHandle {
@@ -283,7 +314,7 @@ class LeaseLockHandle implements LockHandle {
     this.heartbeatWork = this.heartbeatWork
       .then(async () => {
         await this.assertCanonicalOwner();
-        this.renewedAt = this.dependencies.now();
+        this.renewedAt = Math.max(this.renewedAt, this.dependencies.now());
         await this.fileHandle.writeUtf8(
           JSON.stringify(this.metadata(this.renewedAt)),
         );
@@ -438,6 +469,7 @@ export function createFileLockManager(
           lockPath,
           options,
           dependencies,
+          deadline,
         );
         if (quarantineResult === 'quarantined') {
           continue;

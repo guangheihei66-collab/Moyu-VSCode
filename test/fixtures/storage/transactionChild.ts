@@ -1,14 +1,33 @@
+import { access, writeFile } from 'node:fs/promises';
+
 import { createFileLockManager } from '../../../src/infrastructure/storage/fileLock';
 import { createJsonTransactionManager } from '../../../src/infrastructure/storage/fileTransaction';
 import { createNodeFileOperations } from '../../../src/infrastructure/storage/nodeFileOps';
 import { isTestState, storagePaths } from './storageTestHarness';
 
-async function main(): Promise<void> {
-  const [stateDirectory, moduleName, countText] = process.argv.slice(2);
+async function waitForRelease(path: string): Promise<void> {
+  while (true) {
+    try {
+      await access(path);
+      return;
+    } catch {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 10);
+      });
+    }
+  }
+}
+
+async function runTransactions(
+  stateDirectory: string,
+  moduleName: string,
+  countText: string,
+  startedPath?: string,
+): Promise<void> {
   if (
-    stateDirectory === undefined ||
-    moduleName === undefined ||
-    countText === undefined
+    stateDirectory.length === 0 ||
+    moduleName.length === 0 ||
+    countText.length === 0
   ) {
     throw new Error('Expected state directory, module name, and count.');
   }
@@ -25,6 +44,10 @@ async function main(): Promise<void> {
   });
   const paths = storagePaths(stateDirectory, moduleName);
 
+  if (startedPath !== undefined) {
+    await writeFile(startedPath, 'starting', 'utf8');
+  }
+
   for (let index = 0; index < count; index += 1) {
     await transactions.transactJson(paths, isTestState, (current) => ({
       generation: (current?.generation ?? -1) + 1,
@@ -32,6 +55,54 @@ async function main(): Promise<void> {
       value: (current?.value ?? 0) + 1,
     }));
   }
+}
+
+async function holdLock(
+  stateDirectory: string,
+  moduleName: string,
+  readyPath: string,
+  releasePath: string,
+): Promise<void> {
+  const fileOps = createNodeFileOperations();
+  const lockManager = createFileLockManager({ fileOps });
+  const lock = await lockManager.acquireFileLock(
+    storagePaths(stateDirectory, moduleName).lock,
+  );
+  try {
+    await writeFile(readyPath, 'acquired', 'utf8');
+    await waitForRelease(releasePath);
+  } finally {
+    await lock.release();
+  }
+}
+
+async function main(): Promise<void> {
+  const [first, ...rest] = process.argv.slice(2);
+  if (first === 'hold-lock') {
+    const [stateDirectory, moduleName, readyPath, releasePath] = rest;
+    if (
+      stateDirectory === undefined ||
+      moduleName === undefined ||
+      readyPath === undefined ||
+      releasePath === undefined
+    ) {
+      throw new Error(
+        'Expected hold-lock state directory, module, and signals.',
+      );
+    }
+    await holdLock(stateDirectory, moduleName, readyPath, releasePath);
+    return;
+  }
+
+  const [moduleName, countText, startedPath] = rest;
+  if (
+    first === undefined ||
+    moduleName === undefined ||
+    countText === undefined
+  ) {
+    throw new Error('Expected state directory, module name, and count.');
+  }
+  await runTransactions(first, moduleName, countText, startedPath);
 }
 
 void main().catch((error: unknown) => {
