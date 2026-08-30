@@ -26,12 +26,16 @@ describe('serializedUtf8Size', () => {
     const request = readyMessage('x'.repeat(MAX_MESSAGE_BYTES - prefixSize));
 
     expect(serializedUtf8Size(request)).toBe(MAX_MESSAGE_BYTES);
-    expect(validateHostRequest(request, request.sessionId)).toMatchObject({ ok: true });
+    expect(validateHostRequest(request, request.sessionId)).toMatchObject({
+      ok: true,
+    });
   });
 
   it('rejects a serialized request one byte larger than 1 MiB before dispatch', () => {
     const prefixSize = serializedUtf8Size(readyMessage(''));
-    const request = readyMessage('x'.repeat(MAX_MESSAGE_BYTES - prefixSize + 1));
+    const request = readyMessage(
+      'x'.repeat(MAX_MESSAGE_BYTES - prefixSize + 1),
+    );
 
     expect(serializedUtf8Size(request)).toBe(MAX_MESSAGE_BYTES + 1);
     expect(validateHostRequest(request, request.sessionId)).toEqual({

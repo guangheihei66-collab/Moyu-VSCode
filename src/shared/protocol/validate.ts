@@ -205,7 +205,10 @@ function isResponsePayloadForType(type: string, payload: unknown): boolean {
 
   switch (type) {
     case 'response/success':
-      return hasExactKeys(payload, ['requestId']) && isNonEmptyString(payload.requestId);
+      return (
+        hasExactKeys(payload, ['requestId']) &&
+        isNonEmptyString(payload.requestId)
+      );
     case 'response/error':
       return (
         hasExactKeys(payload, ['requestId', 'error']) &&
@@ -226,7 +229,10 @@ function isEventPayloadForType(type: string, payload: unknown): boolean {
     case 'app/error':
       return hasExactKeys(payload, ['error']) && isProtocolError(payload.error);
     case 'app/notice':
-      return hasExactKeys(payload, ['message']) && typeof payload.message === 'string';
+      return (
+        hasExactKeys(payload, ['message']) &&
+        typeof payload.message === 'string'
+      );
     default:
       return false;
   }
@@ -319,7 +325,9 @@ export function validateHostResponse(
     ) {
       return protocolError('UNKNOWN_RESPONSE_TYPE');
     }
-    if (!isResponsePayloadForType(envelope.value.type, envelope.value.payload)) {
+    if (
+      !isResponsePayloadForType(envelope.value.type, envelope.value.payload)
+    ) {
       return protocolError('INVALID_PAYLOAD');
     }
 
@@ -330,7 +338,9 @@ export function validateHostResponse(
 }
 
 /** Validates a Host event before it is transported to the Webview. */
-export function validateHostEvent(value: unknown): Result<HostEvent, ProtocolError> {
+export function validateHostEvent(
+  value: unknown,
+): Result<HostEvent, ProtocolError> {
   try {
     const envelope = validateEnvelope(value);
     if (!envelope.ok) {

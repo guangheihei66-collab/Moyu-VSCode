@@ -75,7 +75,11 @@ describe('validateHostRequest', () => {
     ) => ReturnType<typeof validateHostRequest>;
 
     expect(
-      untypedDispatchValidator({ ...envelope, type: 'books/list', payload: {} }),
+      untypedDispatchValidator({
+        ...envelope,
+        type: 'books/list',
+        payload: {},
+      }),
     ).toEqual({
       ok: false,
       error: {
@@ -86,11 +90,20 @@ describe('validateHostRequest', () => {
   });
 
   it.each([
-    [{ ...envelope, protocol: 2, type: 'books/list', payload: {} }, 'UNSUPPORTED_PROTOCOL'],
+    [
+      { ...envelope, protocol: 2, type: 'books/list', payload: {} },
+      'UNSUPPORTED_PROTOCOL',
+    ],
     [{ ...envelope, type: 'unknown/run', payload: {} }, 'UNKNOWN_REQUEST_TYPE'],
     [{ protocol: 1, type: 'books/list', payload: {} }, 'INVALID_ENVELOPE'],
-    [{ ...envelope, sessionId: '', type: 'books/list', payload: {} }, 'INVALID_SESSION'],
-    [{ ...envelope, type: 'books/list', payload: { unexpected: true } }, 'INVALID_PAYLOAD'],
+    [
+      { ...envelope, sessionId: '', type: 'books/list', payload: {} },
+      'INVALID_SESSION',
+    ],
+    [
+      { ...envelope, type: 'books/list', payload: { unexpected: true } },
+      'INVALID_PAYLOAD',
+    ],
     [
       {
         ...envelope,
@@ -207,7 +220,9 @@ describe('validateHostRequest', () => {
 
     expect(result).toMatchObject({ ok: false, error: { code } });
     if (!result.ok) {
-      expect(result.error.message).not.toMatch(/request-1|webview-session-1|book-1/);
+      expect(result.error.message).not.toMatch(
+        /request-1|webview-session-1|book-1/,
+      );
     }
   });
 

@@ -29,7 +29,9 @@ function notice(message: string) {
 
 describe('outbound protocol validation', () => {
   it('accepts the initial closed response and event families', () => {
-    expect(validateHostResponse(response('response-1'))).toMatchObject({ ok: true });
+    expect(validateHostResponse(response('response-1'))).toMatchObject({
+      ok: true,
+    });
     expect(
       validateHostResponse({
         protocol: 1,
@@ -101,7 +103,9 @@ describe('outbound protocol validation', () => {
 
   it('accepts an exactly 1 MiB response and event', () => {
     const responsePrefix = serializedUtf8Size(response(''));
-    const exactResponse = response('x'.repeat(MAX_MESSAGE_BYTES - responsePrefix));
+    const exactResponse = response(
+      'x'.repeat(MAX_MESSAGE_BYTES - responsePrefix),
+    );
     const noticePrefix = serializedUtf8Size(notice(''));
     const exactNotice = notice('x'.repeat(MAX_MESSAGE_BYTES - noticePrefix));
 
