@@ -177,3 +177,10 @@ Tests: 4 focused Reader Webview tests, full regression 138/138; format check, li
 Review: structured ReaderBlock paragraphs are rendered exclusively through textContent; the mounted block window is bounded and deduplicated; focus/progress checkpoints use logical block IDs; paging uses viewport height; pause/resume, focus restore, VS Code theme variables, reduced motion, and route subscriptions are implemented without raw HTML or pixel-based persistence.
 Known issue: coverage is unavailable because `@vitest/coverage-v8` is not in the existing dependency set; no dependency was installed.
 Next: Task 16
+
+Task 16: complete
+Commit: 6a5cc19
+Tests: 21 focused EPUB security tests, full regression 159/159; format check, lint, build, Extension Host typecheck, and production npm audit PASS. Audit reports 0 vulnerabilities, including 0 high/critical.
+Review: all twelve approved numerical boundaries are frozen and N-1/N/N+1 checked; ZIP source access is lazy and stat-bounded, archive paths are canonical, entry metadata and extraction progress are bounded, compression bombs/encryption/symlinks/duplicates are rejected, XML forbids declarations and external entities before saxes, and parse5 traversal emits only bounded text plus image placeholders. Exact production pins: @zip.js/zip.js 2.8.60 BSD-3-Clause, saxes 6.0.0 ISC, parse5 8.0.1 MIT.
+Known issue: parse5 8.0.1 resolves entities 8.0.0, whose metadata declares Node >=20.19 while VS Code 1.96 uses Node 20.18. The dependency is bundled and current tests/build pass; Task 22 Extension Host acceptance must explicitly exercise EPUB parsing. Coverage remains unavailable because @vitest/coverage-v8 is not installed.
+Next: Task 17

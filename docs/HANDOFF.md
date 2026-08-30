@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `3e7fb62 feat: add safe continuous reader Webview`; working tree is clean.
+HEAD: `6a5cc19 feat: add bounded EPUB security parser`; working tree is clean.
 
 ### Completed Tasks
 
@@ -24,14 +24,15 @@ HEAD: `3e7fb62 feat: add safe continuous reader Webview`; working tree is clean.
 - Task 13: implementation complete and committed as `4eb8e15`; streaming byte-aware TXT indexing, normalized paragraph boundaries, book-bound manifest validation, safe cache paths, atomic publication, reuse invalidation, cancellation, and cross-chunk encoding tests pass.
 - Task 14: implementation complete and committed as `5a04790`; bounded indexed TXT reads, source-change detection, fixed-size decoded-block caching, logical locator recovery, per-book progress merge, and `reader/saveProgress` protocol validation pass.
 - Task 15: implementation complete and committed as `3e7fb62`; safe text-only rendering, bounded deduplicated block mounting, logical focus anchors, viewport paging, pause/resume, theme styling, and route subscription pass.
+- Task 16: implementation complete and committed as `6a5cc19`; all twelve EPUB limits, lazy bounded ZIP access, canonical paths, metadata and expansion checks, entity-free bounded XML, hostile-markup text extraction, and exact dependency audit pass.
 
 ### Current Task
 
-Task 16 — Bounded EPUB Container and Parser Security Boundary.
+Task 17 — EPUB Spine, Chapters, Cache, and Progress.
 
 ### Current Task Status
 
-Task 15 is GREEN and committed. Task 16 is ready to start.
+Task 16 is GREEN and committed. Task 17 is ready to start.
 
 ### Uncommitted Changes
 
@@ -39,21 +40,23 @@ Task 15 is GREEN and committed. Task 16 is ready to start.
 
 ### Passing Tests
 
-- Full regression: 32 test files, 138/138 tests.
-- `npm test -- --run test/unit/webview/readerView.test.ts test/unit/webview/blockWindow.test.ts`: 4/4.
+- Full regression: 35 test files, 159/159 tests.
+- `npm test -- --run test/unit/epub`: 21/21.
 - `npm run format:check`
 - `npm run lint`
 - `npm run build`
-- Webview TypeScript typecheck.
+- Extension Host TypeScript typecheck.
+- `npm audit --omit=dev`: 0 vulnerabilities, including 0 high/critical.
 
 ### Failing Tests
 
-- Coverage is unavailable because the existing dependency set does not include `@vitest/coverage-v8`; no dependency was installed or upgraded.
+- Coverage is unavailable because the dependency set does not include `@vitest/coverage-v8`; no coverage dependency was installed.
+- `parse5@8.0.1` resolves `entities@8.0.0`, whose package metadata declares Node >=20.19 while the minimum VS Code 1.96 runtime is Node 20.18; esbuild bundles it and current tests/build pass, but Task 22 Extension Host acceptance must explicitly verify this path.
 
 ### Last Good Commit
 
-`3e7fb62 feat: add safe continuous reader Webview`
+`6a5cc19 feat: add bounded EPUB security parser`
 
 ### Next Exact Action
 
-Audit the exact Task 16 dependency versions and licenses, then add RED N-1/N/N+1 EPUB boundary tests and hostile-markup fixtures before installing the three pinned project-local production packages.
+Read the complete Task 17 plan, then add RED ordered-spine, chapter navigation, cache invalidation, and EPUB logical-progress tests using the bounded parser boundary.
