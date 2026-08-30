@@ -184,3 +184,10 @@ Tests: 21 focused EPUB security tests, full regression 159/159; format check, li
 Review: all twelve approved numerical boundaries are frozen and N-1/N/N+1 checked; ZIP source access is lazy and stat-bounded, archive paths are canonical, entry metadata and extraction progress are bounded, compression bombs/encryption/symlinks/duplicates are rejected, XML forbids declarations and external entities before saxes, and parse5 traversal emits only bounded text plus image placeholders. Exact production pins: @zip.js/zip.js 2.8.60 BSD-3-Clause, saxes 6.0.0 ISC, parse5 8.0.1 MIT.
 Known issue: parse5 8.0.1 resolves entities 8.0.0, whose metadata declares Node >=20.19 while VS Code 1.96 uses Node 20.18. The dependency is bundled and current tests/build pass; Task 22 Extension Host acceptance must explicitly exercise EPUB parsing. Coverage remains unavailable because @vitest/coverage-v8 is not installed.
 Next: Task 17
+
+Task 17: complete
+Commit: b92d493
+Tests: 27 focused EPUB/reader tests, full regression 162/162; format check, lint, build, and Extension Host typecheck PASS.
+Review: container.xml and OPF are parsed only through the bounded XML boundary; manifest/spine order drives sanitized text chapters; title fallback, missing non-readable items, DRM rejection, and canonical relative hrefs are handled. Atomic cache envelopes bind fingerprint/size/mtime and contain no raw markup. EpubReaderService exposes chapterId-based output, previous/next navigation, and fingerprint-bound logical progress through the existing concurrent ProgressRepository.
+Known issue: parse5/entities Node engine compatibility requires explicit Task 22 Extension Host verification. Coverage remains unavailable because @vitest/coverage-v8 is not installed.
+Next: Task 18

@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `6a5cc19 feat: add bounded EPUB security parser`; working tree is clean.
+HEAD: `b92d493 feat: add text-only EPUB chapter reader`; working tree is clean.
 
 ### Completed Tasks
 
@@ -25,14 +25,15 @@ HEAD: `6a5cc19 feat: add bounded EPUB security parser`; working tree is clean.
 - Task 14: implementation complete and committed as `5a04790`; bounded indexed TXT reads, source-change detection, fixed-size decoded-block caching, logical locator recovery, per-book progress merge, and `reader/saveProgress` protocol validation pass.
 - Task 15: implementation complete and committed as `3e7fb62`; safe text-only rendering, bounded deduplicated block mounting, logical focus anchors, viewport paging, pause/resume, theme styling, and route subscription pass.
 - Task 16: implementation complete and committed as `6a5cc19`; all twelve EPUB limits, lazy bounded ZIP access, canonical paths, metadata and expansion checks, entity-free bounded XML, hostile-markup text extraction, and exact dependency audit pass.
+- Task 17: implementation complete and committed as `b92d493`; container/OPF/spine parsing, ordered sanitized chapters, source-bound atomic cache, chapter navigation, domain EPUB locator reuse, and logical progress restore pass.
 
 ### Current Task
 
-Task 17 — EPUB Spine, Chapters, Cache, and Progress.
+Task 18 — Bookshelf Webview and Import Workflows.
 
 ### Current Task Status
 
-Task 16 is GREEN and committed. Task 17 is ready to start.
+Task 17 is GREEN and committed. Task 18 is ready to start.
 
 ### Uncommitted Changes
 
@@ -40,8 +41,8 @@ Task 16 is GREEN and committed. Task 17 is ready to start.
 
 ### Passing Tests
 
-- Full regression: 35 test files, 159/159 tests.
-- `npm test -- --run test/unit/epub`: 21/21.
+- Full regression: 38 test files, 162/162 tests.
+- `npm test -- --run test/unit/epub test/unit/reader`: 27/27.
 - `npm run format:check`
 - `npm run lint`
 - `npm run build`
@@ -55,8 +56,8 @@ Task 16 is GREEN and committed. Task 17 is ready to start.
 
 ### Last Good Commit
 
-`6a5cc19 feat: add bounded EPUB security parser`
+`b92d493 feat: add text-only EPUB chapter reader`
 
 ### Next Exact Action
 
-Read the complete Task 17 plan, then add RED ordered-spine, chapter navigation, cache invalidation, and EPUB logical-progress tests using the bounded parser boundary.
+Add Task 18 RED bookshelf wording and picker-cancellation tests, then implement safe text-only book cards and Extension Host TXT/EPUB picker flows with explicit removal confirmation.

@@ -6,7 +6,7 @@ Moyu VS Code is a local-only VS Code leisure center for Windows 10/11. V1 contai
 
 ## Current phase
 
-Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–16 are complete; Task 17 is next.
+Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–17 are complete; Task 18 is next.
 
 ## Approved architecture
 
@@ -26,10 +26,11 @@ Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–16 are
 - TXT blocks are read on demand through bounded file-handle ranges; logical TXT locators and per-book progress recover by content fingerprint before percentage fallback.
 - The continuous Reader Webview renders structured blocks as inert text, keeps a bounded deduplicated block window, and captures logical focus/progress anchors independently of viewport pixels.
 - EPUB input is isolated behind exact-pinned ZIP/XML/HTML parsers with twelve numerical limits, lazy source access, canonical archive paths, entity-free XML, and text-only chapter sanitization.
+- EPUB container/OPF/spine parsing now produces ordered text-only chapters; the derived cache is source-bound, and chapter navigation/progress use logical EPUB locators.
 
 ## Pending work
 
-- Task 17: EPUB spine, chapters, cache, and progress.
+- Task 18: bookshelf Webview and import workflows.
 
 ## Important decisions
 
