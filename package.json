@@ -1,0 +1,55 @@
+{
+  "name": "moyu-vscode",
+  "displayName": "Moyu VS Code",
+  "description": "A local-only leisure center for VS Code.",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/extension.js",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "activationEvents": [
+    "onCommand:moyu.open"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "moyu.open",
+        "title": "Moyu: Open"
+      }
+    ]
+  },
+  "files": [
+    "dist/**",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "test": "vitest run",
+    "test:extension": "node scripts/test-extension-contract.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "package": "npm run build && vsce package --no-yarn"
+  },
+  "dependencies": {
+    "iconv-lite": "0.7.3"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.30",
+    "@types/vscode": "1.96.0",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "3.9.2",
+    "esbuild": "0.28.1",
+    "eslint": "9.34.0",
+    "prettier": "3.6.2",
+    "typescript": "5.9.2",
+    "typescript-eslint": "8.68.0",
+    "vitest": "4.0.0"
+  },
+  "overrides": {
+    "vite": "7.1.12"
+  }
+}

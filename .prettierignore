@@ -1,0 +1,8 @@
+.superpowers/
+.vscode-test/
+coverage/
+dist/
+docs/superpowers/
+node_modules/
+PROJECT_CONTEXT.md
+*.vsix
