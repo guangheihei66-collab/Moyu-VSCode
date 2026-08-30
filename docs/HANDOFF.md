@@ -7,7 +7,7 @@ Updated: 2026-08-30
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `fcb6185 feat: add local bookshelf workflows`; working tree is clean.
+HEAD: `83e0b8f fix: align settings controls and error handling`; working tree is clean before this handoff update.
 
 ### Completed Tasks
 
@@ -27,14 +27,15 @@ HEAD: `fcb6185 feat: add local bookshelf workflows`; working tree is clean.
 - Task 16: implementation complete and committed as `6a5cc19`; all twelve EPUB limits, lazy bounded ZIP access, canonical paths, metadata and expansion checks, entity-free bounded XML, hostile-markup text extraction, and exact dependency audit pass.
 - Task 17: implementation complete and committed as `b92d493`; container/OPF/spine parsing, ordered sanitized chapters, source-bound atomic cache, chapter navigation, domain EPUB locator reuse, and logical progress restore pass.
 - Task 18: implementation complete and committed as `fcb6185`; safe Bookshelf cards/controller, native TXT/EPUB picker, relocation, bounded encoding previews, explicit removal confirmation, source-preserving cleanup, protocol validation, and Host smoke pass.
+- Task 19: implementation complete as `1a4ba01` plus review fix `83e0b8f`; closed settings read/update flow, transactional field merge, strict envelope/range validation, accessible native controls, theme tokens, safe correlated errors, and app recovery pass independent review.
 
 ### Current Task
 
-Task 19 — Reader Settings and Theme Accessibility.
+Task 20 — Boss Overlay and Full Module Restoration.
 
 ### Current Task Status
 
-Task 18 is GREEN and committed. Task 19 is ready to start.
+Task 19 is GREEN, committed, and independently approved. Task 20 is ready to start.
 
 ### Uncommitted Changes
 
@@ -42,8 +43,8 @@ Task 18 is GREEN and committed. Task 19 is ready to start.
 
 ### Passing Tests
 
-- Full regression: 40 test files, 168/168 tests.
-- Focused final Bookshelf/service/storage/Host tests: 14/14.
+- Full regression: 209/209 tests.
+- Focused final Task 19 settings/protocol/Host/Webview tests: 70/70.
 - `npm run format:check`
 - `npm run lint`
 - `npm run build`
@@ -57,8 +58,8 @@ Task 18 is GREEN and committed. Task 19 is ready to start.
 
 ### Last Good Commit
 
-`fcb6185 feat: add local bookshelf workflows`
+`83e0b8f fix: align settings controls and error handling`
 
 ### Next Exact Action
 
-Write Task 19 RED tests for validated reader settings, field-level merge persistence, accessible controls, and VS Code theme-token-only Reader CSS, then implement the planned domain/service/view modules.
+Write Task 20 RED tests for overlay/title/focus/module identity restoration, then implement static Boss templates, the Webview module lifecycle adapter, and the real visibility-gated `Ctrl+M` integration without destroying Reader or 2048 state.
