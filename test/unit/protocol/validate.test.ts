@@ -8,6 +8,10 @@ const envelope = {
   sessionId: 'webview-session-1',
 };
 
+function validateForCurrentSession(value: unknown) {
+  return validateHostRequest(value, envelope.sessionId);
+}
+
 describe('validateHostRequest', () => {
   it.each([
     { type: 'app/ready', payload: {} },
@@ -44,7 +48,7 @@ describe('validateHostRequest', () => {
       },
     },
   ])('accepts the closed $type request contract', (request) => {
-    const result = validateHostRequest({ ...envelope, ...request });
+    const result = validateForCurrentSession({ ...envelope, ...request });
 
     expect(result).toEqual({ ok: true, value: { ...envelope, ...request } });
   });
@@ -52,7 +56,7 @@ describe('validateHostRequest', () => {
   it('rejects a syntactically valid request from a stale receiving session', () => {
     const result = validateHostRequest(
       { ...envelope, type: 'books/list', payload: {} },
-      { expectedSessionId: 'current-webview-session' },
+      'current-webview-session',
     );
 
     expect(result).toEqual({
@@ -60,6 +64,23 @@ describe('validateHostRequest', () => {
       error: {
         code: 'STALE_SESSION',
         message: 'Webview session is no longer current.',
+      },
+    });
+  });
+
+  it('rejects an untyped dispatch call that omits the expected session ID', () => {
+    const untypedDispatchValidator = validateHostRequest as unknown as (
+      value: unknown,
+      expectedSessionId?: string,
+    ) => ReturnType<typeof validateHostRequest>;
+
+    expect(
+      untypedDispatchValidator({ ...envelope, type: 'books/list', payload: {} }),
+    ).toEqual({
+      ok: false,
+      error: {
+        code: 'INVALID_SESSION',
+        message: 'Webview session is invalid.',
       },
     });
   });
@@ -182,7 +203,7 @@ describe('validateHostRequest', () => {
       'INVALID_PAYLOAD',
     ],
   ])('rejects unsafe input with safe $1 errors', (value, code) => {
-    const result = validateHostRequest(value);
+    const result = validateForCurrentSession(value);
 
     expect(result).toMatchObject({ ok: false, error: { code } });
     if (!result.ok) {
@@ -191,7 +212,7 @@ describe('validateHostRequest', () => {
   });
 
   it('accepts the largest safe integer power-of-two board tile', () => {
-    const result = validateHostRequest({
+    const result = validateForCurrentSession({
       ...envelope,
       type: 'game2048/save',
       payload: {

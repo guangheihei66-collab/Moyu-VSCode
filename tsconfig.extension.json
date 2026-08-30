@@ -7,5 +7,9 @@
     "moduleResolution": "Node",
     "types": ["node", "vscode"]
   },
-  "include": ["src/extension/**/*.ts", "src/shared/**/*.ts"]
+  "include": [
+    "src/extension/**/*.ts",
+    "src/shared/**/*.ts",
+    "test/unit/protocol/dispatch-validator.typecheck.ts"
+  ]
 }

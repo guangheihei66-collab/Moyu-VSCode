@@ -267,27 +267,20 @@ export function serializedUtf8Size(value: unknown): number {
   return new TextEncoder().encode(serialized).byteLength;
 }
 
-/**
- * Trusted receiving-host context for a request, without a registry dependency.
- */
-export interface HostRequestValidationContext {
-  expectedSessionId?: string;
-}
-
 /** Validates an untrusted Webview request before it reaches a Host handler. */
 export function validateHostRequest(
   value: unknown,
-  context: HostRequestValidationContext = {},
+  expectedSessionId: string,
 ): Result<HostRequest, ProtocolError> {
   try {
+    if (!isNonEmptyString(expectedSessionId)) {
+      return protocolError('INVALID_SESSION');
+    }
     const envelope = validateEnvelope(value);
     if (!envelope.ok) {
       return envelope;
     }
-    if (
-      context.expectedSessionId !== undefined &&
-      envelope.value.sessionId !== context.expectedSessionId
-    ) {
+    if (envelope.value.sessionId !== expectedSessionId) {
       return protocolError('STALE_SESSION');
     }
     if (
