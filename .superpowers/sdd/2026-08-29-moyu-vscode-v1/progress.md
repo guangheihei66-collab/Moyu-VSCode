@@ -260,3 +260,10 @@ Tests: focused shared component/token tests 7/7; full unit regression 267/267; f
 Review: added safe DOM primitives, semantic buttons, local decorative icons, section/empty/progress components, keyboard-operable ActionMenu, focus-returning Modal, and VS Code-variable-backed token/component CSS. No domain, protocol, Host, or service files changed; no dynamic HTML or external resource was introduced.
 Known issues: coverage provider remains unavailable; existing non-Task-1 hardcoded fallback in Boss CSS remains for the later responsive/theme polish task.
 Next: Task 2 — native Sidebar redesign with layered Webview/provider/real Extension Host coverage.
+
+UI Redesign Task 2: complete
+Commit: 2b5e465
+Tests: focused Sidebar/manifest/protocol/PanelRegistry tests 41/41; full unit regression 270/270; current and VS Code 1.96.0 Extension Host lanes PASS; format check, lint, dual typechecks, and build PASS.
+Review: added the four-entry lightweight Sidebar Webview bundle, exact typed navigation validation, nonce/CSP/resource-root HTML, provider state updates and disposal, command-to-Sidebar active synchronization, and real Host checks for production Sidebar JS/CSS assets. The existing `moyu.sidebar` Webview contribution and single main WebviewPanel topology remain intact.
+Known issues: coverage provider remains unavailable; Home is a routed shell fallback until Task 3 implements its snapshot surface; existing non-Task-1 Boss CSS fallback remains for the later responsive/theme polish task.
+Next: Task 3 — Home and overview snapshot adapter.

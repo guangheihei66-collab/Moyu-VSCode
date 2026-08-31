@@ -124,3 +124,46 @@ Implement Task 2 from the amended plan: the four-entry Sidebar bundle and
 provider lifecycle while preserving the `moyu.sidebar` Webview contribution and
 single main WebviewPanel architecture. Use layered Sidebar tests; do not require
 the provider shell to contain visible labels.
+
+## UI Redesign Task 2 checkpoint
+
+Updated: 2026-08-31
+
+### Current Task
+
+Task 3 — Home and overview snapshot adapter.
+
+### Completed
+
+- Task 2 committed as `2b5e465`.
+- Sidebar now renders Home, Books, 2048, and Settings as lightweight semantic
+  navigation entries with selected/hover/focus states and safe summaries.
+- Provider/runtime wiring uses the exact `moyu.sidebar` View ID, strict CSP,
+  packaged `dist/webview/sidebar.js` and `sidebar.css`, local resource roots,
+  typed message validation, active-state updates, and disposal-owned listeners.
+- Real current and VS Code 1.96.0 Extension Host lanes verify provider resolution
+  and production Sidebar asset existence.
+
+### Tests
+
+- Focused Task 2 tests: 41/41 PASS.
+- Full unit regression: 270/270 PASS.
+- Current/minimum Extension Host lanes: PASS.
+- Format, lint, extension/Webview typechecks, and build: PASS.
+
+### Known Issues
+
+- Home remains a shell fallback until Task 3 supplies its safe snapshot surface.
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- Existing non-Task-1 Boss CSS fallback remains for the later theme/accessibility
+  polish task.
+
+### Last Good Commit
+
+`2b5e465 feat: redesign Moyu native Sidebar navigation`
+
+### Next Exact Action
+
+Implement Task 3 from the amended plan: add Home Continue Reading, Quick Access,
+Recent Books, and safe empty states through the presentation snapshot adapter,
+without adding a new store or changing durable services.
