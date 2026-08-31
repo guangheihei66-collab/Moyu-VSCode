@@ -126,6 +126,13 @@ Tests: Boss state-machine tests PASS; full unit regression PASS; format check, l
 Review: in-memory NORMAL/BOSS_MODE transitions retain route/module/focus/scroll snapshots, service toggles serialize, absent/hidden panels no-op, acknowledgements gate title/context updates, and timeout failures restore the prior stable mode without persistence.
 Next: Task 8
 
+UI Redesign Task 8: complete
+Commit: 0ebb4ad feat: redesign Moyu Settings presentation
+Tests: focused Settings/theme/reader/panel tests 33/33 PASS; full unit regression 301/301 PASS; format check, lint, build, Extension Host/Webview typechecks PASS; current and VS Code 1.96.0 Extension Host lanes PASS after a clean rerun.
+Review: Settings is now grouped into Reading and Boss Mode sections with exact native range constraints, descriptions, live accessible values, VS Code theme/high-contrast/reduced-motion hooks, readable template labels, static text-only previews from BOSS_TEMPLATES, and a typed reset action limited to reading fields. Persistence remains at the existing versioned app/service boundary; failed updates still reread a durable snapshot and expose safe status text. No books, progress, game, or Boss state is reset.
+Known issue: coverage remains unavailable because @vitest/coverage-v8 is not installed; the first current Extension Host attempt hit a transient TEMP fixture state.lock EPERM and the immediate clean rerun passed; existing parse5/entities and cross-window notes remain unchanged.
+Next: Task 9 — neutral Boss overlay presentation.
+
 Task 8: complete
 Commit: 1b4eb60
 Tests: 13 focused game-engine tests, full regression, format check, lint, build, and strict game source typecheck PASS. Coverage command unavailable because `@vitest/coverage-v8` is not in the existing dependency set; no dependency changes made.

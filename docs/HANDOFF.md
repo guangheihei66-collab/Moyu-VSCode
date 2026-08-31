@@ -404,3 +404,61 @@ Implement Task 8 from the amended plan: redesign Settings with Reading and Boss
 Mode sections, labelled descriptions/current range outputs, native controls with
 the existing exact ranges, template preview/reset callbacks, and unchanged
 versioned ReaderSettingsService persistence.
+
+## UI Redesign Task 8 checkpoint
+
+Updated: 2026-09-01
+
+### Current Task
+
+Task 9 — Boss neutral overlay presentation.
+
+### Completed
+
+- Task 8 committed as `0ebb4ad feat: redesign Moyu Settings presentation`.
+- Settings now has distinct Reading and Boss Mode sections with exact native
+  ranges: Font size 12–32 step 1, Line height 1.2–2.2 step 0.05, and Content
+  width 480–1200 step 20.
+- Every reading field exposes a label, the approved description, a live
+  accessible value output, and a native range control. Range input previews
+  the value and reader CSS variables immediately; change events still use the
+  existing typed settings update path.
+- Boss template IDs remain exactly `typescript`, `json`, and `buildLog`, while
+  the UI presents TypeScript, JSON, and Build Log labels and a local text-only
+  preview using the existing `BOSS_TEMPLATES` and title mapping. No user source
+  file is read.
+- Reset is a typed optional action and the app submits only the default reading
+  fields through the current base version. Boss template, books, progress,
+  game state, and Boss state are not reset. Failed updates retain the existing
+  durable reread and safe status behavior.
+- Settings CSS uses shared VS Code/theme tokens with visible focus, forced
+  colors, high-contrast, responsive, and reduced-motion hooks; no color
+  literals were added.
+
+### Tests
+
+- Focused Task 8 Settings/theme/reader/panel tests: 33/33 PASS.
+- Full unit regression: 301/301 PASS.
+- Format check, lint, build, Extension Host typecheck, and Webview typecheck:
+  PASS.
+- Current and VS Code 1.96.0 Extension Host lanes: PASS. The first current
+  attempt encountered a transient TEMP fixture `state.lock` EPERM; after the
+  fixture lock was gone, the clean rerun passed. No source change was made for
+  that environmental retry.
+
+### Known Issues
+
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- Existing parse5/entities Node-engine metadata and cross-window refresh notes
+  remain unchanged.
+
+### Last Good Commit
+
+`0ebb4ad feat: redesign Moyu Settings presentation`
+
+### Next Exact Action
+
+Read and implement Task 9 from the amended plan: redesign the Boss overlay as
+an accessible neutral editor-like static document while preserving the existing
+ModuleLifecycle capture/resume state machine, template IDs, titles, and safe
+text-only rendering.
