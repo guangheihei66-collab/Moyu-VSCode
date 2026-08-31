@@ -6,7 +6,9 @@ import { PanelSerializer } from '../../../src/extension/panel/PanelSerializer';
 
 interface PanelHandle {
   isVisible?: boolean;
-  open?: (section: 'game2048' | 'settings' | 'books') => unknown;
+  open?: (
+    section: 'home' | 'books' | 'reader' | 'game2048' | 'settings',
+  ) => unknown;
   dispose?: () => void;
   captureSnapshot?: () => { route: string; panelTitle: string };
   panel?: { webview?: { html?: string } };
@@ -44,8 +46,16 @@ export async function runActivationAcceptance(): Promise<void> {
   assert.equal(panel?.isVisible, true);
 
   assert.match(panel?.panel?.webview?.html ?? '', /data-session-id=/);
-  panel?.open?.('game2048');
-  assert.equal(panel?.captureSnapshot?.().route, 'game2048');
+  for (const section of [
+    'home',
+    'books',
+    'reader',
+    'game2048',
+    'settings',
+  ] as const) {
+    panel?.open?.(section);
+    assert.equal(panel?.captureSnapshot?.().route, section);
+  }
 
   await vscode.commands.executeCommand('moyu.openSettings');
   await vscode.commands.executeCommand('moyu.toggleBossMode');

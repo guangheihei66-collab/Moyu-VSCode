@@ -256,7 +256,14 @@ export function createApp(
     normalRegion.replaceChildren(heading, status);
   };
 
+  const prepareNormalRegion = (): void => {
+    // ReaderView owns the shared region class while it is mounted. Clear it
+    // before another route so Reader-only layout selectors cannot go stale.
+    normalRegion.className = '';
+  };
+
   const unregisterHome = router.register('home', () => {
+    prepareNormalRegion();
     if (homeController === undefined) {
       renderModuleUnavailable('Home');
       return;
@@ -265,6 +272,7 @@ export function createApp(
   });
 
   const unregisterBooks = router.register('books', () => {
+    prepareNormalRegion();
     if (bookshelfController === undefined) {
       renderModuleUnavailable('Books');
       return;
@@ -294,6 +302,7 @@ export function createApp(
   };
 
   const unregisterSettings = router.register('settings', () => {
+    prepareNormalRegion();
     if (settingsClient === undefined) {
       renderSettingsSnapshot({
         version: 0,
@@ -304,6 +313,7 @@ export function createApp(
     void loadSettings();
   });
   const unregisterReader = router.register('reader', () => {
+    prepareNormalRegion();
     if (readerController === undefined) {
       renderModuleUnavailable('Reader');
       return;
@@ -316,6 +326,7 @@ export function createApp(
     });
   });
   const unregisterGame = router.register('game2048', () => {
+    prepareNormalRegion();
     if (gameController === undefined) {
       renderModuleUnavailable('2048');
       return;
