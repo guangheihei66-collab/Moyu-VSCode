@@ -1,6 +1,8 @@
+import type { BossTemplate as ReaderBossTemplate } from '../reader/settings';
+
 export type BossMode = 'NORMAL' | 'BOSS_MODE';
 
-export type BossTemplate = 'typescript' | 'json' | 'buildLog';
+export type BossTemplate = ReaderBossTemplate;
 
 export const BOSS_PANEL_TITLES: Readonly<Record<BossTemplate, string>> =
   Object.freeze({

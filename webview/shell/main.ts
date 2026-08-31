@@ -41,7 +41,7 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     validation.value.sessionId === sessionId &&
     validation.value.type === 'app/navigate'
   ) {
-    app.router.navigate(validation.value.payload.section);
+    app.navigate(validation.value.payload.section);
     return;
   }
   if (

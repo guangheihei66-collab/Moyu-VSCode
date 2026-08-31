@@ -49,4 +49,68 @@ describe('BossModeService', () => {
     expect(service.mode).toBe('NORMAL');
     expect(panel.setBossContext).not.toHaveBeenCalled();
   });
+
+  it('cancels an in-flight enter when its panel is disposed, and ignores a late acknowledgement', async () => {
+    let acknowledge!: () => void;
+    const panel = session();
+    panel.requestBossTransition.mockImplementation(
+      () => new Promise<void>((resolve) => (acknowledge = resolve)),
+    );
+    const service = new BossModeService({ acknowledgementTimeoutMs: 60_000 });
+
+    const transition = service.toggle(panel);
+    await Promise.resolve();
+    service.reset();
+
+    await expect(transition).rejects.toThrow('Boss Mode transition cancelled');
+    acknowledge();
+    await Promise.resolve();
+    expect(service.mode).toBe('NORMAL');
+    expect(panel.setPanelTitle).not.toHaveBeenCalled();
+    expect(panel.setBossContext).not.toHaveBeenCalled();
+  });
+
+  it('cancels an in-flight exit when its panel is disposed, leaving NORMAL after a late acknowledgement', async () => {
+    const panel = session();
+    const service = new BossModeService({ acknowledgementTimeoutMs: 60_000 });
+    await service.toggle(panel);
+    panel.setPanelTitle.mockClear();
+    panel.setBossContext.mockClear();
+    let acknowledge!: () => void;
+    panel.requestBossTransition.mockImplementation(
+      () => new Promise<void>((resolve) => (acknowledge = resolve)),
+    );
+
+    const transition = service.toggle(panel);
+    await Promise.resolve();
+    service.reset();
+
+    await expect(transition).rejects.toThrow('Boss Mode transition cancelled');
+    acknowledge();
+    await Promise.resolve();
+    expect(service.mode).toBe('NORMAL');
+    expect(panel.setPanelTitle).not.toHaveBeenCalled();
+    expect(panel.setBossContext).not.toHaveBeenCalled();
+  });
+
+  it('cancels a hidden panel transition before a late acknowledgement can commit title or context', async () => {
+    let acknowledge!: () => void;
+    const panel = session();
+    panel.requestBossTransition.mockImplementation(
+      () => new Promise<void>((resolve) => (acknowledge = resolve)),
+    );
+    const service = new BossModeService({ acknowledgementTimeoutMs: 60_000 });
+
+    const transition = service.toggle(panel);
+    await Promise.resolve();
+    panel.isVisible = false;
+    service.reset();
+
+    await expect(transition).rejects.toThrow('Boss Mode transition cancelled');
+    acknowledge();
+    await Promise.resolve();
+    expect(service.mode).toBe('NORMAL');
+    expect(panel.setPanelTitle).not.toHaveBeenCalled();
+    expect(panel.setBossContext).not.toHaveBeenCalled();
+  });
 });

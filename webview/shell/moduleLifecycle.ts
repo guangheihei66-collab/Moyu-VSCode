@@ -10,6 +10,8 @@ export interface ModuleBinding {
   restoreFocus?(token: unknown): void;
   captureAnchor?(): unknown;
   restoreAnchor?(anchor: unknown): void;
+  captureScroll?(): unknown;
+  restoreScroll?(scroll: unknown): void;
   captureState?(): unknown;
 }
 
@@ -19,6 +21,7 @@ export interface ModuleSnapshot {
   readonly controller: object;
   readonly logicalFocus?: unknown;
   readonly logicalAnchor?: unknown;
+  readonly logicalScroll?: unknown;
   readonly moduleState?: unknown;
 }
 
@@ -39,6 +42,7 @@ export class ModuleLifecycle {
       controller: module.controller,
       logicalFocus: module.captureFocus?.(),
       logicalAnchor: module.captureAnchor?.(),
+      logicalScroll: module.captureScroll?.(),
       moduleState: module.captureState?.(),
     };
   }
@@ -48,9 +52,6 @@ export class ModuleLifecycle {
   }
 
   resume(snapshot: ModuleSnapshot): void {
-    if (this.router.current !== snapshot.route) {
-      this.router.navigate(snapshot.route);
-    }
     const module = this.requireModule(snapshot.route);
     if (
       module.id !== snapshot.moduleId ||
@@ -58,7 +59,13 @@ export class ModuleLifecycle {
     ) {
       throw new Error('Active module identity changed during Boss Mode.');
     }
+    if (this.router.current !== snapshot.route) {
+      this.router.navigate(snapshot.route);
+    }
     module.resume();
+    if (snapshot.logicalScroll !== undefined) {
+      module.restoreScroll?.(snapshot.logicalScroll);
+    }
     if (snapshot.logicalAnchor !== undefined) {
       module.restoreAnchor?.(snapshot.logicalAnchor);
     }

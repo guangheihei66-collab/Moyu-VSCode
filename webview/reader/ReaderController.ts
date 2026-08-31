@@ -80,6 +80,20 @@ export class ReaderController {
     return this.captureAnchor();
   }
 
+  captureScroll(): number | undefined {
+    return this.root?.scrollTop;
+  }
+
+  restoreScroll(scroll: number): void {
+    if (this.root !== undefined && Number.isFinite(scroll)) {
+      this.root.scrollTop = scroll;
+    }
+  }
+
+  captureState(): object {
+    return this.blockWindow;
+  }
+
   restoreFocus(anchor: FocusAnchor): boolean {
     return this.view?.restoreFocus(anchor) ?? false;
   }

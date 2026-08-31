@@ -23,6 +23,8 @@ export class PanelController {
   private panel: vscode.WebviewPanel | undefined;
   private sessionId: string | undefined;
   private currentSection: AppSection = 'books';
+  private bossMode = false;
+  private bossTransitionPending = false;
   private readonly pendingBossTransitions = new Map<
     string,
     {
@@ -41,7 +43,6 @@ export class PanelController {
     }) => void,
   ) {}
   open(section: AppSection): vscode.WebviewPanel {
-    this.currentSection = section;
     let created = false;
     if (this.panel === undefined) {
       created = true;
@@ -58,9 +59,11 @@ export class PanelController {
       );
       this.attachPanel(this.panel, section);
     }
+    const navigationBlocked = this.bossMode || this.bossTransitionPending;
+    if (!navigationBlocked) this.currentSection = section;
     this.panel.reveal(vscode.ViewColumn.One);
     this.onStateChange?.({ visible: true, open: true });
-    if (!created && this.sessionId !== undefined) {
+    if (!created && !navigationBlocked && this.sessionId !== undefined) {
       const navigation: HostEvent = {
         protocol: PROTOCOL_VERSION,
         id: randomUUID(),
@@ -79,6 +82,8 @@ export class PanelController {
     );
     this.panel = panel;
     this.panel.title = 'Moyu';
+    this.bossMode = false;
+    this.bossTransitionPending = false;
     this.attachPanel(panel, section);
     this.onStateChange?.({
       visible: panel.visible,
@@ -121,6 +126,7 @@ export class PanelController {
       return Promise.reject(new Error('The Boss Mode event is invalid.'));
     }
     return new Promise<void>((resolve, reject) => {
+      this.bossTransitionPending = true;
       this.pendingBossTransitions.set(requestId, {
         mode: transition.mode,
         resolve,
@@ -147,6 +153,7 @@ export class PanelController {
     if (this.panel !== undefined) this.panel.title = title;
   }
   setBossContext(enabled: boolean): void {
+    this.bossMode = enabled;
     this.onStateChange?.({
       visible: this.isVisible,
       open: this.panel !== undefined,
@@ -169,6 +176,8 @@ export class PanelController {
     const pending = this.pendingBossTransitions.get(request.payload.requestId);
     if (pending === undefined || pending.mode !== request.payload.mode) return;
     this.pendingBossTransitions.delete(request.payload.requestId);
+    this.bossTransitionPending = false;
+    this.bossMode = request.payload.mode === 'BOSS_MODE';
     pending.resolve();
   }
 
@@ -176,6 +185,7 @@ export class PanelController {
     const pending = this.pendingBossTransitions.get(requestId);
     if (pending === undefined) return;
     this.pendingBossTransitions.delete(requestId);
+    this.bossTransitionPending = this.pendingBossTransitions.size > 0;
     pending.reject(error);
   }
 
@@ -183,25 +193,37 @@ export class PanelController {
     for (const requestId of this.pendingBossTransitions.keys()) {
       this.rejectBossTransition(requestId, error);
     }
+    this.bossTransitionPending = false;
   }
 
   private attachPanel(panel: vscode.WebviewPanel, section: AppSection): void {
     this.currentSection = section;
     this.sessionId = randomUUID();
+    this.bossMode = false;
+    this.bossTransitionPending = false;
     panel.onDidDispose(() => {
       this.rejectPendingBossTransitions(
         new Error('Moyu Panel was disposed during a Boss Mode transition.'),
       );
       this.panel = undefined;
       this.sessionId = undefined;
+      this.bossMode = false;
+      this.bossTransitionPending = false;
       this.onStateChange?.({ visible: false, open: false });
     });
-    panel.onDidChangeViewState((event) =>
+    panel.onDidChangeViewState((event) => {
+      if (!event.webviewPanel.visible) {
+        this.rejectPendingBossTransitions(
+          new Error('Moyu Panel was hidden during a Boss Mode transition.'),
+        );
+        this.bossMode = false;
+      }
       this.onStateChange?.({
         visible: event.webviewPanel.visible,
         open: true,
-      }),
-    );
+        bossMode: event.webviewPanel.visible ? undefined : false,
+      });
+    });
     const sessionId = this.sessionId;
     const dispatcher = new SettingsMessageDispatcher(sessionId, this.settings);
     panel.webview.onDidReceiveMessage(async (message: unknown) => {

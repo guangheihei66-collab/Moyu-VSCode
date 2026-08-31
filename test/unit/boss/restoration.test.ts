@@ -116,6 +116,26 @@ describe('ModuleLifecycle restoration', () => {
     );
     expect(current.resume).not.toHaveBeenCalled();
   });
+
+  it('checks identity before returning a changed route to its captured module', () => {
+    const router = new Router().navigate('reader');
+    const original = {
+      id: 'reader:book-1',
+      controller: {},
+      pause: vi.fn(),
+      resume: vi.fn(),
+    } satisfies ModuleBinding;
+    let current: ModuleBinding = original;
+    const lifecycle = new ModuleLifecycle(router, () => current);
+    const snapshot = lifecycle.capture();
+    router.navigate('game2048');
+    current = { ...original, controller: {} };
+
+    expect(() => lifecycle.resume(snapshot)).toThrow(
+      'Active module identity changed during Boss Mode.',
+    );
+    expect(router.current).toBe('game2048');
+  });
 });
 
 describe('boss mode protocol', () => {

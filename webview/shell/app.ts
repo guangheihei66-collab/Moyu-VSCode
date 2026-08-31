@@ -7,6 +7,11 @@ import {
 } from '../../src/domain/reader/settings';
 import type { AppSection } from '../../src/shared/protocol/messages';
 import { BossOverlay } from '../boss/BossOverlay';
+import {
+  Game2048Controller,
+  type Game2048Transport,
+} from '../game2048/Game2048Controller';
+import { ReaderController } from '../reader/ReaderController';
 import { SettingsView } from '../settings/SettingsView';
 import {
   ModuleLifecycle,
@@ -26,6 +31,8 @@ export interface SettingsClient {
 export interface MoyuApp {
   readonly router: Router;
   readonly isBossMode: boolean;
+  navigate(section: AppSection): boolean;
+  captureModuleSnapshot(): ModuleSnapshot;
   setBossMode(mode: BossMode, template: BossTemplate): void;
   dispose(): void;
 }
@@ -46,6 +53,35 @@ export function createApp(
     heading.textContent = `Moyu 路 ${section}`;
     normalRegion.replaceChildren(heading);
   });
+  const readerController = new ReaderController({
+    readBlocks: async () => ({ blocks: [], atStart: true, atEnd: true }),
+    saveProgress: async () => undefined,
+  });
+  const gameTransport: Game2048Transport = {
+    load: async () => undefined,
+    save: async (version, state) => ({
+      version: version + 1,
+      data: { state },
+    }),
+    newGame: async (version) => ({
+      version: version + 1,
+      data: {
+        state: {
+          gameSessionId: 'webview',
+          board: Array.from({ length: 4 }, () => [0, 0, 0, 0]),
+          score: 0,
+          bestScore: 0,
+          won: false,
+          gameOver: false,
+          moveSequence: 0,
+          startedAt: 0,
+          updatedAt: 0,
+          stateVersion: 1,
+        },
+      },
+    }),
+  };
+  const gameController = new Game2048Controller(gameTransport);
   const shellController = {};
   const shellModule: ModuleBinding = {
     get id() {
@@ -60,9 +96,44 @@ export function createApp(
     },
     captureState: () => shellController,
   };
+  const readerModule: ModuleBinding = {
+    id: 'reader',
+    controller: readerController,
+    pause: () => readerController.pause(),
+    resume: () => readerController.resume(),
+    captureFocus: () => readerController.captureFocus(),
+    restoreFocus: (token) => {
+      if (token !== undefined) readerController.restoreFocus(token as never);
+    },
+    captureAnchor: () => readerController.captureAnchor(),
+    restoreAnchor: (anchor) => {
+      if (anchor !== undefined) readerController.restoreFocus(anchor as never);
+    },
+    captureScroll: () => readerController.captureScroll(),
+    restoreScroll: (scroll) => readerController.restoreScroll(scroll as number),
+    captureState: () => readerController.captureState(),
+  };
+  const gameModule: ModuleBinding = {
+    get id() {
+      return `game2048:${gameController.captureState().gameSessionId}`;
+    },
+    controller: gameController,
+    pause: () => gameController.pause(),
+    resume: () => gameController.resume(),
+    captureFocus: () => gameController.captureFocus(),
+    restoreFocus: (token) => gameController.restoreFocus(token as string),
+    captureAnchor: () => gameController.captureAnchor(),
+    restoreAnchor: (anchor) => gameController.restoreAnchor(anchor as string),
+    captureState: () => gameController.captureState(),
+  };
+  const productionModule = (route: AppSection): ModuleBinding | undefined => {
+    if (route === 'reader') return readerModule;
+    if (route === 'game2048') return gameModule;
+    return shellModule;
+  };
   const lifecycle = new ModuleLifecycle(
     router,
-    resolveModule ?? (() => shellModule),
+    resolveModule ?? productionModule,
   );
   const bossOverlay = new BossOverlay(root, normalRegion);
   let bossSnapshot: ModuleSnapshot | undefined;
@@ -124,12 +195,26 @@ export function createApp(
     }
     void loadSettings();
   });
+  const unregisterReader = router.register('reader', () => {
+    readerController.mount(normalRegion);
+  });
+  const unregisterGame = router.register('game2048', () => {
+    gameController.mount(normalRegion);
+  });
 
   router.navigate(initialSection);
   return {
     router,
     get isBossMode(): boolean {
       return bossSnapshot !== undefined;
+    },
+    navigate(section: AppSection): boolean {
+      if (bossSnapshot !== undefined) return false;
+      router.navigate(section);
+      return true;
+    },
+    captureModuleSnapshot(): ModuleSnapshot {
+      return lifecycle.capture();
     },
     setBossMode(mode: BossMode, template: BossTemplate): void {
       if (mode === 'BOSS_MODE') {
@@ -164,6 +249,8 @@ export function createApp(
         bossSnapshot = undefined;
       }
       unregisterSettings();
+      unregisterReader();
+      unregisterGame();
       root.replaceChildren();
     },
   };

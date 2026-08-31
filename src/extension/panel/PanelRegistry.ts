@@ -26,6 +26,7 @@ export class PanelRegistry {
     if (panel === undefined) {
       panel = this.factory(windowId, (state) => {
         if (state.open) {
+          if (!state.visible) this.onPanelDisposed?.();
           this.contextKeys.set({ isOpen: true, isVisible: state.visible });
           if (state.bossMode !== undefined) {
             this.contextKeys.set({ isBossMode: state.bossMode });

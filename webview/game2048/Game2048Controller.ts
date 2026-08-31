@@ -84,6 +84,25 @@ export class Game2048Controller {
     this.view?.restoreFocus(token);
   }
 
+  captureFocus(): string | undefined {
+    const view = this.view;
+    return view?.boardElement.ownerDocument.activeElement === view?.boardElement
+      ? 'board'
+      : undefined;
+  }
+
+  captureAnchor(): string {
+    return 'board';
+  }
+
+  restoreAnchor(token: string): void {
+    this.restoreFocus(token);
+  }
+
+  captureState(): Game2048State {
+    return this.state;
+  }
+
   private async restore(): Promise<void> {
     const envelope = await this.transport.load();
     if (this.disposed || envelope === undefined) return;

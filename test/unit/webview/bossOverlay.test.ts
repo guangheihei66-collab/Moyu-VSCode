@@ -6,7 +6,10 @@ import {
   BOSS_TEMPLATES,
 } from '../../../webview/boss/templates';
 import { createApp } from '../../../webview/shell/app';
-import type { ModuleBinding } from '../../../webview/shell/moduleLifecycle';
+import type {
+  ModuleBinding,
+  ModuleSnapshot,
+} from '../../../webview/shell/moduleLifecycle';
 
 class TestElement {
   readonly children: TestElement[] = [];
@@ -16,7 +19,11 @@ class TestElement {
   hidden = false;
   inert = false;
   tabIndex = -1;
+  type = '';
+  scrollTop = 0;
+  clientHeight = 100;
   textContent = '';
+  readonly listeners = new Map<string, (event: unknown) => void>();
 
   constructor(readonly tagName: string) {}
 
@@ -38,6 +45,33 @@ class TestElement {
 
   removeAttribute(name: string): void {
     this.attributes.delete(name);
+  }
+
+  addEventListener(name: string, listener: (event: unknown) => void): void {
+    this.listeners.set(name, listener);
+  }
+
+  querySelectorAll(selector: string): TestElement[] {
+    const matched: TestElement[] = [];
+    const visit = (element: TestElement) => {
+      for (const child of element.children) {
+        if (
+          (selector === '[data-block-id]' &&
+            child.dataset.blockId !== undefined) ||
+          (selector === '[data-cell]' && child.dataset.cell !== undefined)
+        ) {
+          matched.push(child);
+        }
+        visit(child);
+      }
+    };
+    visit(this);
+    return matched;
+  }
+
+  querySelector(selector: string): TestElement | null {
+    void selector;
+    return null;
   }
 
   focus(options?: FocusOptions): void {
@@ -162,5 +196,58 @@ describe('BossOverlay', () => {
     expect(normalRegion).toMatchObject({ hidden: false, inert: false });
     expect(resume).toHaveBeenCalledOnce();
     expect(binding.controller).toBe(controller);
+  });
+
+  it('uses mounted production Reader and 2048 controllers without replacing their state objects', async () => {
+    const document = new TestDocument();
+    const root = document.createElement('main');
+    const app = createApp(
+      root as unknown as HTMLElement,
+      undefined,
+      'reader',
+    ) as unknown as {
+      captureModuleSnapshot(): ModuleSnapshot;
+      navigate(section: 'reader' | 'game2048'): boolean;
+      setBossMode(mode: 'NORMAL' | 'BOSS_MODE', template: 'typescript'): void;
+    };
+
+    const readerBefore = app.captureModuleSnapshot();
+    app.setBossMode('BOSS_MODE', 'typescript');
+    app.setBossMode('NORMAL', 'typescript');
+    const readerAfter = app.captureModuleSnapshot();
+    expect(readerAfter.controller).toBe(readerBefore.controller);
+    expect(readerAfter.moduleState).toBe(readerBefore.moduleState);
+
+    expect(app.navigate('game2048')).toBe(true);
+    await Promise.resolve();
+    const gameBefore = app.captureModuleSnapshot();
+    app.setBossMode('BOSS_MODE', 'typescript');
+    app.setBossMode('NORMAL', 'typescript');
+    const gameAfter = app.captureModuleSnapshot();
+    expect(gameAfter.controller).toBe(gameBefore.controller);
+    expect(gameAfter.moduleState).toBe(gameBefore.moduleState);
+    expect((gameAfter.moduleState as { board: unknown }).board).toBe(
+      (gameBefore.moduleState as { board: unknown }).board,
+    );
+  });
+
+  it('defers navigation while Boss mode is active so the captured module cannot change', () => {
+    const document = new TestDocument();
+    const root = document.createElement('main');
+    const app = createApp(
+      root as unknown as HTMLElement,
+      undefined,
+      'reader',
+    ) as unknown as {
+      captureModuleSnapshot(): ModuleSnapshot;
+      navigate(section: 'game2048'): boolean;
+      setBossMode(mode: 'NORMAL' | 'BOSS_MODE', template: 'typescript'): void;
+    };
+    const before = app.captureModuleSnapshot();
+
+    app.setBossMode('BOSS_MODE', 'typescript');
+    expect(app.navigate('game2048')).toBe(false);
+    expect(app.captureModuleSnapshot().controller).toBe(before.controller);
+    app.setBossMode('NORMAL', 'typescript');
   });
 });
