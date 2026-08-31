@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
+import type { RefreshCoordinator } from '../../application/sessions/RefreshCoordinator';
+import { WebviewSessionRegistry } from '../../application/sessions/WebviewSessionRegistry';
 import type { ReaderSettingsService } from '../../application/reader/ReaderSettingsService';
 import type {
   BossSnapshot,
@@ -22,12 +24,44 @@ import {
 } from './SettingsMessageDispatcher';
 import { createWebviewHtml } from './webviewHtml';
 
+export interface PanelLifecycleServices {
+  readonly sessionRegistry?: WebviewSessionRegistry;
+  readonly refreshCoordinator?: RefreshCoordinator;
+}
+
+function refreshTarget(
+  section: AppSection,
+): 'bookshelf' | 'reader' | 'game2048' | 'settings' {
+  return section === 'books' ? 'bookshelf' : section;
+}
+
+function isMutation(request: HostRequest): request is Extract<
+  HostRequest,
+  {
+    type:
+      | 'settings/update'
+      | 'reader/saveProgress'
+      | 'game2048/newGame'
+      | 'game2048/move'
+      | 'game2048/save';
+  }
+> {
+  return (
+    request.type === 'settings/update' ||
+    request.type === 'reader/saveProgress' ||
+    request.type === 'game2048/newGame' ||
+    request.type === 'game2048/move' ||
+    request.type === 'game2048/save'
+  );
+}
+
 export class PanelController {
   private panel: vscode.WebviewPanel | undefined;
   private sessionId: string | undefined;
   private currentSection: AppSection = 'books';
   private bossMode = false;
   private bossTransitionPending = false;
+  private unregisterSession: (() => void) | undefined;
   private readonly pendingBossTransitions = new Map<
     string,
     {
@@ -45,9 +79,11 @@ export class PanelController {
       bossMode?: boolean;
     }) => void,
     private readonly moduleServices: HostModuleServices = {},
+    private readonly lifecycleServices: PanelLifecycleServices = {},
   ) {}
   open(section: AppSection): vscode.WebviewPanel {
     let created = false;
+    const previousSection = this.currentSection;
     if (this.panel === undefined) {
       created = true;
       this.panel = vscode.window.createWebviewPanel(
@@ -67,7 +103,21 @@ export class PanelController {
     if (!navigationBlocked) this.currentSection = section;
     this.panel.reveal(vscode.ViewColumn.One);
     this.onStateChange?.({ visible: true, open: true });
+    if (created) {
+      this.scheduleRefresh((coordinator) =>
+        coordinator.onCreated(refreshTarget(section)),
+      );
+    } else {
+      this.scheduleRefresh((coordinator) =>
+        coordinator.onRevealed(refreshTarget(section)),
+      );
+    }
     if (!created && !navigationBlocked && this.sessionId !== undefined) {
+      if (previousSection !== section) {
+        this.scheduleRefresh((coordinator) =>
+          coordinator.onNavigated(refreshTarget(section)),
+        );
+      }
       const navigation: HostEvent = {
         protocol: PROTOCOL_VERSION,
         id: randomUUID(),
@@ -89,6 +139,9 @@ export class PanelController {
     this.bossMode = false;
     this.bossTransitionPending = false;
     this.attachPanel(panel, section);
+    this.scheduleRefresh((coordinator) =>
+      coordinator.onCreated(refreshTarget(section)),
+    );
     this.onStateChange?.({
       visible: panel.visible,
       open: true,
@@ -169,6 +222,7 @@ export class PanelController {
       new Error('Moyu Panel was disposed during a Boss Mode transition.'),
     );
     this.panel?.dispose();
+    this.detachSession();
     this.panel = undefined;
     this.sessionId = undefined;
     this.onStateChange?.({ visible: false, open: false });
@@ -201,6 +255,7 @@ export class PanelController {
   }
 
   private attachPanel(panel: vscode.WebviewPanel, section: AppSection): void {
+    this.detachSession();
     this.currentSection = section;
     this.sessionId = randomUUID();
     this.bossMode = false;
@@ -210,6 +265,7 @@ export class PanelController {
       this.rejectPendingBossTransitions(
         new Error('Moyu Panel was disposed during a Boss Mode transition.'),
       );
+      this.detachSession();
       this.panel = undefined;
       this.sessionId = undefined;
       this.bossMode = false;
@@ -229,8 +285,17 @@ export class PanelController {
         open: true,
         bossMode: event.webviewPanel.visible ? undefined : false,
       });
+      if (event.webviewPanel.visible) {
+        this.scheduleRefresh((coordinator) =>
+          coordinator.onRevealed(refreshTarget(this.currentSection)),
+        );
+      }
     });
     const sessionId = this.sessionId;
+    this.unregisterSession = this.lifecycleServices.sessionRegistry?.register(
+      sessionId,
+      (event) => panel.webview.postMessage(event),
+    );
     const dispatcher = new SettingsMessageDispatcher(
       sessionId,
       this.settings,
@@ -242,9 +307,32 @@ export class PanelController {
         this.acknowledgeBossTransition(request.value);
         return;
       }
+      if (request.ok && isMutation(request.value)) {
+        try {
+          await this.lifecycleServices.refreshCoordinator?.beforeMutation(
+            refreshTarget(
+              request.value.type === 'settings/update'
+                ? 'settings'
+                : request.value.type.startsWith('game2048/')
+                  ? 'game2048'
+                  : 'reader',
+            ),
+          );
+        } catch {
+          // The transaction boundary remains authoritative if a refresh read
+          // is unavailable; it will still perform its locked merge/check.
+        }
+      }
       const response = await dispatcher.dispatch(message);
       if (response !== undefined) {
         await panel.webview.postMessage(response);
+        if (
+          request.ok &&
+          isMutation(request.value) &&
+          response.type !== 'response/error'
+        ) {
+          this.broadcastNotice('Moyu data was updated.');
+        }
       }
     });
     panel.webview.html = createWebviewHtml(
@@ -254,5 +342,35 @@ export class PanelController {
       section,
       sessionId,
     );
+  }
+
+  private broadcastNotice(message: string): void {
+    if (
+      this.lifecycleServices.sessionRegistry === undefined ||
+      this.sessionId === undefined
+    )
+      return;
+    const event: HostEvent = {
+      protocol: PROTOCOL_VERSION,
+      id: randomUUID(),
+      sessionId: this.sessionId,
+      type: 'app/notice',
+      payload: { message },
+    };
+    const validation = validateHostEvent(event);
+    if (validation.ok) this.lifecycleServices.sessionRegistry.broadcast(event);
+  }
+
+  private detachSession(): void {
+    this.unregisterSession?.();
+    this.unregisterSession = undefined;
+  }
+
+  private scheduleRefresh(
+    operation: (coordinator: RefreshCoordinator) => Promise<unknown>,
+  ): void {
+    const coordinator = this.lifecycleServices.refreshCoordinator;
+    if (coordinator === undefined) return;
+    void operation(coordinator).catch(() => undefined);
   }
 }

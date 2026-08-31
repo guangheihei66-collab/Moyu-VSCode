@@ -19,14 +19,17 @@ import { PreferencesRepository } from '../infrastructure/storage/preferencesRepo
 import { BossModeService } from '../application/boss/BossModeService';
 import { Game2048Service } from '../application/game2048/Game2048Service';
 import { GameRepository } from '../infrastructure/storage/gameRepository';
+import { WebviewSessionRegistry } from '../application/sessions/WebviewSessionRegistry';
+import { RefreshCoordinator } from '../application/sessions/RefreshCoordinator';
 import type { BookMetadata } from '../domain/books/types';
 
 export function activate(context: vscode.ExtensionContext): void {
   const windowId = String(vscode.env.sessionId);
   const contextKeys = new ContextKeys();
-  const settings = new ReaderSettingsService(
-    new PreferencesRepository(context.globalStorageUri.fsPath),
+  const preferencesRepository = new PreferencesRepository(
+    context.globalStorageUri.fsPath,
   );
+  const settings = new ReaderSettingsService(preferencesRepository);
   const boss = new BossModeService();
   const bookshelfRepository = new BookshelfRepository(
     context.globalStorageUri.fsPath,
@@ -80,12 +83,24 @@ export function activate(context: vscode.ExtensionContext): void {
       indexStore: txtIndexes,
     }),
   });
-  const game = new Game2048Service(
-    new GameRepository(context.globalStorageUri.fsPath),
-  );
+  const gameRepository = new GameRepository(context.globalStorageUri.fsPath);
+  const game = new Game2048Service(gameRepository);
+  const sessionRegistry = new WebviewSessionRegistry();
+  const refreshCoordinator = new RefreshCoordinator({
+    bookshelf: bookshelfRepository,
+    reader: progress,
+    game2048: gameRepository,
+    settings: preferencesRepository,
+  });
   const registry = new PanelRegistry(
     (_, onStateChange) =>
-      new PanelController(context, settings, onStateChange, { reader, game }),
+      new PanelController(
+        context,
+        settings,
+        onStateChange,
+        { reader, game },
+        { sessionRegistry, refreshCoordinator },
+      ),
     contextKeys,
     () => boss.reset(),
   );
