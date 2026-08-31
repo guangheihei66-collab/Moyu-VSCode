@@ -316,3 +316,26 @@ Tests: focused Boss overlay/restoration/PanelController/extension Boss tests 24/
 Review: the single persistent Boss overlay now has a neutral accessible name, safe filename header mapping, editor-like themed document layout, text-only static templates, focus entry/return, and inert/hidden normal content while active. Template changes reuse the same overlay element. Existing ModuleLifecycle snapshots, Reader/2048 controller and state identity, acknowledgement-gated title/context changes, command gating, and restoration semantics were preserved.
 Known issue: coverage remains unavailable because @vitest/coverage-v8 is not installed; existing parse5/entities and cross-window notes remain unchanged.
 Next: Task 10 — responsive, accessibility, and theme polish.
+
+UI Redesign Task 10: complete
+Commit: e088dcf feat: polish Moyu responsive accessibility and themes
+Tests: focused Task 10 presentation tests 12/12 PASS; entire Webview test
+directory 72/72 PASS; full unit regression 307/307 PASS; format check, lint,
+build, Extension Host/Webview typechecks, current/minimum Extension Host lanes,
+extension contract 5/5, and package-content checks 4/4 PASS. Current lane needed
+one retry after a transient TEMP fixture state.lock EPERM; no source change was
+made for the retry.
+Review: added cross-surface token/theme/accessibility regression coverage;
+normalized fluid narrow layouts and focus/contrast/forced-color/reduced-motion
+hooks across shared components, Sidebar, Home, Bookshelf, Reader, 2048,
+Settings, and Boss; marked the shell normal region as main; and bounded
+ErrorView recovery actions with the domain allowlist. Reader chapter drawer
+presentation now uses VS Code shadow/theme aliases only. Domain, parser, cache,
+protocol, persistence, lifecycle, and module behavior were not changed.
+Known issues: coverage provider remains unavailable; parse5/entities metadata
+and cross-window refresh notes remain unchanged; package secret scan reports a
+pre-existing false positive from bundled ZIP dependency code (`password:
+encodePassword`) and no credential/token was found.
+Uncommitted files: documentation handoff update only, to be committed
+separately.
+Next: Task 11 — integrated regression and presentation boundary review.

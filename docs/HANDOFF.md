@@ -512,3 +512,62 @@ Read and implement Task 10 from the amended plan: apply responsive,
 accessibility, and theme polish across the shared tokens, shell/components,
 Sidebar, Home, Bookshelf, Reader, 2048, Settings, and Boss styles without
 introducing hard-coded colors or changing module/business behavior.
+
+## UI Redesign Task 10 checkpoint
+
+Updated: 2026-09-01
+
+### Current Task
+
+Task 11 — integrated regression and presentation boundary review.
+
+### Completed
+
+- Task 10 committed as `e088dcf feat: polish Moyu responsive accessibility and themes`.
+- Added the cross-surface `accessibilityPresentation.test.ts` regression for
+  shared spacing/radius/motion/layout tokens, VS Code theme aliases, forbidden
+  private colors/network assets, focus paths, responsive hooks, semantic state
+  attributes, and bounded recovery-action presentation.
+- Normalized shared and feature CSS around fluid `min-width: 0`/overflow-safe
+  layouts and the existing VS Code-variable token layer. Sidebar, Home,
+  Bookshelf, Reader, 2048, Settings, Boss, and shared components now expose
+  contrast, forced-colors, and reduced-motion hooks; Reader narrow toolbars
+  stack at the smallest supported width.
+- Added global button/input/select focus inheritance and visible forced-color
+  focus, marked the shell normal region as the accessible `main`, and hardened
+  ErrorView to accept only the bounded `RECOVERY_ACTIONS` allowlist while
+  retaining textContent-only rendering and grouped recovery controls.
+- Reader chapter drawer no longer contains a hard-coded RGB shadow or undefined
+  presentation aliases; parser, cache, chapter identity, progress, and module
+  behavior remain unchanged.
+
+### Tests
+
+- Focused Task 10 presentation tests: 12/12 PASS.
+- Entire Webview test directory: 72/72 PASS.
+- Full unit regression: 307/307 PASS.
+- Format check, lint, build, Extension Host/Webview typechecks: PASS.
+- Current Extension Host lane: PASS after one transient TEMP fixture
+  `state.lock` EPERM retry; minimum VS Code 1.96.0 lane: PASS.
+- Extension contract: 5/5 PASS; package-content checks: 4/4 PASS.
+
+### Known Issues
+
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- `parse5/entities` Node-engine metadata and the existing cross-window refresh
+  note remain unchanged.
+- `scan-package-secrets.mjs` currently reports a false positive in the
+  bundled ZIP dependency at `dist/extension.js` (`password: encodePassword`);
+  no credential or provider token was found. This is a pre-existing packaging
+  scanner issue and needs an evidence-based packaging decision in Task 11/12.
+
+### Last Good Commit
+
+`e088dcf feat: polish Moyu responsive accessibility and themes`
+
+### Next Exact Action
+
+Read and implement Task 11 from the amended UI redesign plan: run the
+integrated regression and review presentation boundaries, fixing only actual
+evidence and preserving domain, protocol, lifecycle, persistence, and safe DOM
+contracts.
