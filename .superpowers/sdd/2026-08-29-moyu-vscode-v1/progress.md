@@ -339,3 +339,26 @@ encodePassword`) and no credential/token was found.
 Uncommitted files: documentation handoff update only, to be committed
 separately.
 Next: Task 11 — integrated regression and presentation boundary review.
+
+UI Redesign Task 11: complete
+Commit: e6c4151 test: add integrated Moyu UI regression gates
+Tests: focused integrated regression 3/3 PASS; full unit regression 310/310
+PASS; format check, lint, build, Extension Host/Webview typechecks, and
+extension contract 5/5 PASS; current/minimum Extension Host lanes PASS. The
+minimum lane needed one retry after a transient TEMP fixture state.lock EPERM;
+no source change was made for the retry.
+Review: added a restored-route cross-surface matrix covering Home, Books,
+Reader, 2048, Settings, one active surface/no duplicate roots, Settings live
+output and versioned persistence correlation, EPUB logical locator/chapter
+drawer, Reader menu, Boss inert/hidden state, 2048 gameSessionId/moveSequence,
+controller/module identity, disposal, Sidebar four-entry navigation, one-panel
+count, and exact manifest/runtime Sidebar ID/type. The matrix exposed a real
+Reader-only class remaining on the shared normal region after route changes;
+route handlers now clear that class before mounting another surface.
+Known issues: coverage provider remains unavailable; parse5/entities metadata
+and cross-window refresh notes remain unchanged; package secret scan reports
+the bundled ZIP dependency's non-secret `password: encodePassword` property
+and no credential/token was found.
+Uncommitted files: documentation handoff update only, to be committed
+separately.
+Next: Task 12 — VSIX packaging and manual visual acceptance.

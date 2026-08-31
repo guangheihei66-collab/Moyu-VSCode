@@ -571,3 +571,62 @@ Read and implement Task 11 from the amended UI redesign plan: run the
 integrated regression and review presentation boundaries, fixing only actual
 evidence and preserving domain, protocol, lifecycle, persistence, and safe DOM
 contracts.
+
+## UI Redesign Task 11 checkpoint
+
+Updated: 2026-09-01
+
+### Current Task
+
+Task 12 — VSIX packaging and manual visual acceptance.
+
+### Completed
+
+- Task 11 committed as `e6c4151 test: add integrated Moyu UI regression gates`.
+- Added `presentationRegression.test.ts`, a cross-surface matrix that starts
+  from a restored initial route, visits Home/Books/Reader/2048/Settings, checks
+  exactly one active surface and no duplicate roots, verifies Settings live
+  output→versioned update correlation, and confirms controller/module identity
+  remains stable across route remounts and disposal.
+- The matrix exercises an EPUB logical locator and chapter drawer, toggles Boss
+  while the drawer and Reader action menu are open, checks normal-region
+  inert/hidden behavior, then verifies 2048 board pause and durable
+  `gameSessionId`/`moveSequence` state identity after Boss exit.
+- Added Sidebar Home/Books/2048/Settings navigation to the one-panel registry
+  matrix and an exact manifest/runtime `moyu.sidebar` plus `type: webview`
+  assertion. The real Host activation acceptance now also traverses every main
+  panel route without creating another panel.
+- The RED matrix identified and fixed one real integration defect: ReaderView
+  stored `moyu-reader` on the shared normal region, and later routes left that
+  class behind. Route handlers now clear the shared class before mounting so
+  Reader-only `#app:has(.moyu-reader)` layout selectors cannot remain active.
+
+### Tests
+
+- Focused integrated regression: 3/3 PASS.
+- Full unit regression: 310/310 PASS.
+- Format check, lint, build, Extension Host/Webview typechecks: PASS.
+- Current Extension Host lane: PASS; minimum VS Code 1.96.0 lane: PASS after
+  one transient TEMP fixture `state.lock` EPERM retry.
+- Extension contract: 5/5 PASS; package-content checks: 4/4 PASS.
+
+### Known Issues
+
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- `parse5/entities` Node-engine metadata and the existing cross-window refresh
+  note remain unchanged.
+- `scan-package-secrets.mjs` still reports only the bundled ZIP dependency's
+  non-secret `password: encodePassword` property in `dist/extension.js`; no
+  credential/provider token was found. Task 12 must make an evidence-based
+  packaging decision rather than silently ignoring it.
+
+### Last Good Commit
+
+`e6c4151 test: add integrated Moyu UI regression gates`
+
+### Next Exact Action
+
+Read and implement Task 12 from the amended UI redesign plan: run the full
+packaging gates, produce the local `moyu-vscode-0.2.0.vsix`, and execute the
+isolated manual visual acceptance checklist without publishing or modifying
+user profiles.
