@@ -462,3 +462,53 @@ Read and implement Task 9 from the amended plan: redesign the Boss overlay as
 an accessible neutral editor-like static document while preserving the existing
 ModuleLifecycle capture/resume state machine, template IDs, titles, and safe
 text-only rendering.
+
+## UI Redesign Task 9 checkpoint
+
+Updated: 2026-09-01
+
+### Current Task
+
+Task 10 — Responsive, accessibility, and theme polish.
+
+### Completed
+
+- Task 9 committed as `5fe7317 feat: refine Moyu neutral Boss presentation`.
+- The single persistent Boss overlay now uses the neutral accessible name
+  `Work document preview`, a safe filename header, and an editor-like themed
+  document surface. The exact title mapping remains TypeScript → `extension.ts`,
+  JSON → `settings.json`, and Build Log → `build.log`.
+- Static template content continues to use `textContent` with the existing
+  local `BOSS_TEMPLATES`; no user source file, HTML, or second state machine was
+  introduced. Re-selecting a template reuses the same overlay element.
+- Focus enters the overlay without scroll, returns to the opener on hide, and
+  the normal region remains inert and hidden with `aria-hidden` while active.
+  Reader/2048 controller and state identity, logical restoration, lifecycle
+  snapshots, acknowledgement-gated title/context changes, and command gating
+  remain unchanged.
+
+### Tests
+
+- Focused Boss overlay/restoration/PanelController/extension Boss tests: 24/24
+  PASS.
+- Full unit regression: 302/302 PASS.
+- Format check, lint, build, Extension Host typecheck, and Webview typecheck:
+  PASS.
+- Current and VS Code 1.96.0 Extension Host lanes: PASS.
+
+### Known Issues
+
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- Existing parse5/entities Node-engine metadata and cross-window refresh notes
+  remain unchanged.
+
+### Last Good Commit
+
+`5fe7317 feat: refine Moyu neutral Boss presentation`
+
+### Next Exact Action
+
+Read and implement Task 10 from the amended plan: apply responsive,
+accessibility, and theme polish across the shared tokens, shell/components,
+Sidebar, Home, Bookshelf, Reader, 2048, Settings, and Boss styles without
+introducing hard-coded colors or changing module/business behavior.

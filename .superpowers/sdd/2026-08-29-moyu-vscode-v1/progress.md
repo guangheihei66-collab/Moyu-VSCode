@@ -126,13 +126,6 @@ Tests: Boss state-machine tests PASS; full unit regression PASS; format check, l
 Review: in-memory NORMAL/BOSS_MODE transitions retain route/module/focus/scroll snapshots, service toggles serialize, absent/hidden panels no-op, acknowledgements gate title/context updates, and timeout failures restore the prior stable mode without persistence.
 Next: Task 8
 
-UI Redesign Task 8: complete
-Commit: 0ebb4ad feat: redesign Moyu Settings presentation
-Tests: focused Settings/theme/reader/panel tests 33/33 PASS; full unit regression 301/301 PASS; format check, lint, build, Extension Host/Webview typechecks PASS; current and VS Code 1.96.0 Extension Host lanes PASS after a clean rerun.
-Review: Settings is now grouped into Reading and Boss Mode sections with exact native range constraints, descriptions, live accessible values, VS Code theme/high-contrast/reduced-motion hooks, readable template labels, static text-only previews from BOSS_TEMPLATES, and a typed reset action limited to reading fields. Persistence remains at the existing versioned app/service boundary; failed updates still reread a durable snapshot and expose safe status text. No books, progress, game, or Boss state is reset.
-Known issue: coverage remains unavailable because @vitest/coverage-v8 is not installed; the first current Extension Host attempt hit a transient TEMP fixture state.lock EPERM and the immediate clean rerun passed; existing parse5/entities and cross-window notes remain unchanged.
-Next: Task 9 — neutral Boss overlay presentation.
-
 Task 8: complete
 Commit: 1b4eb60
 Tests: 13 focused game-engine tests, full regression, format check, lint, build, and strict game source typecheck PASS. Coverage command unavailable because `@vitest/coverage-v8` is not in the existing dependency set; no dependency changes made.
@@ -309,3 +302,17 @@ Tests: focused 2048 view/keyboard tests 6/6 PASS; full unit regression 297/297 P
 Review: 2048 now presents compact accessible Score/Best blocks, a bounded semantic 16-cell board with theme-derived value hooks, keyboard help, responsive/paused state hooks, and shared Modal-backed victory/Game Over actions with focus return. Game2048Controller transport, durable state, session identity, move sequence, engine, and persistence semantics remain unchanged.
 Known issue: coverage remains unavailable because @vitest/coverage-v8 is not installed; the existing cross-window and parse5 dependency notes remain unchanged.
 Next: Task 8
+
+UI Redesign Task 8: complete
+Commit: 0ebb4ad feat: redesign Moyu Settings presentation
+Tests: focused Settings/theme/reader/panel tests 33/33 PASS; full unit regression 301/301 PASS; format check, lint, build, Extension Host/Webview typechecks PASS; current and VS Code 1.96.0 Extension Host lanes PASS after a clean rerun.
+Review: Settings is now grouped into Reading and Boss Mode sections with exact native range constraints, descriptions, live accessible values, VS Code theme/high-contrast/reduced-motion hooks, readable template labels, static text-only previews from BOSS_TEMPLATES, and a typed reset action limited to reading fields. Persistence remains at the existing versioned app/service boundary; failed updates still reread a durable snapshot and expose safe status text. No books, progress, game, or Boss state is reset.
+Known issue: coverage remains unavailable because @vitest/coverage-v8 is not installed; the first current Extension Host attempt hit a transient TEMP fixture state.lock EPERM and the immediate clean rerun passed; existing parse5/entities and cross-window notes remain unchanged.
+Next: Task 9 — neutral Boss overlay presentation.
+
+UI Redesign Task 9: complete
+Commit: 5fe7317 feat: refine Moyu neutral Boss presentation
+Tests: focused Boss overlay/restoration/PanelController/extension Boss tests 24/24 PASS; full unit regression 302/302 PASS; format check, lint, build, Extension Host/Webview typechecks PASS; current and VS Code 1.96.0 Extension Host lanes PASS.
+Review: the single persistent Boss overlay now has a neutral accessible name, safe filename header mapping, editor-like themed document layout, text-only static templates, focus entry/return, and inert/hidden normal content while active. Template changes reuse the same overlay element. Existing ModuleLifecycle snapshots, Reader/2048 controller and state identity, acknowledgement-gated title/context changes, command gating, and restoration semantics were preserved.
+Known issue: coverage remains unavailable because @vitest/coverage-v8 is not installed; existing parse5/entities and cross-window notes remain unchanged.
+Next: Task 10 — responsive, accessibility, and theme polish.
