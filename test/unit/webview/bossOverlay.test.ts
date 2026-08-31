@@ -201,6 +201,14 @@ function fixture(): {
   };
 }
 
+function accessibleOutput(element: TestElement): string {
+  const labels = [...element.attributes.entries()]
+    .filter(([name]) => name === 'role' || name.startsWith('aria-'))
+    .map(([, value]) => value)
+    .join(' ');
+  return `${element.fullText} ${labels}`;
+}
+
 describe('BossOverlay', () => {
   it.each(['typescript', 'json', 'buildLog'] as const)(
     'renders the local %s template only as text and maps its safe title',
@@ -209,7 +217,13 @@ describe('BossOverlay', () => {
 
       overlay.show(template);
 
-      expect(host.children[1]?.fullText).toBe(BOSS_TEMPLATES[template]);
+      const document = host.children[1]!;
+      expect(document.children[0]?.tagName).toBe('HEADER');
+      expect(document.children[0]?.children[0]?.textContent).toBe(
+        BOSS_PANEL_TITLES[template],
+      );
+      expect(document.children[1]?.tagName).toBe('PRE');
+      expect(document.children[1]?.textContent).toBe(BOSS_TEMPLATES[template]);
       expect(BOSS_PANEL_TITLES[template]).toBe(
         {
           typescript: 'extension.ts',
@@ -230,8 +244,18 @@ describe('BossOverlay', () => {
     expect(persistentElement).toMatchObject({ hidden: false, tabIndex: -1 });
     expect(persistentElement.attributes.get('role')).toBe('document');
     expect(persistentElement.attributes.get('aria-label')).toBe(
-      'Boss mode work preview',
+      'Work document preview',
     );
+    for (const forbidden of [
+      'Moyu',
+      'Boss Mode',
+      'Fake',
+      'Disguise',
+      'Game',
+      'Novel',
+    ]) {
+      expect(accessibleOutput(persistentElement)).not.toContain(forbidden);
+    }
     expect(host.ownerDocument.activeElement).toBe(persistentElement);
     expect(host.ownerDocument.lastFocusOptions).toEqual({
       preventScroll: true,
@@ -239,11 +263,30 @@ describe('BossOverlay', () => {
 
     overlay.show('json');
     expect(host.children[1]).toBe(persistentElement);
+    expect(persistentElement.children[0]?.children[0]?.textContent).toBe(
+      'settings.json',
+    );
+    expect(persistentElement.children[1]?.textContent).toBe(
+      BOSS_TEMPLATES.json,
+    );
 
     overlay.hide();
     expect(normal).toMatchObject({ hidden: false, inert: false });
     expect(normal.attributes.has('aria-hidden')).toBe(false);
     expect(persistentElement.hidden).toBe(true);
+  });
+
+  it('returns focus to the element that opened the neutral document', () => {
+    const { host, overlay } = fixture();
+    const trigger = host.ownerDocument.createElement('button');
+    host.append(trigger);
+    trigger.focus();
+
+    overlay.show('typescript');
+    expect(host.ownerDocument.activeElement).toBe(host.children[1]);
+    overlay.hide();
+
+    expect(host.ownerDocument.activeElement).toBe(trigger);
   });
 
   it('preserves a populated Reader controller and nonzero logical focus through Boss mode', async () => {
