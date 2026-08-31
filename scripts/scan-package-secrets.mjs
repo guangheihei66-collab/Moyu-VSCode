@@ -9,7 +9,7 @@ export const SECRET_PATTERNS = Object.freeze([
   {
     name: 'secret assignment',
     pattern:
-      /\b(?:OPENAI_API_KEY|API_KEY|PASSWORD|SECRET|TOKEN)\s*[:=]\s*["']?[^\s#"']{8,}/i,
+      /\b(?:OPENAI_API_KEY|API_KEY|PASSWORD|SECRET|TOKEN)\s*[:=]\s*["']?[^\s#"']{8,}/,
   },
   {
     name: 'provider token',

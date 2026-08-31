@@ -26,6 +26,8 @@ export const REQUIRED_VSIX_ENTRIES = Object.freeze([
   'extension/dist/extension.js',
   'extension/dist/webview/main.js',
   'extension/dist/webview/main.css',
+  'extension/dist/webview/sidebar.js',
+  'extension/dist/webview/sidebar.css',
   'extension/media/moyu.svg',
 ]);
 

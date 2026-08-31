@@ -25,5 +25,7 @@ describe('esbuild output contract', () => {
     expect(buildScript).toContain("target: 'chrome128'");
     expect(buildScript).toContain("outfile: 'dist/webview/main.js'");
     expect(buildScript).toContain("outfile: 'dist/webview/main.css'");
+    expect(buildScript).toContain("outfile: 'dist/webview/sidebar.js'");
+    expect(buildScript).toContain("outfile: 'dist/webview/sidebar.css'");
   });
 });

@@ -2,7 +2,7 @@
   "name": "moyu-vscode",
   "displayName": "Moyu VS Code",
   "description": "A local-only leisure center for VS Code.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "./dist/extension.js",
   "engines": {
