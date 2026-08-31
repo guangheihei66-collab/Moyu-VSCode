@@ -7,7 +7,7 @@ Updated: 2026-08-31
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `0090e46 feat: add recovery UX and multi-window refresh`; working tree is clean before this handoff update.
+HEAD: `e3e3a00 test: add Windows extension acceptance harness`; working tree is clean before this handoff update.
 
 ### Completed Tasks
 
@@ -30,14 +30,15 @@ HEAD: `0090e46 feat: add recovery UX and multi-window refresh`; working tree is 
 - Task 19: implementation complete as `1a4ba01` plus review fix `83e0b8f`; closed settings read/update flow, transactional field merge, strict envelope/range validation, accessible native controls, theme tokens, safe correlated errors, and app recovery pass independent review.
 - Task 20: implementation and review fixes complete as `ac16118`, `54ff694`, `1910c34`, and `470b522`; persistent accessible Boss overlay, logical Reader/2048 module restoration, durable Host/Webview transports, non-empty state identity checks, acknowledgement-gated title/context changes, serializer/disposal cancellation barriers, and stable shell-route restoration pass independent review.
 - Task 21: implementation complete as `0090e46`; stable path-free error codes/messages/actions, accessible recovery controls, cancellable locked-repository refresh coordination, Panel lifecycle refresh hooks, same-Extension-Host session registration, and committed local notices pass focused and full regression checks.
+- Task 22: implementation complete as `e3e3a00`; isolated current and VS Code 1.96.0 Extension Host lanes, deterministic TEMP fixtures, activation/Webview/Sidebar/navigation/serializer/picker/Boss/lifecycle checks, TXT/EPUB import-read coverage, 2048 recovery, and competing child-process transaction recovery are automated; the Windows manual acceptance checklist is at `test/acceptance/windows-v1-checklist.md`.
 
 ### Current Task
 
-Task 21 — Error Mapping, Refresh Strategy, and Recovery UX.
+Task 22 — Extension Integration and Windows Acceptance Harness.
 
 ### Current Task Status
 
-Task 21 is GREEN, committed, independently reviewed, and checkpointed. Task 22 is ready to start.
+Task 22 is GREEN, committed, independently reviewed, and checkpointed. Task 23 is ready to start.
 
 ### Uncommitted Changes
 
@@ -49,6 +50,9 @@ Task 21 is GREEN, committed, independently reviewed, and checkpointed. Task 22 i
 - Focused Task 21 error/session/Webview/Panel recovery tests: 16/16.
 - Focused Task 20 Boss/Webview/protocol/extension tests: 88/88.
 - Extension contract: 5/5 tests.
+- Extension Host current lane: PASS.
+- Extension Host minimum lane: PASS on VS Code 1.96.0.
+- Task 22 acceptance includes TXT/EPUB import-read, 2048 restore, Boss acknowledgement, panel reuse/disposal, serializer delegation, picker cancellation, context state, and multi-process transaction recovery.
 - `npm run format:check`
 - `npm run lint`
 - `npm run build`
@@ -58,12 +62,13 @@ Task 21 is GREEN, committed, independently reviewed, and checkpointed. Task 22 i
 
 - No failing tests in this checkpoint.
 - Coverage is unavailable because the dependency set does not include `@vitest/coverage-v8`; no coverage dependency was installed.
-- `parse5@8.0.1` resolves `entities@8.0.0`, whose package metadata declares Node >=20.19 while the minimum VS Code 1.96 runtime is Node 20.18; esbuild bundles it and current tests/build pass, but Task 22 Extension Host acceptance must explicitly verify this path.
+- `parse5@8.0.1` resolves `entities@8.0.0`, whose package metadata declares Node >=20.19 while the minimum VS Code 1.96 runtime is Node 20.18; the bundled EPUB path now passes the isolated VS Code 1.96.0 Extension Host lane, but the metadata mismatch remains a dependency audit note.
+- Cross-window UI may remain temporarily stale until a declared refresh point; the acceptance harness verifies conflict-safe writes, not realtime cross-process event delivery.
 
 ### Last Good Commit
 
-`0090e46 feat: add recovery UX and multi-window refresh`
+`e3e3a00 test: add Windows extension acceptance harness`
 
 ### Next Exact Action
 
-Read the complete Task 22 plan, write RED activation/restart/multi-window tests, then add the isolated current/minimum VS Code acceptance harness and deterministic fixtures without weakening production lifecycle or storage guarantees.
+Read the complete Task 23 plan, add the allowlisted README/package/release verification assets and package-content tests, then run the final regression and local VSIX verification without publishing or pushing.

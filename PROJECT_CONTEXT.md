@@ -6,7 +6,7 @@ Moyu VS Code is a local-only VS Code leisure center for Windows 10/11. V1 contai
 
 ## Current phase
 
-Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–21 are complete; Task 22 is next.
+Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–22 are complete; Task 23 is next.
 
 ## Approved architecture
 
@@ -31,10 +31,10 @@ Implementation in progress on `feature/moyu-v1-implementation`. Tasks 1–21 are
 - Reader settings now persist field-level concurrent updates, validate exact ranges, flow through closed Host/Webview messages, and drive accessible theme-token-based controls and reader CSS variables.
 - Boss mode now uses a persistent accessible overlay over the single main panel, preserves module/controller/state identity, restores logical Reader anchors, serializes acknowledgement-gated transitions, and resets safely across hidden, disposed, and restored panels.
 - Task 21 now maps domain and adapter failures to stable path-free error presentations with bounded recovery actions, renders accessible recovery controls, refreshes locked repositories at explicit panel lifecycle and mutation boundaries, and broadcasts committed notices only among sessions in the same Extension Host.
+- Task 22 now provides isolated current/minimum VS Code Extension Host lanes, deterministic TEMP fixtures, TXT/EPUB/2048/Boss/Webview/lifecycle acceptance coverage, competing child-process transaction coverage, and a manual Windows checklist.
 
 ## Pending work
 
-- Task 22: Extension Host acceptance harness and Windows compatibility checks.
 - Task 23: packaging, README, and final regression.
 
 ## Important decisions
