@@ -167,3 +167,45 @@ Task 3 — Home and overview snapshot adapter.
 Implement Task 3 from the amended plan: add Home Continue Reading, Quick Access,
 Recent Books, and safe empty states through the presentation snapshot adapter,
 without adding a new store or changing durable services.
+
+## UI Redesign Task 3 checkpoint
+
+Updated: 2026-08-31
+
+### Current Task
+
+Task 4 — Bookshelf presentation and safe actions.
+
+### Completed
+
+- Task 3 committed as `4364f5c feat: add Moyu Home presentation`.
+- Added the read-only `PresentationSnapshotProvider`, validated Home/Books
+  snapshot DTOs, correlated `home/read` transport, and Home route/controller.
+- Home now renders Continue Reading, Quick Access, Recent Books, safe empty
+  states, source-missing state, chapter/progress metadata, and typed navigation
+  actions through shared safe DOM components.
+- Existing bookshelf, progress, game, and file-stat services remain the source
+  of truth; no new store, source mutation, or persistence schema was added.
+
+### Tests
+
+- Focused Home/protocol/adapter/dispatcher/router tests: 19/19 PASS.
+- Full unit regression: 279/279 PASS.
+- Current and VS Code 1.96.0 Extension Host lanes: PASS.
+- Format, lint, build, and Extension Host/Webview typechecks: PASS.
+
+### Known Issues
+
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- Existing non-Task-1 Boss CSS fallback remains for the later responsive/theme
+  polish task.
+
+### Last Good Commit
+
+`4364f5c feat: add Moyu Home presentation`
+
+### Next Exact Action
+
+Implement Task 4 from the amended plan: compact Bookshelf rows, local search and
+type filters, safe overflow actions, source-missing recovery, and the existing
+validated import/relocate/reselect/remove/open flows without source deletion.

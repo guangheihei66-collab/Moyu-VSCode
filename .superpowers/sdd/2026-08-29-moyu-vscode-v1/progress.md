@@ -267,3 +267,10 @@ Tests: focused Sidebar/manifest/protocol/PanelRegistry tests 41/41; full unit re
 Review: added the four-entry lightweight Sidebar Webview bundle, exact typed navigation validation, nonce/CSP/resource-root HTML, provider state updates and disposal, command-to-Sidebar active synchronization, and real Host checks for production Sidebar JS/CSS assets. The existing `moyu.sidebar` Webview contribution and single main WebviewPanel topology remain intact.
 Known issues: coverage provider remains unavailable; Home is a routed shell fallback until Task 3 implements its snapshot surface; existing non-Task-1 Boss CSS fallback remains for the later responsive/theme polish task.
 Next: Task 3 — Home and overview snapshot adapter.
+
+UI Redesign Task 3: complete
+Commit: 4364f5c feat: add Moyu Home presentation
+Tests: focused Home/protocol/adapter/dispatcher/router tests 19/19 PASS; full unit regression 279/279 PASS; current and VS Code 1.96.0 Extension Host lanes PASS; format check, lint, build, and Extension Host/Webview typechecks PASS.
+Review: Home uses a read-only PresentationSnapshotProvider to join existing bookshelf, progress, game, and file-stat services into path-free DTOs. Home renders Continue Reading, Quick Access, Recent Books, and safe empty/source-missing states through shared safe DOM components. The typed home/read transport remains correlated to the current Webview session and does not add a store or mutate durable data.
+Known issues: coverage remains unavailable because @vitest/coverage-v8 is not installed; existing non-Task-1 Boss CSS fallback remains for the later responsive/theme polish task.
+Next: Task 4 — Bookshelf presentation and safe actions.
