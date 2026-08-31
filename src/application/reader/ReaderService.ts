@@ -1,6 +1,10 @@
 import type { VersionedEnvelope } from '../../domain/persistence/envelope';
-import type { ReaderBlockBatch, TxtLocator } from '../../domain/reader/locator';
-import { isTxtLocator } from '../../domain/reader/locator';
+import {
+  isTxtLocator,
+  locatorForBlock,
+  type ReaderBlockBatch,
+  type TxtLocator,
+} from '../../domain/reader/locator';
 import type { TxtIndexManifest } from '../../domain/reader/txtIndex';
 import type {
   ProgressData,
@@ -34,6 +38,11 @@ export interface ReaderServiceOptions {
   clock?: () => number;
 }
 
+export interface ReaderOpenState {
+  version: number;
+  locator: TxtLocator | undefined;
+}
+
 export class ReaderService {
   private readonly clock: () => number;
 
@@ -53,6 +62,23 @@ export class ReaderService {
       direction,
       limit,
     );
+  }
+
+  /** Resolves the durable start locator before any Webview block request. */
+  async open(bookId: string): Promise<ReaderOpenState> {
+    await this.ensureBook(bookId);
+    // Index and source work stays independent of the progress transaction.
+    const index = await this.options.blockReader.loadIndex(bookId);
+    const state = await this.options.progress.read();
+    const checkpoint = state?.data.byBookId[bookId];
+    const restored =
+      checkpoint !== undefined && isTxtLocator(checkpoint.locator)
+        ? recoverLocator(checkpoint.locator, index, checkpoint.percentage)
+        : undefined;
+    return {
+      version: state?.version ?? 0,
+      locator: restored ?? locatorForBlock(index, 0),
+    };
   }
 
   async saveProgress(

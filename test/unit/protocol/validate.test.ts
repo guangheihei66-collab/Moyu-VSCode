@@ -12,6 +12,21 @@ function validateForCurrentSession(value: unknown) {
   return validateHostRequest(value, envelope.sessionId);
 }
 
+function gameState(board: readonly (readonly number[])[]) {
+  return {
+    gameSessionId: 'game-session-1',
+    board,
+    score: 12,
+    bestScore: 12,
+    won: false,
+    gameOver: false,
+    moveSequence: 3,
+    startedAt: 1,
+    updatedAt: 2,
+    stateVersion: 1,
+  };
+}
+
 describe('validateHostRequest', () => {
   it.each([
     { type: 'app/ready', payload: {} },
@@ -56,18 +71,16 @@ describe('validateHostRequest', () => {
       type: 'game2048/save',
       payload: {
         baseVersion: 3,
-        state: {
-          board: [
-            [2, 0, 0, 0],
-            [0, 4, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-          ],
-          score: 12,
-          status: 'playing',
-        },
+        state: gameState([
+          [2, 0, 0, 0],
+          [0, 4, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ]),
       },
     },
+    { type: 'game2048/load', payload: {} },
+    { type: 'game2048/newGame', payload: { baseVersion: 3 } },
   ])('accepts the closed $type request contract', (request) => {
     const result = validateForCurrentSession({ ...envelope, ...request });
 
@@ -203,11 +216,7 @@ describe('validateHostRequest', () => {
         type: 'game2048/save',
         payload: {
           baseVersion: 3,
-          state: {
-            board: [[2, 0, 0, 0]],
-            score: 12,
-            status: 'playing',
-          },
+          state: gameState([[2, 0, 0, 0]]),
         },
       },
       'INVALID_PAYLOAD',
@@ -218,16 +227,12 @@ describe('validateHostRequest', () => {
         type: 'game2048/save',
         payload: {
           baseVersion: 3,
-          state: {
-            board: [
-              [2, 0, 0, 0],
-              [0, 3, 0, 0],
-              [0, 0, 0, 0],
-              [0, 0, 0, 0],
-            ],
-            score: 12,
-            status: 'playing',
-          },
+          state: gameState([
+            [2, 0, 0, 0],
+            [0, 3, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ]),
         },
       },
       'INVALID_PAYLOAD',
@@ -238,16 +243,12 @@ describe('validateHostRequest', () => {
         type: 'game2048/save',
         payload: {
           baseVersion: 3,
-          state: {
-            board: [
-              [4_294_967_297, 0, 0, 0],
-              [0, 0, 0, 0],
-              [0, 0, 0, 0],
-              [0, 0, 0, 0],
-            ],
-            score: 12,
-            status: 'playing',
-          },
+          state: gameState([
+            [4_294_967_297, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ]),
         },
       },
       'INVALID_PAYLOAD',
@@ -258,16 +259,12 @@ describe('validateHostRequest', () => {
         type: 'game2048/save',
         payload: {
           baseVersion: 3,
-          state: {
-            board: [
-              [2 ** 53, 0, 0, 0],
-              [0, 0, 0, 0],
-              [0, 0, 0, 0],
-              [0, 0, 0, 0],
-            ],
-            score: 12,
-            status: 'playing',
-          },
+          state: gameState([
+            [2 ** 53, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ]),
         },
       },
       'INVALID_PAYLOAD',
@@ -289,16 +286,12 @@ describe('validateHostRequest', () => {
       type: 'game2048/save',
       payload: {
         baseVersion: 3,
-        state: {
-          board: [
-            [2 ** 52, 0, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-          ],
-          score: 12,
-          status: 'playing',
-        },
+        state: gameState([
+          [2 ** 52, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ]),
       },
     });
 

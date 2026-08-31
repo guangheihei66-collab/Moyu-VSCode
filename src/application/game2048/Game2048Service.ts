@@ -58,6 +58,18 @@ export class Game2048Service {
     return envelope;
   }
 
+  async save(
+    baseVersion: number,
+    state: Game2048State,
+  ): Promise<VersionedGameState> {
+    const envelope = await this.repository.save(
+      baseVersion,
+      state as unknown as PersistedGameState,
+    );
+    this.localState = envelope.data.state as unknown as Game2048State;
+    return envelope;
+  }
+
   async move(
     baseVersion: number,
     sessionId: string,

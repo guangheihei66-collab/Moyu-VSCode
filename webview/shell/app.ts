@@ -11,7 +11,10 @@ import {
   Game2048Controller,
   type Game2048Transport,
 } from '../game2048/Game2048Controller';
-import { ReaderController } from '../reader/ReaderController';
+import {
+  ReaderController,
+  type ReaderTransport,
+} from '../reader/ReaderController';
 import { SettingsView } from '../settings/SettingsView';
 import {
   ModuleLifecycle,
@@ -26,6 +29,25 @@ export interface SettingsClient {
     baseVersion: number,
     patch: ReaderSettingsPatch,
   ): Promise<ReaderSettingsSnapshot>;
+}
+
+export interface ProductionModuleClient
+  extends SettingsClient,
+    ReaderTransport,
+    Game2048Transport {}
+
+function isProductionModuleClient(
+  client: SettingsClient | undefined,
+): client is ProductionModuleClient {
+  const candidate = client as Partial<ProductionModuleClient> | undefined;
+  return (
+    typeof candidate?.open === 'function' &&
+    typeof candidate.readBlocks === 'function' &&
+    typeof candidate.saveProgress === 'function' &&
+    typeof candidate.load === 'function' &&
+    typeof candidate.save === 'function' &&
+    typeof candidate.newGame === 'function'
+  );
 }
 
 export interface MoyuApp {
@@ -53,35 +75,15 @@ export function createApp(
     heading.textContent = `Moyu 路 ${section}`;
     normalRegion.replaceChildren(heading);
   });
-  const readerController = new ReaderController({
-    readBlocks: async () => ({ blocks: [], atStart: true, atEnd: true }),
-    saveProgress: async () => undefined,
-  });
-  const gameTransport: Game2048Transport = {
-    load: async () => undefined,
-    save: async (version, state) => ({
-      version: version + 1,
-      data: { state },
-    }),
-    newGame: async (version) => ({
-      version: version + 1,
-      data: {
-        state: {
-          gameSessionId: 'webview',
-          board: Array.from({ length: 4 }, () => [0, 0, 0, 0]),
-          score: 0,
-          bestScore: 0,
-          won: false,
-          gameOver: false,
-          moveSequence: 0,
-          startedAt: 0,
-          updatedAt: 0,
-          stateVersion: 1,
-        },
-      },
-    }),
-  };
-  const gameController = new Game2048Controller(gameTransport);
+  const moduleClient = isProductionModuleClient(settingsClient)
+    ? settingsClient
+    : undefined;
+  const readerController =
+    moduleClient === undefined ? undefined : new ReaderController(moduleClient);
+  const gameController =
+    moduleClient === undefined
+      ? undefined
+      : new Game2048Controller(moduleClient);
   const shellController = {};
   const shellModule: ModuleBinding = {
     get id() {
@@ -96,7 +98,7 @@ export function createApp(
     },
     captureState: () => shellController,
   };
-  const readerModule: ModuleBinding = {
+  const readerModule: ModuleBinding | undefined = readerController && {
     id: 'reader',
     controller: readerController,
     pause: () => readerController.pause(),
@@ -113,7 +115,7 @@ export function createApp(
     restoreScroll: (scroll) => readerController.restoreScroll(scroll as number),
     captureState: () => readerController.captureState(),
   };
-  const gameModule: ModuleBinding = {
+  const gameModule: ModuleBinding | undefined = gameController && {
     get id() {
       return `game2048:${gameController.captureState().gameSessionId}`;
     },
@@ -164,6 +166,15 @@ export function createApp(
     normalRegion.replaceChildren(heading, status);
   };
 
+  const renderModuleUnavailable = (label: string): void => {
+    const heading = document.createElement('h1');
+    heading.textContent = label;
+    const status = document.createElement('p');
+    status.setAttribute('role', 'alert');
+    status.textContent = `${label} is unavailable.`;
+    normalRegion.replaceChildren(heading, status);
+  };
+
   const loadSettings = async (status?: string): Promise<void> => {
     if (settingsClient === undefined) return;
     try {
@@ -196,9 +207,17 @@ export function createApp(
     void loadSettings();
   });
   const unregisterReader = router.register('reader', () => {
+    if (readerController === undefined) {
+      renderModuleUnavailable('Reader');
+      return;
+    }
     readerController.mount(normalRegion);
   });
   const unregisterGame = router.register('game2048', () => {
+    if (gameController === undefined) {
+      renderModuleUnavailable('2048');
+      return;
+    }
     gameController.mount(normalRegion);
   });
 

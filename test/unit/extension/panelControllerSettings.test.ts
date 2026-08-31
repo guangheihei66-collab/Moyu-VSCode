@@ -164,6 +164,52 @@ describe('PanelController settings wiring', () => {
     expect(states.at(-1)).toMatchObject({ bossMode: true, open: true });
   });
 
+  it('routes reader module requests through the single panel dispatcher', async () => {
+    const reader = {
+      open: vi.fn(async () => ({
+        version: 4,
+        locator: {
+          kind: 'txt' as const,
+          blockId: 'block-7',
+          characterOffset: 9,
+          contentFingerprint: 'block-fingerprint-7',
+        },
+      })),
+    };
+    const controller = new PanelController(
+      { extensionUri: { path: 'extension' } } as never,
+      { read: vi.fn(), update: vi.fn() } as never,
+      undefined,
+      { reader } as never,
+    );
+    controller.open('reader');
+    const sessionId = /data-session-id="([^"]+)"/.exec(
+      vscodeHarness.panel.webview.html,
+    )?.[1];
+
+    await vscodeHarness.receive({
+      protocol: 1,
+      id: 'reader-open-1',
+      sessionId,
+      type: 'reader/open',
+      payload: { bookId: 'reader-book' },
+    });
+
+    expect(reader.open).toHaveBeenCalledWith('reader-book');
+    expect(vscodeHarness.postMessage).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        sessionId,
+        type: 'reader/opened',
+        payload: expect.objectContaining({
+          requestId: 'reader-open-1',
+          snapshot: expect.objectContaining({
+            anchor: expect.objectContaining({ characterOffset: 9 }),
+          }),
+        }),
+      }),
+    );
+  });
+
   it('attaches a restored panel in NORMAL without revealing or replacing it', () => {
     const states: { visible: boolean; open: boolean; bossMode?: boolean }[] =
       [];

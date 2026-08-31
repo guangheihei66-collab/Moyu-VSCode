@@ -1,4 +1,9 @@
-import type { EpubLocator, TxtLocator } from '../../domain/reader/locator';
+import type {
+  EpubLocator,
+  ReaderBlockBatch,
+  TxtLocator,
+} from '../../domain/reader/locator';
+import type { Game2048State as DurableGame2048State } from '../../domain/game2048/types';
 import type {
   BossTemplate,
   ReaderSettingsPatch,
@@ -27,11 +32,7 @@ export interface Envelope<Type extends string, Payload> {
 
 export type LogicalLocator = TxtLocator | EpubLocator;
 
-export interface Game2048State {
-  board: readonly (readonly number[])[];
-  score: number;
-  status: 'playing' | 'won' | 'lost';
-}
+export type Game2048State = DurableGame2048State;
 
 export type GameDirection = 'left' | 'right' | 'up' | 'down';
 
@@ -93,11 +94,40 @@ export interface ProtocolError {
   message: string;
 }
 
+export interface ReaderOpenSnapshot {
+  bookId: string;
+  version: number;
+  anchor: LogicalLocator | null;
+}
+
+export interface ReaderProgressSnapshot {
+  version: number;
+  locator: LogicalLocator;
+}
+
+export interface Game2048SessionSnapshot {
+  version: number;
+  state: Game2048State;
+}
+
 export type HostResponse =
   | Envelope<'response/success', { requestId: string }>
   | Envelope<
       'settings/snapshot',
       { requestId: string; snapshot: ReaderSettingsSnapshot }
+    >
+  | Envelope<
+      'reader/opened',
+      { requestId: string; snapshot: ReaderOpenSnapshot }
+    >
+  | Envelope<'reader/blocks', { requestId: string; batch: ReaderBlockBatch }>
+  | Envelope<
+      'reader/progressSaved',
+      { requestId: string; snapshot: ReaderProgressSnapshot }
+    >
+  | Envelope<
+      'game2048/session',
+      { requestId: string; session: Game2048SessionSnapshot | null }
     >
   | Envelope<'response/error', { requestId: string; error: ProtocolError }>;
 

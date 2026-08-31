@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { ReaderSettingsService } from '../../../src/application/reader/ReaderSettingsService';
+import { ReaderService } from '../../../src/application/reader/ReaderService';
+import { Game2048Service } from '../../../src/application/game2048/Game2048Service';
+import { GameRepository } from '../../../src/infrastructure/storage/gameRepository';
+import { ProgressRepository } from '../../../src/infrastructure/storage/progressRepository';
 import { DEFAULT_READER_SETTINGS } from '../../../src/domain/reader/settings';
 import { SettingsMessageDispatcher } from '../../../src/extension/panel/SettingsMessageDispatcher';
 import { PreferencesRepository } from '../../../src/infrastructure/storage/preferencesRepository';
@@ -20,6 +24,133 @@ function request(
 }
 
 describe('SettingsMessageDispatcher', () => {
+  it('returns correlated populated Reader and durable 2048 service snapshots', async () => {
+    await withStorageDirectory(async (root) => {
+      const reader = new ReaderService({
+        bookProvider: async (bookId) =>
+          bookId === 'reader-book'
+            ? {
+                id: 'reader-book',
+                title: 'Reader',
+                uri: 'file:///reader.txt',
+                type: 'txt' as const,
+                encoding: 'utf8' as const,
+                fingerprint: 'source-fingerprint',
+                size: 40,
+                modifiedAt: 1,
+                addedAt: 1,
+                metadataVersion: 1,
+              }
+            : undefined,
+        progress: new ProgressRepository(root),
+        blockReader: {
+          loadIndex: async () => ({
+            schemaVersion: 1,
+            bookId: 'reader-book',
+            uri: 'file:///reader.txt',
+            size: 40,
+            modifiedAt: 1,
+            fingerprint: 'source-fingerprint',
+            encoding: 'utf8' as const,
+            blocks: [
+              {
+                blockId: 'block-7',
+                byteStart: 0,
+                byteEnd: 40,
+                decodedLength: 40,
+                paragraphCount: 1,
+                contentFingerprint: 'block-fingerprint-7',
+              },
+            ],
+          }),
+          readBlocks: async () => ({
+            blocks: [
+              {
+                id: 'block-7',
+                paragraphs: ['A durable reader paragraph.'],
+                decodedLength: 40,
+                contentFingerprint: 'block-fingerprint-7',
+              },
+            ],
+            atStart: true,
+            atEnd: true,
+          }),
+        },
+      });
+      const game = new Game2048Service(
+        new GameRepository(root),
+        () => 0,
+        () => 1,
+        () => 'durable-game-1',
+      );
+      let responseSequence = 0;
+      const dispatcher = new SettingsMessageDispatcher(
+        'session-current',
+        new ReaderSettingsService(new PreferencesRepository(root)),
+        { reader, game } as never,
+        () => `response-${++responseSequence}`,
+      );
+
+      await expect(
+        dispatcher.dispatch(
+          request('reader/open' as never, { bookId: 'reader-book' }),
+        ),
+      ).resolves.toMatchObject({
+        type: 'reader/opened',
+        payload: {
+          requestId: 'request-reader/open',
+          snapshot: {
+            bookId: 'reader-book',
+            version: 0,
+            anchor: {
+              blockId: 'block-7',
+              characterOffset: 0,
+              contentFingerprint: 'block-fingerprint-7',
+            },
+          },
+        },
+      });
+      await expect(
+        dispatcher.dispatch(
+          request('reader/readBlocks' as never, {
+            bookId: 'reader-book',
+            anchor: {
+              kind: 'txt',
+              blockId: 'block-7',
+              characterOffset: 9,
+              contentFingerprint: 'block-fingerprint-7',
+            },
+            direction: 'after',
+            limit: 20,
+          }),
+        ),
+      ).resolves.toMatchObject({
+        type: 'reader/blocks',
+        payload: {
+          requestId: 'request-reader/readBlocks',
+          batch: { blocks: [{ id: 'block-7' }] },
+        },
+      });
+      await expect(
+        dispatcher.dispatch(
+          request('game2048/newGame' as never, { baseVersion: 0 }),
+        ),
+      ).resolves.toMatchObject({
+        type: 'game2048/session',
+        payload: {
+          requestId: 'request-game2048/newGame',
+          session: {
+            version: 0,
+            state: {
+              gameSessionId: 'durable-game-1',
+              board: expect.arrayContaining([expect.arrayContaining([2])]),
+            },
+          },
+        },
+      });
+    });
+  });
+
   it('dispatches read and update requests through the real settings service', async () => {
     await withStorageDirectory(async (root) => {
       let responseSequence = 0;

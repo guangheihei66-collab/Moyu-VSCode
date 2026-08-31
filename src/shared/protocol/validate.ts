@@ -35,11 +35,6 @@ const APP_SECTIONS: ReadonlySet<AppSection> = new Set([
   'game2048',
   'settings',
 ]);
-const GAME_STATUSES: ReadonlySet<Game2048State['status']> = new Set([
-  'playing',
-  'won',
-  'lost',
-]);
 const BOSS_MODES = new Set(['NORMAL', 'BOSS_MODE']);
 const BOSS_TEMPLATES = new Set(['typescript', 'json', 'buildLog']);
 const MAX_2048_TILE = 2 ** 52;
@@ -138,11 +133,26 @@ function isPowerOfTwoTile(value: unknown): value is number {
 }
 
 function isGame2048State(value: unknown): value is Game2048State {
-  if (!isRecord(value) || !hasExactKeys(value, ['board', 'score', 'status'])) {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, [
+      'gameSessionId',
+      'board',
+      'score',
+      'bestScore',
+      'won',
+      'gameOver',
+      'moveSequence',
+      'startedAt',
+      'updatedAt',
+      'stateVersion',
+    ])
+  ) {
     return false;
   }
 
   return (
+    isNonEmptyString(value.gameSessionId) &&
     Array.isArray(value.board) &&
     value.board.length === 4 &&
     value.board.every(
@@ -152,8 +162,43 @@ function isGame2048State(value: unknown): value is Game2048State {
         row.every((tile) => isPowerOfTwoTile(tile)),
     ) &&
     isNonNegativeInteger(value.score) &&
-    typeof value.status === 'string' &&
-    GAME_STATUSES.has(value.status as Game2048State['status'])
+    isNonNegativeInteger(value.bestScore) &&
+    typeof value.won === 'boolean' &&
+    typeof value.gameOver === 'boolean' &&
+    isNonNegativeInteger(value.moveSequence) &&
+    isNonNegativeInteger(value.startedAt) &&
+    isNonNegativeInteger(value.updatedAt) &&
+    isNonNegativeInteger(value.stateVersion) &&
+    value.stateVersion > 0
+  );
+}
+
+function isReaderBlockBatch(value: unknown): boolean {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ['blocks', 'atStart', 'atEnd'])
+  ) {
+    return false;
+  }
+  return (
+    Array.isArray(value.blocks) &&
+    value.blocks.every(
+      (block) =>
+        isRecord(block) &&
+        hasExactKeys(block, [
+          'id',
+          'paragraphs',
+          'decodedLength',
+          'contentFingerprint',
+        ]) &&
+        isNonEmptyString(block.id) &&
+        Array.isArray(block.paragraphs) &&
+        block.paragraphs.every((paragraph) => typeof paragraph === 'string') &&
+        isNonNegativeInteger(block.decodedLength) &&
+        isNonEmptyString(block.contentFingerprint),
+    ) &&
+    typeof value.atStart === 'boolean' &&
+    typeof value.atEnd === 'boolean'
   );
 }
 
@@ -219,6 +264,29 @@ function isPayloadForType(type: string, payload: unknown): boolean {
         isNonNegativeInteger(payload.baseVersion) &&
         isLogicalLocator(payload.locator)
       );
+    case 'game2048/load':
+      return hasExactKeys(payload, []);
+    case 'game2048/newGame':
+      return (
+        hasExactKeys(payload, ['baseVersion']) &&
+        isNonNegativeInteger(payload.baseVersion)
+      );
+    case 'game2048/move':
+      return (
+        hasExactKeys(payload, [
+          'baseVersion',
+          'sessionId',
+          'moveSequence',
+          'direction',
+        ]) &&
+        isNonNegativeInteger(payload.baseVersion) &&
+        isNonEmptyString(payload.sessionId) &&
+        isNonNegativeInteger(payload.moveSequence) &&
+        (payload.direction === 'left' ||
+          payload.direction === 'right' ||
+          payload.direction === 'up' ||
+          payload.direction === 'down')
+      );
     case 'game2048/save':
       return (
         hasExactKeys(payload, ['baseVersion', 'state']) &&
@@ -260,6 +328,42 @@ function isResponsePayloadForType(type: string, payload: unknown): boolean {
         hasExactKeys(payload.snapshot, ['version', 'settings']) &&
         isNonNegativeInteger(payload.snapshot.version) &&
         isReaderSettings(payload.snapshot.settings)
+      );
+    case 'reader/opened':
+      return (
+        hasExactKeys(payload, ['requestId', 'snapshot']) &&
+        isNonEmptyString(payload.requestId) &&
+        isRecord(payload.snapshot) &&
+        hasExactKeys(payload.snapshot, ['bookId', 'version', 'anchor']) &&
+        isNonEmptyString(payload.snapshot.bookId) &&
+        isNonNegativeInteger(payload.snapshot.version) &&
+        (payload.snapshot.anchor === null ||
+          isLogicalLocator(payload.snapshot.anchor))
+      );
+    case 'reader/blocks':
+      return (
+        hasExactKeys(payload, ['requestId', 'batch']) &&
+        isNonEmptyString(payload.requestId) &&
+        isReaderBlockBatch(payload.batch)
+      );
+    case 'reader/progressSaved':
+      return (
+        hasExactKeys(payload, ['requestId', 'snapshot']) &&
+        isNonEmptyString(payload.requestId) &&
+        isRecord(payload.snapshot) &&
+        hasExactKeys(payload.snapshot, ['version', 'locator']) &&
+        isNonNegativeInteger(payload.snapshot.version) &&
+        isLogicalLocator(payload.snapshot.locator)
+      );
+    case 'game2048/session':
+      return (
+        hasExactKeys(payload, ['requestId', 'session']) &&
+        isNonEmptyString(payload.requestId) &&
+        (payload.session === null ||
+          (isRecord(payload.session) &&
+            hasExactKeys(payload.session, ['version', 'state']) &&
+            isNonNegativeInteger(payload.session.version) &&
+            isGame2048State(payload.session.state)))
       );
     case 'response/error':
       return (
@@ -370,6 +474,9 @@ export function validateHostRequest(
       envelope.value.type !== 'settings/update' &&
       envelope.value.type !== 'reader/readBlocks' &&
       envelope.value.type !== 'reader/saveProgress' &&
+      envelope.value.type !== 'game2048/load' &&
+      envelope.value.type !== 'game2048/newGame' &&
+      envelope.value.type !== 'game2048/move' &&
       envelope.value.type !== 'game2048/save'
     ) {
       return protocolError('UNKNOWN_REQUEST_TYPE');
@@ -398,6 +505,10 @@ export function validateHostResponse(
     if (
       envelope.value.type !== 'response/success' &&
       envelope.value.type !== 'settings/snapshot' &&
+      envelope.value.type !== 'reader/opened' &&
+      envelope.value.type !== 'reader/blocks' &&
+      envelope.value.type !== 'reader/progressSaved' &&
+      envelope.value.type !== 'game2048/session' &&
       envelope.value.type !== 'response/error'
     ) {
       return protocolError('UNKNOWN_RESPONSE_TYPE');

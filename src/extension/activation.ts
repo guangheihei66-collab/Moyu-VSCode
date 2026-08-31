@@ -10,11 +10,16 @@ import { createNodeFileStatProvider } from '../infrastructure/filesystem/fileIde
 import { BookshelfRepository } from '../infrastructure/storage/bookshelfRepository';
 import { EncodingSelectionService } from '../application/reader/EncodingSelectionService';
 import { ProgressRepository } from '../infrastructure/storage/progressRepository';
-import { IndexStore } from '../infrastructure/txt/IndexStore';
+import { IndexStore } from '../infrastructure/txt/indexStore';
+import { TxtBlockReader } from '../infrastructure/txt/TxtBlockReader';
 import { EpubCache } from '../infrastructure/epub/EpubCache';
 import { ReaderSettingsService } from '../application/reader/ReaderSettingsService';
+import { ReaderService } from '../application/reader/ReaderService';
 import { PreferencesRepository } from '../infrastructure/storage/preferencesRepository';
 import { BossModeService } from '../application/boss/BossModeService';
+import { Game2048Service } from '../application/game2048/Game2048Service';
+import { GameRepository } from '../infrastructure/storage/gameRepository';
+import type { BookMetadata } from '../domain/books/types';
 
 export function activate(context: vscode.ExtensionContext): void {
   const windowId = String(vscode.env.sessionId);
@@ -23,11 +28,6 @@ export function activate(context: vscode.ExtensionContext): void {
     new PreferencesRepository(context.globalStorageUri.fsPath),
   );
   const boss = new BossModeService();
-  const registry = new PanelRegistry(
-    (_, onStateChange) => new PanelController(context, settings, onStateChange),
-    contextKeys,
-    () => boss.reset(),
-  );
   const bookshelfRepository = new BookshelfRepository(
     context.globalStorageUri.fsPath,
   );
@@ -44,6 +44,51 @@ export function activate(context: vscode.ExtensionContext): void {
       await Promise.all([progress.remove(bookId), removeDerived(bookId)]);
     },
   });
+  const bookProvider = async (
+    bookId: string,
+  ): Promise<BookMetadata | undefined> => {
+    const book = (await bookshelf.list())?.data.books.find(
+      (candidate) => candidate.id === bookId,
+    );
+    const fingerprint = book?.fingerprint;
+    const size = book?.size;
+    const modifiedAt = book?.modifiedAt;
+    if (
+      book === undefined ||
+      typeof fingerprint !== 'string' ||
+      typeof size !== 'number' ||
+      !Number.isSafeInteger(size) ||
+      size < 0 ||
+      typeof modifiedAt !== 'number' ||
+      !Number.isSafeInteger(modifiedAt) ||
+      modifiedAt < 0
+    ) {
+      return undefined;
+    }
+    return {
+      ...book,
+      fingerprint,
+      size,
+      modifiedAt,
+    } as BookMetadata;
+  };
+  const reader = new ReaderService({
+    bookProvider,
+    progress,
+    blockReader: new TxtBlockReader({
+      bookProvider,
+      indexStore: txtIndexes,
+    }),
+  });
+  const game = new Game2048Service(
+    new GameRepository(context.globalStorageUri.fsPath),
+  );
+  const registry = new PanelRegistry(
+    (_, onStateChange) =>
+      new PanelController(context, settings, onStateChange, { reader, game }),
+    contextKeys,
+    () => boss.reset(),
+  );
   registerCommands(context, registry, windowId, {
     bookshelf,
     encoding: new EncodingSelectionService(bookshelfRepository),

@@ -24,19 +24,7 @@ export class PanelRegistry {
   ): Promise<PanelController> {
     let panel = this.panels.get(windowId);
     if (panel === undefined) {
-      panel = this.factory(windowId, (state) => {
-        if (state.open) {
-          if (!state.visible) this.onPanelDisposed?.();
-          this.contextKeys.set({ isOpen: true, isVisible: state.visible });
-          if (state.bossMode !== undefined) {
-            this.contextKeys.set({ isBossMode: state.bossMode });
-          }
-        } else {
-          this.panels.delete(windowId);
-          this.onPanelDisposed?.();
-          this.contextKeys.clear();
-        }
-      });
+      panel = this.factory(windowId, this.createStateListener(windowId));
       this.panels.set(windowId, panel);
       this.contextKeys.set({
         isOpen: true,
@@ -55,21 +43,12 @@ export class PanelRegistry {
     panel: Parameters<PanelController['restore']>[0],
     section: AppSection = 'books',
   ): PanelController {
+    // A serializer replacement invalidates any acknowledgement owned by the
+    // previous panel instance before it can roll a restored panel backwards.
+    this.onPanelDisposed?.();
     let controller = this.panels.get(windowId);
     if (controller === undefined) {
-      controller = this.factory(windowId, (state) => {
-        if (state.open) {
-          this.contextKeys.set({
-            isOpen: true,
-            isVisible: state.visible,
-            isBossMode: state.bossMode ?? false,
-          });
-        } else {
-          this.panels.delete(windowId);
-          this.onPanelDisposed?.();
-          this.contextKeys.clear();
-        }
-      });
+      controller = this.factory(windowId, this.createStateListener(windowId));
       this.panels.set(windowId, controller);
     }
     controller.restore(panel, section);
@@ -79,5 +58,23 @@ export class PanelRegistry {
     this.panels.delete(windowId);
     this.onPanelDisposed?.();
     if (this.panels.size === 0) this.contextKeys.clear();
+  }
+
+  private createStateListener(
+    windowId: string,
+  ): (state: { visible: boolean; open: boolean; bossMode?: boolean }) => void {
+    return (state) => {
+      if (state.open) {
+        if (!state.visible) this.onPanelDisposed?.();
+        this.contextKeys.set({ isOpen: true, isVisible: state.visible });
+        if (state.bossMode !== undefined) {
+          this.contextKeys.set({ isBossMode: state.bossMode });
+        }
+        return;
+      }
+      this.panels.delete(windowId);
+      this.onPanelDisposed?.();
+      this.contextKeys.clear();
+    };
   }
 }

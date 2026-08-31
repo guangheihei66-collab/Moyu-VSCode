@@ -133,4 +133,37 @@ describe('ReaderView', () => {
     expect(controller.isPaused).toBe(false);
     controller.dispose();
   });
+
+  it('retains a validated nonzero durable locator for a live focused block', async () => {
+    const root = new TestElement('MAIN');
+    root.ownerDocument = new TestDocument();
+    const locator = {
+      kind: 'txt' as const,
+      blockId: '1',
+      characterOffset: 9,
+      contentFingerprint: 'fp-1',
+    };
+    const transport = {
+      open: vi.fn(async () => ({ version: 4, anchor: locator })),
+      readBlocks: vi.fn(async () => ({
+        blocks: [block],
+        atStart: true,
+        atEnd: false,
+      })),
+      saveProgress: vi.fn(async () => ({ version: 5, locator })),
+    };
+    const controller = new ReaderController(transport);
+    controller.mount(root as unknown as HTMLElement);
+
+    await controller.open('reader-book');
+    root.querySelector('[data-block-id]')!.focus();
+    expect(controller.captureLogicalAnchor()).toEqual(locator);
+
+    await controller.saveAnchor();
+    expect(transport.saveProgress).toHaveBeenCalledWith(
+      'reader-book',
+      4,
+      locator,
+    );
+  });
 });

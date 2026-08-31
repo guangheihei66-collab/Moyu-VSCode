@@ -2,6 +2,31 @@ import { describe, expect, it, vi } from 'vitest';
 import { MessageClient } from '../../../webview/shell/messageClient';
 import { DEFAULT_READER_SETTINGS } from '../../../src/domain/reader/settings';
 
+const durableReaderAnchor = {
+  kind: 'txt' as const,
+  blockId: 'block-7',
+  characterOffset: 9,
+  contentFingerprint: 'block-fingerprint-7',
+};
+
+const durableGameState = {
+  gameSessionId: 'durable-game-1',
+  board: [
+    [2, 4, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ],
+  score: 12,
+  bestScore: 12,
+  won: false,
+  gameOver: false,
+  moveSequence: 3,
+  startedAt: 1,
+  updatedAt: 2,
+  stateVersion: 1,
+};
+
 const request = {
   protocol: 1 as const,
   id: 'request-1',
@@ -11,6 +36,164 @@ const request = {
 };
 
 describe('MessageClient', () => {
+  it('uses validated correlated Reader and durable 2048 transports', async () => {
+    const api = { postMessage: vi.fn() };
+    const ids = [
+      'reader-open-1',
+      'reader-blocks-1',
+      'reader-save-1',
+      'game-load-1',
+      'game-save-1',
+      'game-new-1',
+    ];
+    const client = new MessageClient(
+      api,
+      'session-1',
+      10_000,
+      () => ids.shift()!,
+    );
+
+    const opened = client.open('reader-book');
+    expect(api.postMessage).toHaveBeenLastCalledWith({
+      protocol: 1,
+      id: 'reader-open-1',
+      sessionId: 'session-1',
+      type: 'reader/open',
+      payload: { bookId: 'reader-book' },
+    });
+    expect(
+      client.handleMessage({
+        protocol: 1,
+        id: 'host-reader-open-1',
+        sessionId: 'session-1',
+        type: 'reader/opened',
+        payload: {
+          requestId: 'reader-open-1',
+          snapshot: {
+            bookId: 'reader-book',
+            version: 4,
+            anchor: durableReaderAnchor,
+          },
+        },
+      }),
+    ).toBe(true);
+    await expect(opened).resolves.toEqual({
+      version: 4,
+      anchor: durableReaderAnchor,
+    });
+
+    const blocks = client.readBlocks(
+      'reader-book',
+      durableReaderAnchor,
+      'after',
+      20,
+    );
+    expect(api.postMessage).toHaveBeenLastCalledWith({
+      protocol: 1,
+      id: 'reader-blocks-1',
+      sessionId: 'session-1',
+      type: 'reader/readBlocks',
+      payload: {
+        bookId: 'reader-book',
+        anchor: durableReaderAnchor,
+        direction: 'after',
+        limit: 20,
+      },
+    });
+    client.handleMessage({
+      protocol: 1,
+      id: 'host-reader-blocks-1',
+      sessionId: 'session-1',
+      type: 'reader/blocks',
+      payload: {
+        requestId: 'reader-blocks-1',
+        batch: {
+          blocks: [
+            {
+              id: 'block-7',
+              paragraphs: ['A durable paragraph.'],
+              decodedLength: 20,
+              contentFingerprint: 'block-fingerprint-7',
+            },
+          ],
+          atStart: true,
+          atEnd: false,
+        },
+      },
+    });
+    await expect(blocks).resolves.toMatchObject({
+      blocks: [{ id: 'block-7' }],
+    });
+
+    const savedProgress = client.saveProgress(
+      'reader-book',
+      4,
+      durableReaderAnchor,
+    );
+    client.handleMessage({
+      protocol: 1,
+      id: 'host-reader-save-1',
+      sessionId: 'session-1',
+      type: 'reader/progressSaved',
+      payload: {
+        requestId: 'reader-save-1',
+        snapshot: { version: 5, locator: durableReaderAnchor },
+      },
+    });
+    await expect(savedProgress).resolves.toEqual({
+      version: 5,
+      locator: durableReaderAnchor,
+    });
+
+    const loadedGame = client.load();
+    client.handleMessage({
+      protocol: 1,
+      id: 'host-game-load-1',
+      sessionId: 'session-1',
+      type: 'game2048/session',
+      payload: {
+        requestId: 'game-load-1',
+        session: { version: 6, state: durableGameState },
+      },
+    });
+    await expect(loadedGame).resolves.toEqual({
+      version: 6,
+      data: { state: durableGameState },
+    });
+
+    const savedGame = client.save(6, durableGameState);
+    client.handleMessage({
+      protocol: 1,
+      id: 'host-game-save-1',
+      sessionId: 'session-1',
+      type: 'game2048/session',
+      payload: {
+        requestId: 'game-save-1',
+        session: { version: 7, state: durableGameState },
+      },
+    });
+    await expect(savedGame).resolves.toEqual({
+      version: 7,
+      data: { state: durableGameState },
+    });
+
+    const newGame = client.newGame(7);
+    client.handleMessage({
+      protocol: 1,
+      id: 'host-game-new-1',
+      sessionId: 'session-1',
+      type: 'game2048/session',
+      payload: {
+        requestId: 'game-new-1',
+        session: { version: 8, state: durableGameState },
+      },
+    });
+    await expect(newGame).resolves.toEqual({
+      version: 8,
+      data: { state: durableGameState },
+    });
+  });
+
   it('correlates responses by request id', async () => {
     const api = { postMessage: vi.fn() };
     const client = new MessageClient(api);

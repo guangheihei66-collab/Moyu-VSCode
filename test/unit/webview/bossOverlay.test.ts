@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { BossOverlay } from '../../../webview/boss/BossOverlay';
 import {
@@ -6,10 +6,78 @@ import {
   BOSS_TEMPLATES,
 } from '../../../webview/boss/templates';
 import { createApp } from '../../../webview/shell/app';
+import { ReaderController } from '../../../webview/reader/ReaderController';
 import type {
   ModuleBinding,
   ModuleSnapshot,
 } from '../../../webview/shell/moduleLifecycle';
+
+const durableReaderAnchor = {
+  kind: 'txt' as const,
+  blockId: 'block-7',
+  characterOffset: 9,
+  contentFingerprint: 'block-fingerprint-7',
+};
+const durableGameState = {
+  gameSessionId: 'durable-game-1',
+  board: [
+    [2, 4, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ],
+  score: 12,
+  bestScore: 12,
+  won: false,
+  gameOver: false,
+  moveSequence: 3,
+  startedAt: 1,
+  updatedAt: 2,
+  stateVersion: 1,
+};
+
+function productionModuleClient() {
+  return {
+    readSettings: async () => ({
+      version: 0,
+      settings: {
+        fontSize: 18,
+        lineHeight: 1.75,
+        contentWidth: 760,
+        bossTemplate: 'typescript' as const,
+      },
+    }),
+    updateSettings: async () => ({
+      version: 0,
+      settings: {
+        fontSize: 18,
+        lineHeight: 1.75,
+        contentWidth: 760,
+        bossTemplate: 'typescript' as const,
+      },
+    }),
+    open: async () => ({ version: 4, anchor: durableReaderAnchor }),
+    readBlocks: async () => ({
+      blocks: [
+        {
+          id: 'block-7',
+          paragraphs: ['A durable reader paragraph.'],
+          decodedLength: 40,
+          contentFingerprint: 'block-fingerprint-7',
+        },
+      ],
+      atStart: true,
+      atEnd: true,
+    }),
+    saveProgress: async () => ({
+      version: 5,
+      locator: durableReaderAnchor,
+    }),
+    load: async () => ({ version: 6, data: { state: durableGameState } }),
+    save: async () => ({ version: 7, data: { state: durableGameState } }),
+    newGame: async () => ({ version: 7, data: { state: durableGameState } }),
+  };
+}
 
 class TestElement {
   readonly children: TestElement[] = [];
@@ -70,8 +138,7 @@ class TestElement {
   }
 
   querySelector(selector: string): TestElement | null {
-    void selector;
-    return null;
+    return this.querySelectorAll(selector)[0] ?? null;
   }
 
   focus(options?: FocusOptions): void {
@@ -161,41 +228,68 @@ describe('BossOverlay', () => {
     expect(persistentElement.hidden).toBe(true);
   });
 
-  it('integrates with the app without replacing the active module controller', () => {
+  it('preserves a populated Reader controller and nonzero logical focus through Boss mode', async () => {
     const document = new TestDocument();
     const root = document.createElement('main');
-    const controller = { kind: 'reader' };
-    const pause = vi.fn();
-    const resume = vi.fn();
+    const readerAnchor = {
+      kind: 'txt' as const,
+      blockId: 'block-7',
+      characterOffset: 9,
+      contentFingerprint: 'block-fingerprint-7',
+    };
+    const controller = new ReaderController({
+      open: async () => ({ version: 4, anchor: readerAnchor }),
+      readBlocks: async () => ({
+        blocks: [
+          {
+            id: 'block-7',
+            paragraphs: ['A durable reader paragraph.'],
+            decodedLength: 40,
+            contentFingerprint: 'block-fingerprint-7',
+          },
+        ],
+        atStart: true,
+        atEnd: false,
+      }),
+      saveProgress: async () => ({ version: 5, locator: readerAnchor }),
+    });
     const binding: ModuleBinding = {
       id: 'reader:book-1',
       controller,
-      pause,
-      resume,
-      captureFocus: () => 'paragraph:block-9',
-      restoreFocus: vi.fn(),
-      captureAnchor: () => 'block-9',
-      restoreAnchor: vi.fn(),
-      captureState: () => controller,
+      pause: () => controller.pause(),
+      resume: () => controller.resume(),
+      captureFocus: () => controller.captureFocus(),
+      restoreFocus: (focus) => controller.restoreFocus(focus as never),
+      captureAnchor: () => controller.captureLogicalAnchor(),
+      restoreAnchor: (anchor) =>
+        controller.restoreLogicalAnchor(anchor as typeof readerAnchor),
+      captureState: () => controller.captureState(),
     };
     const app = createApp(
       root as unknown as HTMLElement,
-      undefined,
+      productionModuleClient(),
       'reader',
       () => binding,
     );
     const normalRegion = root.children[0]!;
+    controller.mount(normalRegion as unknown as HTMLElement);
+    await controller.open('reader-book');
+    normalRegion.querySelector('[data-block-id]')!.focus();
+    const before = app.captureModuleSnapshot();
 
     app.setBossMode('BOSS_MODE', 'typescript');
     expect(app.isBossMode).toBe(true);
     expect(normalRegion).toMatchObject({ hidden: true, inert: true });
-    expect(pause).toHaveBeenCalledOnce();
+    expect(controller.isPaused).toBe(true);
 
     app.setBossMode('NORMAL', 'typescript');
     expect(app.isBossMode).toBe(false);
     expect(normalRegion).toMatchObject({ hidden: false, inert: false });
-    expect(resume).toHaveBeenCalledOnce();
-    expect(binding.controller).toBe(controller);
+    const after = app.captureModuleSnapshot();
+    expect(controller.isPaused).toBe(false);
+    expect(after.controller).toBe(before.controller);
+    expect(after.moduleState).toBe(before.moduleState);
+    expect(after.logicalAnchor).toEqual(readerAnchor);
   });
 
   it('uses mounted production Reader and 2048 controllers without replacing their state objects', async () => {
@@ -203,7 +297,7 @@ describe('BossOverlay', () => {
     const root = document.createElement('main');
     const app = createApp(
       root as unknown as HTMLElement,
-      undefined,
+      productionModuleClient(),
       'reader',
     ) as unknown as {
       captureModuleSnapshot(): ModuleSnapshot;
@@ -221,6 +315,12 @@ describe('BossOverlay', () => {
     expect(app.navigate('game2048')).toBe(true);
     await Promise.resolve();
     const gameBefore = app.captureModuleSnapshot();
+    expect(
+      (gameBefore.moduleState as { gameSessionId: string }).gameSessionId,
+    ).toBe('durable-game-1');
+    expect((gameBefore.moduleState as { board: unknown[] }).board[0]).toContain(
+      2,
+    );
     app.setBossMode('BOSS_MODE', 'typescript');
     app.setBossMode('NORMAL', 'typescript');
     const gameAfter = app.captureModuleSnapshot();
@@ -236,7 +336,7 @@ describe('BossOverlay', () => {
     const root = document.createElement('main');
     const app = createApp(
       root as unknown as HTMLElement,
-      undefined,
+      productionModuleClient(),
       'reader',
     ) as unknown as {
       captureModuleSnapshot(): ModuleSnapshot;

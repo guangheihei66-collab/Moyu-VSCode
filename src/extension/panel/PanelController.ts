@@ -16,7 +16,10 @@ import {
   validateHostEvent,
   validateHostRequest,
 } from '../../shared/protocol/validate';
-import { SettingsMessageDispatcher } from './SettingsMessageDispatcher';
+import {
+  SettingsMessageDispatcher,
+  type HostModuleServices,
+} from './SettingsMessageDispatcher';
 import { createWebviewHtml } from './webviewHtml';
 
 export class PanelController {
@@ -41,6 +44,7 @@ export class PanelController {
       open: boolean;
       bossMode?: boolean;
     }) => void,
+    private readonly moduleServices: HostModuleServices = {},
   ) {}
   open(section: AppSection): vscode.WebviewPanel {
     let created = false;
@@ -202,6 +206,7 @@ export class PanelController {
     this.bossMode = false;
     this.bossTransitionPending = false;
     panel.onDidDispose(() => {
+      if (this.panel !== panel) return;
       this.rejectPendingBossTransitions(
         new Error('Moyu Panel was disposed during a Boss Mode transition.'),
       );
@@ -212,6 +217,7 @@ export class PanelController {
       this.onStateChange?.({ visible: false, open: false });
     });
     panel.onDidChangeViewState((event) => {
+      if (this.panel !== event.webviewPanel) return;
       if (!event.webviewPanel.visible) {
         this.rejectPendingBossTransitions(
           new Error('Moyu Panel was hidden during a Boss Mode transition.'),
@@ -225,7 +231,11 @@ export class PanelController {
       });
     });
     const sessionId = this.sessionId;
-    const dispatcher = new SettingsMessageDispatcher(sessionId, this.settings);
+    const dispatcher = new SettingsMessageDispatcher(
+      sessionId,
+      this.settings,
+      this.moduleServices,
+    );
     panel.webview.onDidReceiveMessage(async (message: unknown) => {
       const request = validateHostRequest(message, sessionId);
       if (request.ok && request.value.type === 'boss/ack') {
@@ -234,7 +244,7 @@ export class PanelController {
       }
       const response = await dispatcher.dispatch(message);
       if (response !== undefined) {
-        await this.panel?.webview.postMessage(response);
+        await panel.webview.postMessage(response);
       }
     });
     panel.webview.html = createWebviewHtml(
