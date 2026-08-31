@@ -6,7 +6,14 @@ Moyu VS Code is a local-only VS Code leisure center for Windows 10/11. V1 contai
 
 ## Current phase
 
-V1 implementation is complete on `feature/moyu-v1-implementation`. Tasks 1–23 are complete; follow-up notes are tracked in `docs/todo.md`.
+V1 implementation and the UI redesign release checkpoint are complete on
+`feature/moyu-v1-implementation`. UI Redesign Tasks 1–12 are implemented and
+the local `0.2.0` VSIX is packaged. The isolated visual pass verified the
+Activity Bar, four-entry Sidebar, one-panel navigation, themes, responsive
+layouts, Settings, and neutral Boss presentation. Reader/EPUB fixture-driven
+visual checks remain explicitly open because no manual book fixture is shipped;
+their automated Host/Webview coverage is green. Follow-up notes remain in
+`docs/todo.md` and `test/acceptance/windows-v1-checklist.md`.
 
 ## Approved architecture
 
@@ -33,10 +40,23 @@ V1 implementation is complete on `feature/moyu-v1-implementation`. Tasks 1–23 
 - Task 21 now maps domain and adapter failures to stable path-free error presentations with bounded recovery actions, renders accessible recovery controls, refreshes locked repositories at explicit panel lifecycle and mutation boundaries, and broadcasts committed notices only among sessions in the same Extension Host.
 - Task 22 now provides isolated current/minimum VS Code Extension Host lanes, deterministic TEMP fixtures, TXT/EPUB/2048/Boss/Webview/lifecycle acceptance coverage, competing child-process transaction coverage, and a manual Windows checklist.
 - Task 23 now provides the user guide, changelog/license, architecture and decision notes, a runtime-only `.vscodeignore` boundary, package-input secret scanning, VSIX archive allowlist verification, and isolated packaged current/minimum install smoke.
+- UI Redesign Tasks 1–11 now provide the approved presentation layer across
+  the shared components, native Sidebar, Home, Bookshelf, Reader, EPUB drawer,
+  2048, Settings, neutral Boss overlay, responsive layouts, accessibility,
+  themes, and integrated route/lifecycle regression coverage. Domain,
+  protocol, persistence, parser, and controller boundaries remain intact.
+- UI Redesign Task 12 packages version `0.2.0`, requires both main Webview and
+  Sidebar runtime assets, fixes the package scanner's case-sensitive secret
+  assignment boundary, verifies the 11-entry runtime-only VSIX archive, and
+  records the isolated Windows smoke in
+  `test/acceptance/windows-v1-checklist.md`.
 
 ## Pending work
 
-- V1 implementation is complete. Remaining follow-up notes and manual acceptance observations are tracked in `docs/todo.md` and `test/acceptance/windows-v1-checklist.md`.
+- Complete a fixture-backed manual Reader TXT, EPUB drawer, Reader Boss, and
+  2048 modal visual pass when an approved non-private fixture is available.
+- Keep the known coverage-provider, parse5/entities engine metadata, and
+  documented cross-window refresh notes in `docs/todo.md`.
 
 ## Important decisions
 
@@ -46,3 +66,5 @@ V1 implementation is complete on `feature/moyu-v1-implementation`. Tasks 1–23 
 - EPUB is safe text-only chapter reading with no original HTML rendering or images.
 - TXT supports UTF-8, UTF-16LE/BE, GB18030, and GBK with explicit encoding confirmation.
 - Boss mode overlays the existing Moyu Webview without changing the user's real editor layout.
+- The `0.2.0` UI redesign is released locally only; no push, Marketplace
+  publish, or normal VS Code profile mutation is part of the release checkpoint.

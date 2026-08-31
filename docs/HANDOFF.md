@@ -630,3 +630,85 @@ Read and implement Task 12 from the amended UI redesign plan: run the full
 packaging gates, produce the local `moyu-vscode-0.2.0.vsix`, and execute the
 isolated manual visual acceptance checklist without publishing or modifying
 user profiles.
+
+## UI Redesign Task 12 checkpoint
+
+Updated: 2026-09-01
+
+### Current Task
+
+Task 12 — IN PROGRESS: release gates and available isolated visual smoke are
+complete; fixture-backed Reader/EPUB visual acceptance remains open.
+
+### Completed Tasks
+
+UI Redesign Tasks 1–11 are complete. Task 12's package metadata, package
+contract, archive verifier, secret-scan boundary, release package, and
+available isolated smoke are complete.
+
+### Completed
+
+- Set the release version to `0.2.0` in `package.json` and the lockfile.
+- Extended package/build contracts to require the main Webview and Sidebar
+  JavaScript/CSS assets and the approved version.
+- Corrected the package secret scanner to avoid treating ordinary lowercase
+  dependency properties such as `password: encodePassword` as credentials;
+  explicit uppercase secret assignments remain rejected.
+- Ran `npm run package` successfully: format, lint, 313/313 unit tests,
+  Extension contract 5/5, build, current/minimum Extension Host lanes,
+  typechecks, secret scan, VSIX allowlist verification, and packaged install
+  smoke all pass.
+- Produced `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation\moyu-vscode-0.2.0.vsix`.
+  The archive contains 11 runtime-approved entries, including the current
+  main Webview, Sidebar JS/CSS, extension bundle, manifest, README/license,
+  and media; no tests, fixtures, maps, logs, secrets, or user data are present.
+- Installed the VSIX through VS Code 1.135.0 in the isolated profile
+  `%TEMP%\\moyu-vscode-ui-0.2.0-20260901`. Activity Bar → Sidebar showed
+  Home, Books, 2048, and Settings without the data-provider error. All four
+  entries reused one visible Moyu WebviewPanel.
+- Observed Dark 2026, Light 2026, and Dark High Contrast themes; narrow
+  817x904, normal 1443x904, and wide 1707x1019 responsive states. Settings
+  live preview/reset, Books search/filter/import cancellation, 2048 New Game,
+  and the neutral 2048 Ctrl+M enter/exit flow were observed.
+- Recorded the available results and limitations in
+  `test/acceptance/windows-v1-checklist.md` and refreshed
+  `PROJECT_CONTEXT.md`.
+
+### Tests
+
+- Package gate: PASS.
+- Full unit regression: 313/313 PASS.
+- Extension contract: 5/5 PASS.
+- Current and VS Code 1.96.0 Extension Host lanes: PASS.
+- Format, lint, build, Extension Host/Webview typechecks, secret scan, archive
+  verification, and packaged current/minimum install smoke: PASS.
+- Manual visual smoke: Sidebar/provider, one-panel routes, themes, widths,
+  Settings, Books baseline, 2048, and neutral Boss: PASS.
+
+### Known Issues
+
+- Manual Reader TXT import/content, EPUB drawer, Reader Boss, and 2048
+  victory/Game Over modal were not run because the repository has no approved
+  non-private manual book fixture. Automated Reader/EPUB/presentation/
+  lifecycle coverage remains green.
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- `parse5/entities` Node-engine metadata and the documented cross-window
+  refresh note remain unchanged.
+
+### Last Good Commit
+
+`f2bc9b2 release: package Moyu UI redesign 0.2.0`
+
+### Uncommitted Files
+
+Documentation updates for this checkpoint are pending commit:
+`PROJECT_CONTEXT.md`, `docs/HANDOFF.md`,
+`test/acceptance/windows-v1-checklist.md`.
+
+### Next Exact Action
+
+When an approved non-private fixture is available, run the remaining manual
+Reader/EPUB/Reader Boss/modal visual flows in the same isolated profile and
+append the result to `test/acceptance/windows-v1-checklist.md`; then commit
+the documentation checkpoint. Do not change the release package or normal
+user profile.

@@ -362,3 +362,33 @@ and no credential/token was found.
 Uncommitted files: documentation handoff update only, to be committed
 separately.
 Next: Task 12 — VSIX packaging and manual visual acceptance.
+
+UI Redesign Task 12: in progress — release gates complete; manual fixture follow-up open
+Commit: `f2bc9b2 release: package Moyu UI redesign 0.2.0`
+Completed Tasks: UI Redesign Tasks 1–11 complete; Task 12 package metadata,
+package contracts, archive verification, secret-scan boundary, local VSIX, and
+available isolated visual smoke complete.
+Tests: `npm run package` PASS; format, lint, full unit 313/313, Extension
+contract 5/5, build, Extension Host/Webview typechecks, current/minimum Host
+lanes, package-input secret scan, 11-entry VSIX allowlist, and packaged
+current/minimum install smoke PASS.
+Manual: VS Code 1.135.0 on Windows 11 x64; isolated installation showed the
+Moyu Activity Bar, four-entry Sidebar without provider error, one-panel route
+reuse, Dark/Light/Dark High Contrast themes, 817x904 narrow, 1443x904 normal,
+1707x1019 wide layouts, Books search/filter/import cancellation, Settings
+preview/reset, 2048 New Game, and neutral 2048 Ctrl+M enter/exit.
+Review: production archive contains current main Webview, Sidebar JS/CSS,
+extension bundle, package metadata, README/license, and media only; no tests,
+fixtures, maps, logs, secrets, or user data. Package scanner now rejects
+explicit uppercase secret assignments while ignoring ordinary lowercase
+dependency properties.
+Known issues: Reader TXT/EPUB fixture-driven visual flows, Reader Boss, and
+2048 victory/Game Over modal remain manual follow-up because no approved
+non-private book fixture is shipped; automated Reader/EPUB/presentation/
+lifecycle coverage is green. Coverage provider is unavailable; parse5/entities
+engine metadata and cross-window refresh notes remain unchanged.
+Status: IN PROGRESS (safe release checkpoint; documentation update pending
+commit).
+Next: when an approved non-private fixture is available, complete the remaining
+manual Reader/EPUB/Reader Boss/modal flows in the isolated profile, append the
+result to `test/acceptance/windows-v1-checklist.md`, and commit the docs.
