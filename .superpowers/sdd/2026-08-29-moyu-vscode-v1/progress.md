@@ -236,3 +236,11 @@ Review: isolated TEMP fixtures are marker-protected and never use normal user da
 Known issues: coverage provider is not installed; parse5/entities metadata declares a Node 20.19 floor while the bundled EPUB path passes under the isolated VS Code 1.96.0 Extension Host lane; cross-window UI can remain temporarily stale until a declared refresh point, as specified.
 Uncommitted files: documentation handoff update only, to be committed separately.
 Next: Task 23 — read the complete packaging/README plan, add allowlisted package verification and documentation assets, run final regression, and produce a local VSIX without publishing.
+
+Task 23: complete
+Commit: 119bf28
+Tests: `npm run package` PASS with format check, lint, 261/261 unit tests, Extension contract 5/5, build, current/minimum Extension Host lanes, package-input secret scan, VSCE listing, 9-entry archive verification, and isolated packaged current/minimum install smoke. Local VSIX `moyu-vscode-0.1.0.vsix` was produced at 242.44 KB and remains Git-ignored.
+Review: README documents installation, F5, all core workflows, Ctrl+M conflict/rebinding, local `globalStorage`, multi-window refresh limits, encoding confirmation, and source-file safety. `.vscodeignore` and the post-package verifier agree on a runtime-only archive; the verifier rejects development dependencies, tests/fixtures, maps/logs, secrets, unsafe paths, and unapproved entries. No publish, push, or external repository metadata was added.
+Known issues: coverage provider is not installed; parse5/entities metadata declares a Node 20.19 floor while the bundled EPUB path passes under the isolated VS Code 1.96.0 Extension Host lane; this host exposes Node 26.4.0 rather than Node 22 and no system/toolchain change was made; cross-window UI can remain temporarily stale until a declared refresh point.
+Uncommitted files: documentation handoff update only, to be committed separately.
+Next: V1 implementation complete; review `docs/todo.md` and run the manual Windows checklist when a human UI/visual acceptance pass is scheduled.
