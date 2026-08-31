@@ -55,6 +55,7 @@ export class Game2048Controller {
       onContinue: () => this.view?.render(this.state),
     });
     this.view = view;
+    view.setPaused(this.paused);
     view.render(this.state);
     view.boardElement.addEventListener('keydown', (event) => {
       handleGameKey(
@@ -123,6 +124,7 @@ export class Game2048Controller {
   }
 
   private async newGame(): Promise<void> {
+    if (this.paused) return;
     const envelope = await this.transport.newGame(this.baseVersion);
     if (this.disposed) return;
     this.baseVersion = envelope.version;

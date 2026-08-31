@@ -33,6 +33,10 @@ body {
   padding: 0;
 }
 
+#app:has(.moyu-game2048) {
+  max-width: 760px;
+}
+
 button:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid var(--moyu-focus);

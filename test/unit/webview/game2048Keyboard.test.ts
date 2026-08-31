@@ -26,4 +26,26 @@ describe('2048 keyboard scope', () => {
     expect(onMove).toHaveBeenCalledWith('left');
     expect(preventDefault).toHaveBeenCalledOnce();
   });
+
+  it('does not invoke browser alerts or route keyboard input outside the board', () => {
+    const alert = vi.fn();
+    vi.stubGlobal('alert', alert);
+    const onMove = vi.fn();
+    const preventDefault = vi.fn();
+
+    expect(
+      handleGameKey(
+        { key: 'ArrowRight', preventDefault },
+        false,
+        false,
+        onMove,
+      ),
+    ).toBe(false);
+    expect(
+      handleGameKey({ key: 'w', preventDefault }, true, true, onMove),
+    ).toBe(false);
+    expect(onMove).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
 });
