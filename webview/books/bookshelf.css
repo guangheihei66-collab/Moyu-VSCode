@@ -1,23 +1,108 @@
 .moyu-bookshelf {
   display: grid;
-  gap: 1rem;
+  gap: var(--moyu-space-4);
+  width: min(100%, var(--moyu-content-max-width));
+  margin: 0 auto;
 }
 
-[data-book-id] {
-  padding: 1rem;
-  border: 1px solid var(--vscode-panel-border);
-  border-radius: 0.35rem;
-  background: var(--vscode-sideBar-background);
+.moyu-bookshelf__search {
+  display: grid;
+  gap: var(--moyu-space-1);
 }
 
-[data-book-id] h2,
-[data-book-id] p {
-  margin-block: 0 0.6rem;
+.moyu-bookshelf__search label {
+  color: var(--moyu-muted);
+  font-size: 0.85rem;
+}
+
+.moyu-bookshelf__search input {
+  box-sizing: border-box;
+  min-height: var(--moyu-control-height);
+  width: 100%;
+  padding: 0 var(--moyu-space-2);
+  border: 1px solid var(--moyu-input-border);
+  border-radius: var(--moyu-radius-control);
+  color: var(--moyu-input-foreground);
+  background: var(--moyu-input-background);
+  font: inherit;
+}
+
+.moyu-bookshelf__search input:focus-visible {
+  outline: 2px solid var(--moyu-focus);
+  outline-offset: 2px;
+}
+
+.moyu-bookshelf__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--moyu-space-1);
+}
+
+.moyu-bookshelf__filters .moyu-button[aria-pressed='true'] {
+  color: var(--moyu-selected-foreground);
+  background: var(--moyu-selected);
+}
+
+.moyu-bookshelf__list {
+  display: grid;
+  gap: var(--moyu-space-2);
+}
+
+.moyu-book-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--moyu-space-4);
+  padding: var(--moyu-space-3) var(--moyu-space-4);
+  border: 1px solid var(--moyu-border);
+  border-radius: var(--moyu-radius-small);
+  background: var(--moyu-surface-raised);
+}
+
+.moyu-book-row__copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--moyu-space-1);
+}
+
+.moyu-book-row__copy h2,
+.moyu-book-row__copy p {
+  margin: 0;
   overflow-wrap: anywhere;
 }
 
-[data-book-actions] {
+.moyu-book-row__copy h2 {
+  font-size: 1rem;
+}
+
+.moyu-book-row__copy p {
+  color: var(--moyu-muted);
+  font-size: 0.85rem;
+}
+
+.moyu-book-row__missing {
+  color: var(--vscode-errorForeground, var(--moyu-foreground)) !important;
+}
+
+.moyu-book-row__actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--moyu-space-1);
+}
+
+@media (max-width: 620px) {
+  .moyu-book-row {
+    grid-template-columns: 1fr;
+  }
+
+  .moyu-book-row__actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moyu-bookshelf * {
+    scroll-behavior: auto;
+  }
 }

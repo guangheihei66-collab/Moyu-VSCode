@@ -40,6 +40,10 @@ function isMutation(request: HostRequest): request is Extract<
   {
     type:
       | 'settings/update'
+      | 'books/import'
+      | 'books/remove'
+      | 'books/relocate'
+      | 'books/selectEncoding'
       | 'reader/saveProgress'
       | 'game2048/newGame'
       | 'game2048/move'
@@ -48,6 +52,10 @@ function isMutation(request: HostRequest): request is Extract<
 > {
   return (
     request.type === 'settings/update' ||
+    request.type === 'books/import' ||
+    request.type === 'books/remove' ||
+    request.type === 'books/relocate' ||
+    request.type === 'books/selectEncoding' ||
     request.type === 'reader/saveProgress' ||
     request.type === 'game2048/newGame' ||
     request.type === 'game2048/move' ||
@@ -315,7 +323,9 @@ export class PanelController {
                 ? 'settings'
                 : request.value.type.startsWith('game2048/')
                   ? 'game2048'
-                  : 'reader',
+                  : request.value.type.startsWith('books/')
+                    ? 'books'
+                    : 'reader',
             ),
           );
         } catch {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ReaderSettingsService } from '../../../src/application/reader/ReaderSettingsService';
 import { ReaderService } from '../../../src/application/reader/ReaderService';
@@ -191,6 +191,12 @@ describe('SettingsMessageDispatcher', () => {
 
   it('dispatches Home and bookshelf snapshots through the presentation adapter', async () => {
     await withStorageDirectory(async (root) => {
+      const books = {
+        import: vi.fn(async () => undefined),
+        relocate: vi.fn(async () => undefined),
+        selectEncoding: vi.fn(async () => undefined),
+        remove: vi.fn(async () => undefined),
+      };
       const dispatcher = new SettingsMessageDispatcher(
         'session-current',
         new ReaderSettingsService(new PreferencesRepository(root)),
@@ -204,6 +210,7 @@ describe('SettingsMessageDispatcher', () => {
             }),
             readBooks: async () => ({ version: 3, books: [] }),
           },
+          books,
         } as never,
         () => 'response-presentation',
       );
@@ -235,6 +242,19 @@ describe('SettingsMessageDispatcher', () => {
         type: 'books/snapshot',
         payload: { requestId: 'books-list-1', snapshot: { version: 3 } },
       });
+      await expect(
+        dispatcher.dispatch({
+          protocol: 1,
+          id: 'books-import-1',
+          sessionId: 'session-current',
+          type: 'books/import',
+          payload: {},
+        }),
+      ).resolves.toMatchObject({
+        type: 'books/snapshot',
+        payload: { requestId: 'books-import-1' },
+      });
+      expect(books.import).toHaveBeenCalledWith(undefined);
     });
   });
 

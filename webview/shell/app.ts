@@ -7,10 +7,15 @@ import {
 } from '../../src/domain/reader/settings';
 import type {
   AppSection,
+  BookshelfSnapshot,
   HomeSnapshot,
   LogicalLocator,
 } from '../../src/shared/protocol/messages';
 import { BossOverlay } from '../boss/BossOverlay';
+import {
+  BookshelfController,
+  type BookshelfClient,
+} from '../books/BookshelfController';
 import { HomeController, type HomeAction } from '../home/HomeController';
 import {
   Game2048Controller,
@@ -35,6 +40,11 @@ export interface SettingsClient {
     patch: ReaderSettingsPatch,
   ): Promise<ReaderSettingsSnapshot>;
   readHome?(): Promise<HomeSnapshot>;
+  readBooks?(): Promise<BookshelfSnapshot>;
+  importBook?(): Promise<BookshelfSnapshot>;
+  relocateBook?(bookId: string): Promise<BookshelfSnapshot>;
+  selectBookEncoding?(bookId: string): Promise<BookshelfSnapshot>;
+  removeBook?(bookId: string): Promise<BookshelfSnapshot>;
 }
 
 export interface ProductionModuleClient
@@ -117,6 +127,17 @@ export function createApp(
           router.navigate('reader');
           void readerController?.open(action.bookId);
         });
+  const booksClient =
+    typeof settingsClient?.readBooks === 'function'
+      ? (settingsClient as SettingsClient & BookshelfClient)
+      : undefined;
+  const bookshelfController =
+    booksClient === undefined
+      ? undefined
+      : new BookshelfController(booksClient, undefined, (bookId) => {
+          router.navigate('reader');
+          void readerController?.open(bookId);
+        });
   const homeModule: ModuleBinding | undefined = homeController && {
     id: 'home',
     controller: homeController,
@@ -127,6 +148,17 @@ export function createApp(
       if (typeof anchor === 'number') normalRegion.scrollTop = anchor;
     },
     captureState: () => homeController,
+  };
+  const booksModule: ModuleBinding | undefined = bookshelfController && {
+    id: 'books',
+    controller: bookshelfController,
+    pause: () => undefined,
+    resume: () => undefined,
+    captureAnchor: () => normalRegion.scrollTop,
+    restoreAnchor: (anchor) => {
+      if (typeof anchor === 'number') normalRegion.scrollTop = anchor;
+    },
+    captureState: () => bookshelfController,
   };
   const readerModule: ModuleBinding | undefined = readerController && {
     id: 'reader',
@@ -162,6 +194,7 @@ export function createApp(
   };
   const productionModule = (route: AppSection): ModuleBinding | undefined => {
     if (route === 'home') return homeModule ?? shellModule;
+    if (route === 'books') return booksModule ?? shellModule;
     if (route === 'reader') return readerModule;
     if (route === 'game2048') return gameModule;
     return shellModule;
@@ -214,6 +247,14 @@ export function createApp(
       return;
     }
     homeController.mount(normalRegion);
+  });
+
+  const unregisterBooks = router.register('books', () => {
+    if (bookshelfController === undefined) {
+      renderModuleUnavailable('Books');
+      return;
+    }
+    bookshelfController.mount(normalRegion);
   });
 
   const loadSettings = async (status?: string): Promise<void> => {
@@ -310,9 +351,11 @@ export function createApp(
       }
       unregisterSettings();
       unregisterHome();
+      unregisterBooks();
       unregisterReader();
       unregisterGame();
       homeController?.dispose();
+      bookshelfController?.dispose();
       root.replaceChildren();
     },
   };

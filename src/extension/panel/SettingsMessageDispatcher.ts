@@ -4,7 +4,7 @@ import type { ReaderSettingsService } from '../../application/reader/ReaderSetti
 import type { ReaderService } from '../../application/reader/ReaderService';
 import type { Game2048Service } from '../../application/game2048/Game2048Service';
 import type { VersionedGameState } from '../../application/game2048/Game2048Service';
-import type { PresentationSnapshotProvider } from './PresentationSnapshotProvider';
+import type { PresentationSnapshotReader } from './PresentationSnapshotProvider';
 import type {
   BookshelfSnapshot,
   Game2048SessionSnapshot,
@@ -31,7 +31,15 @@ const UPDATE_ERROR: ProtocolError = {
 export interface HostModuleServices {
   reader?: ReaderService;
   game?: Game2048Service;
-  presentation?: PresentationSnapshotProvider;
+  presentation?: PresentationSnapshotReader;
+  books?: HostBookOperations;
+}
+
+export interface HostBookOperations {
+  import(uri?: string): Promise<void>;
+  remove(bookId: string): Promise<void>;
+  relocate(bookId: string, uri?: string): Promise<void>;
+  selectEncoding(bookId: string): Promise<void>;
 }
 
 function validatedResponse(response: HostResponse): HostResponse {
@@ -91,17 +99,46 @@ export class SettingsMessageDispatcher {
         });
       }
       case 'books/list': {
-        const snapshot = await this.requirePresentation().readBooks();
-        return validatedResponse({
-          protocol: PROTOCOL_VERSION,
+        return this.booksSnapshotResponse(
           id,
-          sessionId: this.sessionId,
-          type: 'books/snapshot',
-          payload: {
-            requestId: request.id,
-            snapshot: snapshot as BookshelfSnapshot,
-          },
-        });
+          request.id,
+          await this.requirePresentation().readBooks(),
+        );
+      }
+      case 'books/import': {
+        await this.requireBooks().import(request.payload.uri);
+        return this.booksSnapshotResponse(
+          id,
+          request.id,
+          await this.requirePresentation().readBooks(),
+        );
+      }
+      case 'books/relocate': {
+        await this.requireBooks().relocate(
+          request.payload.bookId,
+          request.payload.uri,
+        );
+        return this.booksSnapshotResponse(
+          id,
+          request.id,
+          await this.requirePresentation().readBooks(),
+        );
+      }
+      case 'books/selectEncoding': {
+        await this.requireBooks().selectEncoding(request.payload.bookId);
+        return this.booksSnapshotResponse(
+          id,
+          request.id,
+          await this.requirePresentation().readBooks(),
+        );
+      }
+      case 'books/remove': {
+        await this.requireBooks().remove(request.payload.bookId);
+        return this.booksSnapshotResponse(
+          id,
+          request.id,
+          await this.requirePresentation().readBooks(),
+        );
       }
       case 'settings/read': {
         const snapshot = await this.service.read();
@@ -245,6 +282,20 @@ export class SettingsMessageDispatcher {
     });
   }
 
+  private booksSnapshotResponse(
+    id: string,
+    requestId: string,
+    snapshot: BookshelfSnapshot,
+  ): HostResponse {
+    return validatedResponse({
+      protocol: PROTOCOL_VERSION,
+      id,
+      sessionId: this.sessionId,
+      type: 'books/snapshot',
+      payload: { requestId, snapshot },
+    });
+  }
+
   private requireReader(): ReaderService {
     if (this.moduleServices.reader === undefined) {
       throw new Error('Reader service is unavailable.');
@@ -259,17 +310,28 @@ export class SettingsMessageDispatcher {
     return this.moduleServices.game;
   }
 
-  private requirePresentation(): PresentationSnapshotProvider {
+  private requirePresentation(): PresentationSnapshotReader {
     if (this.moduleServices.presentation === undefined) {
       throw new Error('Presentation snapshot provider is unavailable.');
     }
     return this.moduleServices.presentation;
   }
 
+  private requireBooks(): HostBookOperations {
+    if (this.moduleServices.books === undefined) {
+      throw new Error('Bookshelf operations are unavailable.');
+    }
+    return this.moduleServices.books;
+  }
+
   private safeCorrelatedError(request: HostRequest, id: string): HostResponse {
     const isWrite =
       request.type === 'settings/update' ||
       request.type === 'reader/saveProgress' ||
+      request.type === 'books/import' ||
+      request.type === 'books/remove' ||
+      request.type === 'books/relocate' ||
+      request.type === 'books/selectEncoding' ||
       request.type === 'game2048/newGame' ||
       request.type === 'game2048/save' ||
       request.type === 'game2048/move';

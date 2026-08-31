@@ -32,6 +32,8 @@ describe('validateHostRequest', () => {
     { type: 'app/ready', payload: {} },
     { type: 'app/navigate', payload: { section: 'books' } },
     { type: 'books/list', payload: {} },
+    { type: 'books/import', payload: {} },
+    { type: 'books/relocate', payload: { bookId: 'book-1' } },
     { type: 'settings/read', payload: {} },
     {
       type: 'settings/update',

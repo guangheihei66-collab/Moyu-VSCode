@@ -157,4 +157,57 @@ describe('PanelController recovery lifecycle', () => {
       ),
     ).toBe(true);
   });
+
+  it('uses the bookshelf refresh boundary for a Host bookshelf mutation', async () => {
+    const refresh = {
+      onCreated: vi.fn(async () => undefined),
+      onRevealed: vi.fn(async () => undefined),
+      onNavigated: vi.fn(async () => undefined),
+      beforeMutation: vi.fn(async () => undefined),
+    };
+    const books = {
+      import: vi.fn(async () => undefined),
+      relocate: vi.fn(async () => undefined),
+      selectEncoding: vi.fn(async () => undefined),
+      remove: vi.fn(async () => undefined),
+    };
+    const controller = new PanelController(
+      { extensionUri: { path: 'extension' } } as never,
+      { read: vi.fn(), update: vi.fn() } as never,
+      undefined,
+      {
+        books,
+        presentation: {
+          readBooks: async () => ({ version: 1, books: [] }),
+          readHome: async () => ({
+            recentBooks: [],
+            booksCount: 0,
+            bestScore: 0,
+            hasGameSession: false,
+          }),
+        },
+      },
+      { refreshCoordinator: refresh as never },
+    );
+
+    controller.open('books');
+    const sessionId = /data-session-id="([^"]+)"/.exec(
+      vscodeHarness.panel.webview.html,
+    )?.[1];
+    await vscodeHarness.receive({
+      protocol: 1,
+      id: 'books-import-1',
+      sessionId,
+      type: 'books/import',
+      payload: {},
+    });
+
+    expect(refresh.beforeMutation).toHaveBeenCalledWith('bookshelf');
+    expect(books.import).toHaveBeenCalledWith(undefined);
+    expect(
+      vscodeHarness.postMessage.mock.calls.some(
+        ([message]) => (message as { type?: string }).type === 'books/snapshot',
+      ),
+    ).toBe(true);
+  });
 });

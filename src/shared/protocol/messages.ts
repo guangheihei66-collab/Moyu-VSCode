@@ -83,9 +83,9 @@ export type HostRequest =
   | Envelope<'boss/ack', { requestId: string; mode: BossMode }>
   | Envelope<'app/navigate', { section: AppSection }>
   | Envelope<'books/list', Record<string, never>>
-  | Envelope<'books/import', { uri: string }>
+  | Envelope<'books/import', { uri?: string }>
   | Envelope<'books/remove', { bookId: string }>
-  | Envelope<'books/relocate', { bookId: string; uri: string }>
+  | Envelope<'books/relocate', { bookId: string; uri?: string }>
   | Envelope<'books/selectEncoding', { bookId: string }>
   | Envelope<'reader/open', { bookId: string }>
   | Envelope<'settings/read', Record<string, never>>

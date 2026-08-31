@@ -1,11 +1,10 @@
-export interface BookshelfBook {
-  id: string;
-  title: string;
-  uri: string;
-  type: 'txt' | 'epub';
-  encoding?: string;
-  sourceMissing?: boolean;
-}
+import type { PresentationBook } from '../../src/shared/protocol/messages';
+import { ActionMenu, type MenuItem } from '../components/ActionMenu';
+import { createButton } from '../components/Button';
+import { createProgress } from '../components/ProgressBar';
+import { createText } from '../components/dom';
+
+export type BookshelfBook = PresentationBook;
 
 export interface BookCardActions {
   open(bookId: string): void;
@@ -14,66 +13,119 @@ export interface BookCardActions {
   remove(bookId: string): void;
 }
 
+interface ManagedBookCard extends HTMLElement {
+  disposeMenu?: () => void;
+}
+
 export function createBookCard(
   document: Document,
   book: BookshelfBook,
   actions: BookCardActions,
 ): HTMLElement {
-  const card = document.createElement('article');
-  card.dataset.bookId = book.id;
-  card.setAttribute('aria-label', book.title);
+  const row = document.createElement('article');
+  row.className = 'moyu-book-row';
+  row.setAttribute('data-book-row', book.bookId);
+  row.setAttribute('data-book-id', book.bookId);
+  row.setAttribute('aria-label', book.title);
 
-  const title = document.createElement('h2');
-  title.textContent = book.title;
-  const pathLabel = document.createElement('p');
-  pathLabel.textContent = displayPath(book.uri);
-  card.append(title, pathLabel);
+  const copy = document.createElement('div');
+  copy.className = 'moyu-book-row__copy';
+  copy.append(
+    createText(document, 'h2', book.title),
+    createText(document, 'p', metadataLabel(book)),
+  );
+  if (book.chapterLabel !== undefined) {
+    copy.append(createText(document, 'p', book.chapterLabel));
+  }
+  if (book.sourceMissing) {
+    const missing = createText(document, 'p', 'Source unavailable');
+    missing.className = 'moyu-book-row__missing';
+    missing.setAttribute('role', 'status');
+    copy.append(missing);
+  }
+  copy.append(
+    createProgress(document, {
+      value: book.percentage,
+      label: `${book.title} reading progress`,
+    }),
+  );
 
   const controls = document.createElement('div');
-  controls.dataset.bookActions = '';
-  controls.append(
-    actionButton(document, book.sourceMissing ? 'Relocate' : 'Continue', () =>
-      book.sourceMissing ? actions.relocate(book.id) : actions.open(book.id),
-    ),
+  controls.className = 'moyu-book-row__actions';
+  const primary = createButton(document, {
+    label: book.sourceMissing
+      ? 'Relocate'
+      : book.percentage > 0
+        ? 'Continue'
+        : 'Open',
+    variant: 'primary',
+    onClick: () =>
+      book.sourceMissing
+        ? actions.relocate(book.bookId)
+        : actions.open(book.bookId),
+  });
+  primary.setAttribute(
+    'data-book-action',
+    `${book.sourceMissing ? 'relocate' : 'open'}-${book.bookId}`,
   );
+
+  const menuTrigger = createButton(document, {
+    label: `More actions for ${book.title}`,
+    icon: 'more',
+    variant: 'quiet',
+    title: 'More actions',
+  });
+  menuTrigger.setAttribute('data-book-menu', book.bookId);
+  controls.append(primary, menuTrigger);
+
+  const menu = new ActionMenu(document);
+  menu.mount(menuTrigger, menuItems(book, actions));
+  row.append(copy, controls);
+  (row as ManagedBookCard).disposeMenu = () => menu.dispose();
+  return row;
+}
+
+export function disposeBookCard(card: HTMLElement): void {
+  (card as ManagedBookCard).disposeMenu?.();
+}
+
+function menuItems(
+  book: BookshelfBook,
+  actions: BookCardActions,
+): readonly MenuItem[] {
+  const items: MenuItem[] = [
+    {
+      id: 'open',
+      label: 'Open',
+      disabled: book.sourceMissing,
+      onSelect: () => actions.open(book.bookId),
+    },
+    {
+      id: 'relocate',
+      label: 'Relocate file',
+      onSelect: () => actions.relocate(book.bookId),
+    },
+  ];
   if (book.type === 'txt') {
-    controls.append(
-      actionButton(document, 'Reselect encoding', () =>
-        actions.selectEncoding(book.id),
-      ),
-    );
+    items.push({
+      id: 'encoding',
+      label: 'Reselect encoding',
+      onSelect: () => actions.selectEncoding(book.bookId),
+    });
   }
-  if (!book.sourceMissing) {
-    controls.append(
-      actionButton(document, 'Relocate', () => actions.relocate(book.id)),
-    );
-  }
-  controls.append(
-    actionButton(document, 'Remove from bookshelf', () =>
-      actions.remove(book.id),
-    ),
-  );
-  card.append(controls);
-  return card;
+  items.push({
+    id: 'remove',
+    label: 'Remove from bookshelf',
+    onSelect: () => actions.remove(book.bookId),
+  });
+  return items;
 }
 
-function actionButton(
-  document: Document,
-  label: string,
-  action: () => void,
-): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.textContent = label;
-  button.addEventListener('click', action);
-  return button;
-}
-
-export function displayPath(uri: string): string {
-  try {
-    const value = decodeURIComponent(uri.replace(/^file:\/\//i, ''));
-    return value.replace(/^\/+([a-z]:)/i, '$1').replaceAll('/', '\\');
-  } catch {
-    return uri;
-  }
+function metadataLabel(book: BookshelfBook): string {
+  const progress = book.percentage > 0 ? ` · ${book.percentage}%` : '';
+  const lastRead =
+    book.lastOpenedAt === undefined
+      ? 'Not opened yet'
+      : `Last read ${new Date(book.lastOpenedAt).toLocaleDateString()}`;
+  return `${book.type.toUpperCase()}${progress} · ${lastRead}`;
 }

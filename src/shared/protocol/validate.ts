@@ -323,7 +323,10 @@ function isPayloadForType(type: string, payload: unknown): boolean {
         APP_SECTIONS.has(payload.section as AppSection)
       );
     case 'books/import':
-      return hasExactKeys(payload, ['uri']) && isNonEmptyString(payload.uri);
+      return (
+        hasOnlyKeys(payload, [], ['uri']) &&
+        (payload.uri === undefined || isNonEmptyString(payload.uri))
+      );
     case 'books/remove':
     case 'books/selectEncoding':
     case 'reader/open':
@@ -332,9 +335,9 @@ function isPayloadForType(type: string, payload: unknown): boolean {
       );
     case 'books/relocate':
       return (
-        hasExactKeys(payload, ['bookId', 'uri']) &&
+        hasOnlyKeys(payload, ['bookId'], ['uri']) &&
         isNonEmptyString(payload.bookId) &&
-        isNonEmptyString(payload.uri)
+        (payload.uri === undefined || isNonEmptyString(payload.uri))
       );
     case 'settings/read':
       return hasExactKeys(payload, []);

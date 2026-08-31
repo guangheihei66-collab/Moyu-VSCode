@@ -1,4 +1,5 @@
 import type {
+  BookshelfSnapshot,
   HomeSnapshot,
   Game2048State,
   HostRequest,
@@ -85,6 +86,56 @@ export class MessageClient {
       throw new Error('The Host returned an unexpected Home response.');
     }
     return response.payload.snapshot;
+  }
+
+  readBooks(): Promise<BookshelfSnapshot> {
+    return this.requestBooks({
+      protocol: PROTOCOL_VERSION,
+      id: this.createRequestId(),
+      sessionId: this.sessionId,
+      type: 'books/list',
+      payload: {},
+    });
+  }
+
+  importBook(): Promise<BookshelfSnapshot> {
+    return this.requestBooks({
+      protocol: PROTOCOL_VERSION,
+      id: this.createRequestId(),
+      sessionId: this.sessionId,
+      type: 'books/import',
+      payload: {},
+    });
+  }
+
+  relocateBook(bookId: string): Promise<BookshelfSnapshot> {
+    return this.requestBooks({
+      protocol: PROTOCOL_VERSION,
+      id: this.createRequestId(),
+      sessionId: this.sessionId,
+      type: 'books/relocate',
+      payload: { bookId },
+    });
+  }
+
+  selectBookEncoding(bookId: string): Promise<BookshelfSnapshot> {
+    return this.requestBooks({
+      protocol: PROTOCOL_VERSION,
+      id: this.createRequestId(),
+      sessionId: this.sessionId,
+      type: 'books/selectEncoding',
+      payload: { bookId },
+    });
+  }
+
+  removeBook(bookId: string): Promise<BookshelfSnapshot> {
+    return this.requestBooks({
+      protocol: PROTOCOL_VERSION,
+      id: this.createRequestId(),
+      sessionId: this.sessionId,
+      type: 'books/remove',
+      payload: { bookId },
+    });
   }
 
   updateSettings(
@@ -245,6 +296,27 @@ export class MessageClient {
       throw new Error(response.payload.error.message);
     if (response.type !== 'settings/snapshot')
       throw new Error('The Host returned an unexpected settings response.');
+    return response.payload.snapshot;
+  }
+
+  private async requestBooks(
+    request: Extract<
+      HostRequest,
+      {
+        type:
+          | 'books/list'
+          | 'books/import'
+          | 'books/relocate'
+          | 'books/selectEncoding'
+          | 'books/remove';
+      }
+    >,
+  ): Promise<BookshelfSnapshot> {
+    const response = await this.request(request);
+    this.throwIfError(response);
+    if (response.type !== 'books/snapshot') {
+      throw new Error('The Host returned an unexpected bookshelf response.');
+    }
     return response.payload.snapshot;
   }
 

@@ -247,6 +247,91 @@ describe('MessageClient', () => {
     });
   });
 
+  it('uses correlated bookshelf snapshots for reads and safe Host actions', async () => {
+    const api = { postMessage: vi.fn() };
+    const ids = [
+      'books-read-1',
+      'books-import-1',
+      'books-relocate-1',
+      'books-encoding-1',
+      'books-remove-1',
+    ];
+    const client = new MessageClient(
+      api,
+      'session-1',
+      10_000,
+      () => ids.shift()!,
+    );
+    const emptySnapshot = { version: 2, books: [] };
+
+    const read = client.readBooks();
+    expect(api.postMessage).toHaveBeenLastCalledWith({
+      protocol: 1,
+      id: 'books-read-1',
+      sessionId: 'session-1',
+      type: 'books/list',
+      payload: {},
+    });
+    client.handleMessage({
+      protocol: 1,
+      id: 'books-response-1',
+      sessionId: 'session-1',
+      type: 'books/snapshot',
+      payload: { requestId: 'books-read-1', snapshot: emptySnapshot },
+    });
+    await expect(read).resolves.toEqual(emptySnapshot);
+
+    const operations = [
+      client.importBook(),
+      client.relocateBook('book-1'),
+      client.selectBookEncoding('book-1'),
+      client.removeBook('book-1'),
+    ];
+    expect(api.postMessage).toHaveBeenNthCalledWith(2, {
+      protocol: 1,
+      id: 'books-import-1',
+      sessionId: 'session-1',
+      type: 'books/import',
+      payload: {},
+    });
+    expect(api.postMessage).toHaveBeenNthCalledWith(3, {
+      protocol: 1,
+      id: 'books-relocate-1',
+      sessionId: 'session-1',
+      type: 'books/relocate',
+      payload: { bookId: 'book-1' },
+    });
+    expect(api.postMessage).toHaveBeenNthCalledWith(4, {
+      protocol: 1,
+      id: 'books-encoding-1',
+      sessionId: 'session-1',
+      type: 'books/selectEncoding',
+      payload: { bookId: 'book-1' },
+    });
+    expect(api.postMessage).toHaveBeenNthCalledWith(5, {
+      protocol: 1,
+      id: 'books-remove-1',
+      sessionId: 'session-1',
+      type: 'books/remove',
+      payload: { bookId: 'book-1' },
+    });
+    for (const requestId of [
+      'books-import-1',
+      'books-relocate-1',
+      'books-encoding-1',
+      'books-remove-1',
+    ]) {
+      client.handleMessage({
+        protocol: 1,
+        id: `${requestId}-response`,
+        sessionId: 'session-1',
+        type: 'books/snapshot',
+        payload: { requestId, snapshot: emptySnapshot },
+      });
+    }
+    await Promise.all(operations);
+  });
+
   it('updates settings with the latest base version and returns the snapshot', async () => {
     const api = { postMessage: vi.fn() };
     const client = new MessageClient(

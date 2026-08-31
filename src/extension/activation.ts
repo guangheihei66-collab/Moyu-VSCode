@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
-import { registerCommands } from './commands';
+import {
+  confirmBookshelfRemoval,
+  pickBookUri,
+  registerCommands,
+  selectBookEncoding,
+} from './commands';
 import { ContextKeys } from './contextKeys';
 import { MoyuSidebarProvider } from './sidebar/MoyuSidebarProvider';
 import { PanelController } from './panel/PanelController';
@@ -49,6 +54,7 @@ export function activate(context: vscode.ExtensionContext): void {
       await Promise.all([progress.remove(bookId), removeDerived(bookId)]);
     },
   });
+  const encoding = new EncodingSelectionService(bookshelfRepository);
   const bookProvider = async (
     bookId: string,
   ): Promise<BookMetadata | undefined> => {
@@ -93,6 +99,38 @@ export function activate(context: vscode.ExtensionContext): void {
     game,
     fileStats,
   });
+  const bookOperations = {
+    import: async (uri?: string): Promise<void> => {
+      const selected = uri ?? (await pickBookUri(vscode.window));
+      if (selected === undefined) return;
+      await bookshelf.import(selected);
+    },
+    relocate: async (bookId: string, uri?: string): Promise<void> => {
+      const book = await bookProvider(bookId);
+      if (book === undefined) throw new Error('Book was not found.');
+      const selected =
+        uri ?? (await pickBookUri(vscode.window, book.type))?.toString();
+      if (selected === undefined) return;
+      await bookshelf.relocate(bookId, selected);
+    },
+    remove: async (bookId: string): Promise<void> => {
+      const book = await bookProvider(bookId);
+      if (book === undefined) throw new Error('Book was not found.');
+      if (!(await confirmBookshelfRemoval(vscode.window, book.title))) return;
+      await bookshelf.remove(bookId);
+    },
+    selectEncoding: async (bookId: string): Promise<void> => {
+      const book = await bookProvider(bookId);
+      if (book === undefined) throw new Error('Book was not found.');
+      const state = await bookshelf.list();
+      await selectBookEncoding(
+        vscode.window,
+        encoding,
+        book,
+        state?.version ?? 0,
+      );
+    },
+  };
   const sessionRegistry = new WebviewSessionRegistry();
   const refreshCoordinator = new RefreshCoordinator({
     bookshelf: bookshelfRepository,
@@ -106,7 +144,7 @@ export function activate(context: vscode.ExtensionContext): void {
         context,
         settings,
         onStateChange,
-        { reader, game, presentation },
+        { reader, game, presentation, books: bookOperations },
         { sessionRegistry, refreshCoordinator },
       ),
     contextKeys,
@@ -123,7 +161,7 @@ export function activate(context: vscode.ExtensionContext): void {
     windowId,
     {
       bookshelf,
-      encoding: new EncodingSelectionService(bookshelfRepository),
+      encoding,
       boss: { service: boss, settings },
     },
     (section) => {
