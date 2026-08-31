@@ -1,3 +1,8 @@
 :root {
   color-scheme: light dark;
 }
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  color-scheme: only light;
+}

@@ -1,3 +1,6 @@
+@import './tokens.css';
+@import './theme.css';
+@import '../components/components.css';
 @import '../reader/reader.css';
 @import '../books/bookshelf.css';
 @import '../settings/settings.css';
@@ -6,20 +9,27 @@
 :root {
   color-scheme: light dark;
   font-family: var(--vscode-font-family, sans-serif);
+  color: var(--moyu-foreground);
+  background: var(--moyu-surface);
 }
 
 body {
   margin: 0;
+  color: var(--moyu-foreground);
+  background: var(--moyu-surface);
 }
 
 #app {
   position: relative;
   min-height: 100vh;
-  padding: 1rem;
+  box-sizing: border-box;
+  max-width: var(--moyu-content-max-width);
+  margin: 0 auto;
+  padding: var(--moyu-space-4);
 }
 
 button:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid var(--vscode-focusBorder, #3794ff);
+  outline: 2px solid var(--moyu-focus);
   outline-offset: 2px;
 }

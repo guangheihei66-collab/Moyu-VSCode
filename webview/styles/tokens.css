@@ -1,0 +1,58 @@
+:root {
+  --moyu-space-1: 4px;
+  --moyu-space-2: 8px;
+  --moyu-space-3: 12px;
+  --moyu-space-4: 16px;
+  --moyu-space-5: 24px;
+  --moyu-space-6: 32px;
+  --moyu-radius-small: 4px;
+  --moyu-radius-control: 6px;
+  --moyu-control-height: 30px;
+  --moyu-content-max-width: 1100px;
+  --moyu-reader-width: 720px;
+  --moyu-motion-fast: 120ms;
+  --moyu-motion-normal: 180ms;
+
+  --moyu-surface: var(
+    --vscode-editor-background,
+    var(--vscode-sideBar-background)
+  );
+  --moyu-surface-raised: var(
+    --vscode-editorWidget-background,
+    var(--vscode-sideBar-background)
+  );
+  --moyu-foreground: var(
+    --vscode-editor-foreground,
+    var(--vscode-sideBar-foreground)
+  );
+  --moyu-muted: var(--vscode-descriptionForeground, var(--moyu-foreground));
+  --moyu-border: var(--vscode-panel-border, var(--vscode-contrastBorder));
+  --moyu-hover: var(--vscode-list-hoverBackground, var(--moyu-surface-raised));
+  --moyu-selected: var(
+    --vscode-list-activeSelectionBackground,
+    var(--moyu-hover)
+  );
+  --moyu-selected-foreground: var(
+    --vscode-list-activeSelectionForeground,
+    var(--moyu-foreground)
+  );
+  --moyu-focus: var(--vscode-focusBorder, var(--vscode-contrastBorder));
+  --moyu-input-background: var(
+    --vscode-input-background,
+    var(--moyu-surface-raised)
+  );
+  --moyu-input-foreground: var(
+    --vscode-input-foreground,
+    var(--moyu-foreground)
+  );
+  --moyu-input-border: var(--vscode-input-border, var(--moyu-border));
+  --moyu-button-background: var(
+    --vscode-button-background,
+    var(--moyu-selected)
+  );
+  --moyu-button-foreground: var(
+    --vscode-button-foreground,
+    var(--moyu-selected-foreground)
+  );
+  --moyu-button-hover: var(--vscode-button-hoverBackground, var(--moyu-hover));
+}
