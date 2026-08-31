@@ -17,6 +17,20 @@
       "script": "watch",
       "isBackground": true,
       "problemMatcher": []
+    },
+    {
+      "label": "test:extension:current",
+      "type": "npm",
+      "script": "test:extension:current",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "test:extension:min",
+      "type": "npm",
+      "script": "test:extension:min",
+      "group": "test",
+      "problemMatcher": []
     }
   ]
 }
