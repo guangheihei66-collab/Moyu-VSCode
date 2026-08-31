@@ -288,3 +288,10 @@ Tests: focused Reader/toolbar/block-window/Boss tests 17/17 PASS; full unit regr
 Review: Reader presentation is model-driven and safe: title/type/percentage/chapter metadata, quiet toolbar and overflow actions, centered bounded content, inert paragraph text, progress, and boundary-aware paging. ReaderController continues to own the existing bounded block window, TXT logical locators, focus/progress capture, pause/resume, and lifecycle. No durable reader service or parser was changed.
 Known issues: coverage remains unavailable because @vitest/coverage-v8 is not installed; EPUB chapter protocol and Host presentation adapter remain Task 6 work.
 Next: Task 6 — EPUB chapter navigation UI and Host adapter.
+
+UI Redesign Task 6: complete
+Commit: a400f2f feat: add accessible EPUB chapter navigation
+Tests: EPUB/Webview/dispatcher/adapter focused tests PASS; full unit regression 294/294 PASS; current and VS Code 1.96.0 Extension Host lanes PASS; format check, lint, build, Extension Host typecheck, and Webview typecheck PASS.
+Review: added the closed EPUB chapter protocol families, strict bounded DTO validation, MessageClient identity checks, an EpubPresentationAdapter over the existing EpubReaderService, and activation wiring. ReaderController now restores and navigates EPUB chapter locators through a text-only ChapterDrawer with safe DOM rendering, focus return, boundary guards, and Boss pause disposal. Minimal parser type-compatibility fixes were required when activation brought the existing EPUB parser into Extension Host typechecking; EpubReaderService.ts was not modified.
+Known issue: coverage remains unavailable because @vitest/coverage-v8 is not installed; parse5/entities Node engine metadata remains a dependency audit note already covered by the minimum Extension Host lane.
+Next: Task 7

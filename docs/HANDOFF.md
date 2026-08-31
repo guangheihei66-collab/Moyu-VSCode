@@ -304,3 +304,57 @@ Implement Task 6 from the amended plan: add `ChapterDrawer` and
 text-only EPUB chapter navigation. Do not modify
 `src/application/reader/EpubReaderService.ts`; preserve parser, security, cache,
 chapter identity, and progress semantics.
+
+## UI Redesign Task 6 checkpoint
+
+Updated: 2026-09-01
+
+### Current Task
+
+Task 7 — 2048 presentation redesign.
+
+### Completed
+
+- Task 6 committed as `a400f2f feat: add accessible EPUB chapter navigation`.
+- Added `EpubPresentationAdapter` as the only new EPUB presentation boundary;
+  it consumes the existing parser/cache/progress-backed `EpubReaderService`
+  and returns only bounded chapter summaries, fingerprints, and text
+  paragraphs. `src/application/reader/EpubReaderService.ts` was not modified.
+- Added typed `reader/listChapters`, `reader/openChapter`, and
+  `reader/navigateChapter` request/response families, strict DTO validation,
+  exact book/chapter identity checks, and activation injection.
+- Reader now restores EPUB locators, renders chapter paragraphs through
+  `textContent`, exposes an accessible ChapterDrawer with ordered/current
+  buttons, Escape/focus return, and previous/next boundary handling. The
+  drawer closes when the Reader is paused for Boss Mode and is disposed with
+  the view.
+- The existing EPUB parser/sanitizer received only the minimal import/type
+  compatibility fixes needed after activation made that code part of the
+  Extension Host typecheck graph.
+
+### Tests
+
+- Task 6 focused EPUB/Webview/dispatcher/adapter tests: PASS.
+- Full unit regression: 294/294 PASS.
+- Current and VS Code 1.96.0 minimum Extension Host lanes: PASS.
+- Format check, lint, build, Extension Host typecheck, and Webview typecheck:
+  PASS.
+
+### Known Issues
+
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- `parse5/entities` Node engine metadata remains a dependency audit note; the
+  bundled EPUB path passes the isolated VS Code 1.96.0 Extension Host lane.
+- Cross-window UI may remain temporarily stale until a declared refresh point,
+  as specified by the existing lifecycle design.
+
+### Last Good Commit
+
+`a400f2f feat: add accessible EPUB chapter navigation`
+
+### Next Exact Action
+
+Implement Task 7 from the amended plan: redesign the 2048 presentation with
+compact Score/Best blocks, the bounded 16-cell semantic board, keyboard help,
+secondary New Game action, and accessible win/Game Over dialogs while
+preserving the existing Game2048Controller transport and lifecycle semantics.
