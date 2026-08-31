@@ -5,12 +5,21 @@ import type {
 import type { LogicalLocator } from '../../src/shared/protocol/messages';
 import { BlockWindow } from './blockWindow';
 import type { FocusAnchor } from './focusAnchor';
-import { ReaderView } from './ReaderView';
+import { ReaderView, type ReaderViewActions } from './ReaderView';
+import {
+  createReaderPresentationModel,
+  type ReaderDocumentType,
+  type ReaderPresentationMetadata,
+} from './readerModel';
 
 export interface ReaderTransport {
   open(bookId: string): Promise<{
     version: number;
     anchor: LogicalLocator | null;
+    title?: string;
+    type?: ReaderDocumentType;
+    percentage?: number;
+    chapterTitle?: string;
   }>;
   readBlocks(
     bookId: string,
@@ -33,6 +42,14 @@ export class ReaderController {
   private bookId: string | undefined;
   private baseVersion = 0;
   private paused = false;
+  private presentation: ReaderPresentationMetadata = {
+    bookId: 'reader',
+    title: 'Reader',
+    type: 'txt',
+    percentage: 0,
+  };
+  private atStart = true;
+  private atEnd = true;
 
   constructor(private readonly transport: ReaderTransport) {}
 
@@ -40,19 +57,35 @@ export class ReaderController {
     return this.paused;
   }
 
-  mount(root: HTMLElement): void {
+  mount(root: HTMLElement, actions: ReaderViewActions = {}): void {
+    const hasRenderedReader =
+      root.querySelector<HTMLElement>('[data-reader-content]') !== null;
     this.root = root;
-    this.view = new ReaderView(root);
+    this.view = new ReaderView(root, {
+      ...actions,
+      onPrevious: actions.onPrevious ?? (() => this.pageUp()),
+      onNext: actions.onNext ?? (() => this.pageDown()),
+    });
     this.view.setPaused(this.paused);
+    if (!hasRenderedReader) this.render();
   }
 
   async open(bookId: string): Promise<void> {
     this.bookId = bookId;
     const opened = await this.transport.open(bookId);
     this.baseVersion = opened.version;
+    this.presentation = {
+      bookId,
+      title: opened.title,
+      type: opened.type,
+      percentage: opened.percentage,
+      chapterTitle: opened.chapterTitle,
+    };
     this.locatorsByBlockId.clear();
     if (opened.anchor === null) {
       this.blockWindow.replace([]);
+      this.atStart = true;
+      this.atEnd = true;
       this.render();
       return;
     }
@@ -63,6 +96,8 @@ export class ReaderController {
       20,
     );
     this.blockWindow.replace(batch.blocks);
+    this.atStart = batch.atStart;
+    this.atEnd = batch.atEnd;
     this.rememberLocators(batch.blocks, opened.anchor);
     this.render();
   }
@@ -155,10 +190,19 @@ export class ReaderController {
   }
 
   dispose(): void {
+    this.view?.dispose();
     this.root = undefined;
     this.view = undefined;
     this.bookId = undefined;
     this.baseVersion = 0;
+    this.presentation = {
+      bookId: 'reader',
+      title: 'Reader',
+      type: 'txt',
+      percentage: 0,
+    };
+    this.atStart = true;
+    this.atEnd = true;
     this.locatorsByBlockId.clear();
     this.blockWindow.replace([]);
   }
@@ -179,12 +223,22 @@ export class ReaderController {
     );
     if (direction === 'before') this.blockWindow.prepend(batch.blocks);
     else this.blockWindow.append(batch.blocks);
+    this.atStart = batch.atStart;
+    this.atEnd = batch.atEnd;
     this.rememberLocators(batch.blocks);
     this.render();
   }
 
   private render(): void {
-    this.view?.renderBlocks(this.blockWindow.blocks);
+    this.view?.render(
+      createReaderPresentationModel(
+        this.presentation,
+        this.blockWindow.blocks,
+        this.atStart,
+        this.atEnd,
+      ),
+      this.blockWindow.blocks,
+    );
   }
 
   private pageBy(direction: -1 | 1): void {

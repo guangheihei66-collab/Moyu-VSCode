@@ -25,6 +25,7 @@ import {
   ReaderController,
   type ReaderTransport,
 } from '../reader/ReaderController';
+import type { ReaderAction } from '../reader/ReaderView';
 import { SettingsView } from '../settings/SettingsView';
 import {
   ModuleLifecycle,
@@ -293,7 +294,12 @@ export function createApp(
       renderModuleUnavailable('Reader');
       return;
     }
-    readerController.mount(normalRegion);
+    readerController.mount(normalRegion, {
+      onBack: () => router.navigate('books'),
+      onAction: (action: ReaderAction) => {
+        if (action === 'settings') router.navigate('settings');
+      },
+    });
   });
   const unregisterGame = router.register('game2048', () => {
     if (gameController === undefined) {
@@ -356,6 +362,8 @@ export function createApp(
       unregisterGame();
       homeController?.dispose();
       bookshelfController?.dispose();
+      readerController?.dispose();
+      gameController?.dispose();
       root.replaceChildren();
     },
   };

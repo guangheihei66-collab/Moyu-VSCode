@@ -120,6 +120,10 @@ class TestElement {
     this.listeners.set(name, listener);
   }
 
+  removeEventListener(name: string, listener: (event: unknown) => void): void {
+    if (this.listeners.get(name) === listener) this.listeners.delete(name);
+  }
+
   querySelectorAll(selector: string): TestElement[] {
     const matched: TestElement[] = [];
     const visit = (element: TestElement) => {
@@ -147,6 +151,12 @@ class TestElement {
     this.ownerDocument.lastFocusOptions = options;
   }
 
+  remove(): void {
+    const index = this.parentElement?.children.indexOf(this) ?? -1;
+    if (index >= 0) this.parentElement?.children.splice(index, 1);
+    this.parentElement = null;
+  }
+
   get fullText(): string {
     return (
       this.textContent + this.children.map((child) => child.fullText).join('')
@@ -158,9 +168,11 @@ class TestDocument {
   activeElement: TestElement | null = null;
   lastFocusOptions: FocusOptions | undefined;
   readonly documentElement: TestElement;
+  readonly body: TestElement;
 
   constructor() {
     this.documentElement = this.createElement('html');
+    this.body = this.createElement('body');
   }
 
   createElement(tagName: string): TestElement {

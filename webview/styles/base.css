@@ -28,6 +28,11 @@ body {
   padding: var(--moyu-space-4);
 }
 
+#app:has(.moyu-reader) {
+  max-width: none;
+  padding: 0;
+}
+
 button:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid var(--moyu-focus);
