@@ -189,6 +189,55 @@ describe('SettingsMessageDispatcher', () => {
     });
   });
 
+  it('dispatches Home and bookshelf snapshots through the presentation adapter', async () => {
+    await withStorageDirectory(async (root) => {
+      const dispatcher = new SettingsMessageDispatcher(
+        'session-current',
+        new ReaderSettingsService(new PreferencesRepository(root)),
+        {
+          presentation: {
+            readHome: async () => ({
+              recentBooks: [],
+              booksCount: 0,
+              bestScore: 0,
+              hasGameSession: false,
+            }),
+            readBooks: async () => ({ version: 3, books: [] }),
+          },
+        } as never,
+        () => 'response-presentation',
+      );
+
+      await expect(
+        dispatcher.dispatch({
+          protocol: 1,
+          id: 'home-read-1',
+          sessionId: 'session-current',
+          type: 'home/read',
+          payload: {},
+        }),
+      ).resolves.toMatchObject({
+        type: 'home/snapshot',
+        payload: {
+          requestId: 'home-read-1',
+          snapshot: { booksCount: 0, hasGameSession: false },
+        },
+      });
+      await expect(
+        dispatcher.dispatch({
+          protocol: 1,
+          id: 'books-list-1',
+          sessionId: 'session-current',
+          type: 'books/list',
+          payload: {},
+        }),
+      ).resolves.toMatchObject({
+        type: 'books/snapshot',
+        payload: { requestId: 'books-list-1', snapshot: { version: 3 } },
+      });
+    });
+  });
+
   it('rejects malformed and stale-session requests before persistence', async () => {
     await withStorageDirectory(async (root) => {
       const repository = new PreferencesRepository(root);

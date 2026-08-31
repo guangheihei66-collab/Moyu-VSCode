@@ -4,8 +4,11 @@ import type { ReaderSettingsService } from '../../application/reader/ReaderSetti
 import type { ReaderService } from '../../application/reader/ReaderService';
 import type { Game2048Service } from '../../application/game2048/Game2048Service';
 import type { VersionedGameState } from '../../application/game2048/Game2048Service';
+import type { PresentationSnapshotProvider } from './PresentationSnapshotProvider';
 import type {
+  BookshelfSnapshot,
   Game2048SessionSnapshot,
+  HomeSnapshot,
   HostRequest,
   HostResponse,
   ProtocolError,
@@ -28,6 +31,7 @@ const UPDATE_ERROR: ProtocolError = {
 export interface HostModuleServices {
   reader?: ReaderService;
   game?: Game2048Service;
+  presentation?: PresentationSnapshotProvider;
 }
 
 function validatedResponse(response: HostResponse): HostResponse {
@@ -73,6 +77,32 @@ export class SettingsMessageDispatcher {
     id: string,
   ): Promise<HostResponse | undefined> {
     switch (request.type) {
+      case 'home/read': {
+        const snapshot = await this.requirePresentation().readHome();
+        return validatedResponse({
+          protocol: PROTOCOL_VERSION,
+          id,
+          sessionId: this.sessionId,
+          type: 'home/snapshot',
+          payload: {
+            requestId: request.id,
+            snapshot: snapshot as HomeSnapshot,
+          },
+        });
+      }
+      case 'books/list': {
+        const snapshot = await this.requirePresentation().readBooks();
+        return validatedResponse({
+          protocol: PROTOCOL_VERSION,
+          id,
+          sessionId: this.sessionId,
+          type: 'books/snapshot',
+          payload: {
+            requestId: request.id,
+            snapshot: snapshot as BookshelfSnapshot,
+          },
+        });
+      }
       case 'settings/read': {
         const snapshot = await this.service.read();
         return validatedResponse({
@@ -227,6 +257,13 @@ export class SettingsMessageDispatcher {
       throw new Error('2048 service is unavailable.');
     }
     return this.moduleServices.game;
+  }
+
+  private requirePresentation(): PresentationSnapshotProvider {
+    if (this.moduleServices.presentation === undefined) {
+      throw new Error('Presentation snapshot provider is unavailable.');
+    }
+    return this.moduleServices.presentation;
   }
 
   private safeCorrelatedError(request: HostRequest, id: string): HostResponse {

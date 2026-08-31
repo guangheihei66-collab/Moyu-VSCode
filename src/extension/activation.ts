@@ -5,6 +5,7 @@ import { MoyuSidebarProvider } from './sidebar/MoyuSidebarProvider';
 import { PanelController } from './panel/PanelController';
 import { PanelRegistry } from './panel/PanelRegistry';
 import { PanelSerializer } from './panel/PanelSerializer';
+import { PresentationSnapshotProvider } from './panel/PresentationSnapshotProvider';
 import { BookshelfService } from '../application/books/BookshelfService';
 import { createNodeFileStatProvider } from '../infrastructure/filesystem/fileIdentity';
 import { BookshelfRepository } from '../infrastructure/storage/bookshelfRepository';
@@ -37,11 +38,12 @@ export function activate(context: vscode.ExtensionContext): void {
   const progress = new ProgressRepository(context.globalStorageUri.fsPath);
   const txtIndexes = new IndexStore(context.globalStorageUri.fsPath);
   const epubCache = new EpubCache(context.globalStorageUri.fsPath);
+  const fileStats = createNodeFileStatProvider();
   const removeDerived = async (bookId: string): Promise<void> => {
     await Promise.all([txtIndexes.remove(bookId), epubCache.remove(bookId)]);
   };
   const bookshelf = new BookshelfService(bookshelfRepository, {
-    fileStats: createNodeFileStatProvider(),
+    fileStats,
     onIndexInvalidated: removeDerived,
     onBookRemoved: async (bookId) => {
       await Promise.all([progress.remove(bookId), removeDerived(bookId)]);
@@ -85,6 +87,12 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   const gameRepository = new GameRepository(context.globalStorageUri.fsPath);
   const game = new Game2048Service(gameRepository);
+  const presentation = new PresentationSnapshotProvider({
+    bookshelf,
+    progress,
+    game,
+    fileStats,
+  });
   const sessionRegistry = new WebviewSessionRegistry();
   const refreshCoordinator = new RefreshCoordinator({
     bookshelf: bookshelfRepository,
@@ -98,7 +106,7 @@ export function activate(context: vscode.ExtensionContext): void {
         context,
         settings,
         onStateChange,
-        { reader, game },
+        { reader, game, presentation },
         { sessionRegistry, refreshCoordinator },
       ),
     contextKeys,

@@ -7,9 +7,11 @@ import {
 } from '../../src/domain/reader/settings';
 import type {
   AppSection,
+  HomeSnapshot,
   LogicalLocator,
 } from '../../src/shared/protocol/messages';
 import { BossOverlay } from '../boss/BossOverlay';
+import { HomeController, type HomeAction } from '../home/HomeController';
 import {
   Game2048Controller,
   type Game2048Transport,
@@ -32,6 +34,7 @@ export interface SettingsClient {
     baseVersion: number,
     patch: ReaderSettingsPatch,
   ): Promise<ReaderSettingsSnapshot>;
+  readHome?(): Promise<HomeSnapshot>;
 }
 
 export interface ProductionModuleClient
@@ -99,6 +102,32 @@ export function createApp(
     },
     captureState: () => shellController,
   };
+  const homeClient =
+    typeof settingsClient?.readHome === 'function'
+      ? { readHome: settingsClient.readHome.bind(settingsClient) }
+      : undefined;
+  const homeController =
+    homeClient === undefined
+      ? undefined
+      : new HomeController(homeClient, (action: HomeAction) => {
+          if (action.type === 'navigate') {
+            router.navigate(action.section);
+            return;
+          }
+          router.navigate('reader');
+          void readerController?.open(action.bookId);
+        });
+  const homeModule: ModuleBinding | undefined = homeController && {
+    id: 'home',
+    controller: homeController,
+    pause: () => normalRegion.setAttribute('data-paused', 'true'),
+    resume: () => normalRegion.removeAttribute('data-paused'),
+    captureAnchor: () => normalRegion.scrollTop,
+    restoreAnchor: (anchor) => {
+      if (typeof anchor === 'number') normalRegion.scrollTop = anchor;
+    },
+    captureState: () => homeController,
+  };
   const readerModule: ModuleBinding | undefined = readerController && {
     id: 'reader',
     controller: readerController,
@@ -132,6 +161,7 @@ export function createApp(
     captureState: () => gameController.captureState(),
   };
   const productionModule = (route: AppSection): ModuleBinding | undefined => {
+    if (route === 'home') return homeModule ?? shellModule;
     if (route === 'reader') return readerModule;
     if (route === 'game2048') return gameModule;
     return shellModule;
@@ -177,6 +207,14 @@ export function createApp(
     status.textContent = `${label} is unavailable.`;
     normalRegion.replaceChildren(heading, status);
   };
+
+  const unregisterHome = router.register('home', () => {
+    if (homeController === undefined) {
+      renderModuleUnavailable('Home');
+      return;
+    }
+    homeController.mount(normalRegion);
+  });
 
   const loadSettings = async (status?: string): Promise<void> => {
     if (settingsClient === undefined) return;
@@ -271,8 +309,10 @@ export function createApp(
         bossSnapshot = undefined;
       }
       unregisterSettings();
+      unregisterHome();
       unregisterReader();
       unregisterGame();
+      homeController?.dispose();
       root.replaceChildren();
     },
   };

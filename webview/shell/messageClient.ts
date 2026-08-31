@@ -1,4 +1,5 @@
 import type {
+  HomeSnapshot,
   Game2048State,
   HostRequest,
   HostResponse,
@@ -69,6 +70,21 @@ export class MessageClient {
       type: 'settings/read',
       payload: {},
     });
+  }
+
+  async readHome(): Promise<HomeSnapshot> {
+    const response = await this.request({
+      protocol: PROTOCOL_VERSION,
+      id: this.createRequestId(),
+      sessionId: this.sessionId,
+      type: 'home/read',
+      payload: {},
+    });
+    this.throwIfError(response);
+    if (response.type !== 'home/snapshot') {
+      throw new Error('The Host returned an unexpected Home response.');
+    }
+    return response.payload.snapshot;
   }
 
   updateSettings(

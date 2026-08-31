@@ -40,6 +40,29 @@ export type SidebarHostMessage = {
   model: SidebarViewModel;
 };
 
+export interface PresentationBook {
+  bookId: string;
+  title: string;
+  type: 'txt' | 'epub';
+  percentage: number;
+  lastOpenedAt?: number;
+  sourceMissing: boolean;
+  chapterLabel?: string;
+}
+
+export interface HomeSnapshot {
+  continueReading?: PresentationBook;
+  recentBooks: readonly PresentationBook[];
+  booksCount: number;
+  bestScore: number;
+  hasGameSession: boolean;
+}
+
+export interface BookshelfSnapshot {
+  version: number;
+  books: readonly PresentationBook[];
+}
+
 export interface Envelope<Type extends string, Payload> {
   protocol: typeof PROTOCOL_VERSION;
   id: string;
@@ -56,6 +79,7 @@ export type GameDirection = 'left' | 'right' | 'up' | 'down';
 
 export type HostRequest =
   | Envelope<'app/ready', Record<string, never>>
+  | Envelope<'home/read', Record<string, never>>
   | Envelope<'boss/ack', { requestId: string; mode: BossMode }>
   | Envelope<'app/navigate', { section: AppSection }>
   | Envelope<'books/list', Record<string, never>>
@@ -130,6 +154,11 @@ export interface Game2048SessionSnapshot {
 
 export type HostResponse =
   | Envelope<'response/success', { requestId: string }>
+  | Envelope<'home/snapshot', { requestId: string; snapshot: HomeSnapshot }>
+  | Envelope<
+      'books/snapshot',
+      { requestId: string; snapshot: BookshelfSnapshot }
+    >
   | Envelope<
       'settings/snapshot',
       { requestId: string; snapshot: ReaderSettingsSnapshot }

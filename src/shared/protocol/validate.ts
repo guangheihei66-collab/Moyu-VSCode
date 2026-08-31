@@ -5,7 +5,10 @@ import {
   type HostRequest,
   type HostResponse,
   type HostEvent,
+  type BookshelfSnapshot,
+  type HomeSnapshot,
   type LogicalLocator,
+  type PresentationBook,
   type ProtocolError,
   type ProtocolErrorCode,
   PROTOCOL_VERSION,
@@ -80,6 +83,78 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
+function hasOnlyKeys(
+  value: Record<string, unknown>,
+  required: readonly string[],
+  optional: readonly string[] = [],
+): boolean {
+  const allowed = new Set([...required, ...optional]);
+  const keys = Object.keys(value);
+  return (
+    required.every((key) => keys.includes(key)) &&
+    keys.every((key) => allowed.has(key))
+  );
+}
+
+function isPresentationBook(value: unknown): value is PresentationBook {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(
+      value,
+      ['bookId', 'title', 'type', 'percentage', 'sourceMissing'],
+      ['lastOpenedAt', 'chapterLabel'],
+    )
+  ) {
+    return false;
+  }
+  return (
+    isNonEmptyString(value.bookId) &&
+    typeof value.title === 'string' &&
+    value.title.length > 0 &&
+    (value.type === 'txt' || value.type === 'epub') &&
+    typeof value.percentage === 'number' &&
+    Number.isFinite(value.percentage) &&
+    value.percentage >= 0 &&
+    value.percentage <= 100 &&
+    typeof value.sourceMissing === 'boolean' &&
+    (value.lastOpenedAt === undefined ||
+      isNonNegativeInteger(value.lastOpenedAt)) &&
+    (value.chapterLabel === undefined || isNonEmptyString(value.chapterLabel))
+  );
+}
+
+function isHomeSnapshot(value: unknown): value is HomeSnapshot {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(
+      value,
+      ['recentBooks', 'booksCount', 'bestScore', 'hasGameSession'],
+      ['continueReading'],
+    )
+  ) {
+    return false;
+  }
+  return (
+    Array.isArray(value.recentBooks) &&
+    value.recentBooks.every(isPresentationBook) &&
+    isNonNegativeInteger(value.booksCount) &&
+    isNonNegativeInteger(value.bestScore) &&
+    typeof value.hasGameSession === 'boolean' &&
+    (value.continueReading === undefined ||
+      isPresentationBook(value.continueReading))
+  );
+}
+
+function isBookshelfSnapshot(value: unknown): value is BookshelfSnapshot {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ['version', 'books']) &&
+    isNonNegativeInteger(value.version) &&
+    Array.isArray(value.books) &&
+    value.books.every(isPresentationBook)
+  );
 }
 
 function isSidebarViewModel(value: unknown): value is SidebarViewModel {
@@ -231,6 +306,7 @@ function isPayloadForType(type: string, payload: unknown): boolean {
 
   switch (type) {
     case 'app/ready':
+    case 'home/read':
     case 'books/list':
       return hasExactKeys(payload, []);
     case 'boss/ack':
@@ -341,6 +417,18 @@ function isResponsePayloadForType(type: string, payload: unknown): boolean {
       return (
         hasExactKeys(payload, ['requestId']) &&
         isNonEmptyString(payload.requestId)
+      );
+    case 'home/snapshot':
+      return (
+        hasExactKeys(payload, ['requestId', 'snapshot']) &&
+        isNonEmptyString(payload.requestId) &&
+        isHomeSnapshot(payload.snapshot)
+      );
+    case 'books/snapshot':
+      return (
+        hasExactKeys(payload, ['requestId', 'snapshot']) &&
+        isNonEmptyString(payload.requestId) &&
+        isBookshelfSnapshot(payload.snapshot)
       );
     case 'settings/snapshot':
       return (
@@ -507,6 +595,7 @@ export function validateHostRequest(
     }
     if (
       envelope.value.type !== 'app/ready' &&
+      envelope.value.type !== 'home/read' &&
       envelope.value.type !== 'boss/ack' &&
       envelope.value.type !== 'app/navigate' &&
       envelope.value.type !== 'books/list' &&
@@ -549,6 +638,8 @@ export function validateHostResponse(
     }
     if (
       envelope.value.type !== 'response/success' &&
+      envelope.value.type !== 'home/snapshot' &&
+      envelope.value.type !== 'books/snapshot' &&
       envelope.value.type !== 'settings/snapshot' &&
       envelope.value.type !== 'reader/opened' &&
       envelope.value.type !== 'reader/blocks' &&
