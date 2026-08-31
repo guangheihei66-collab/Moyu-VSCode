@@ -1,41 +1,164 @@
-[aria-label='Reader settings'] {
+.moyu-settings {
   display: grid;
-  gap: 1rem;
-  max-width: 42rem;
-}
-[aria-label='Reader settings'] > div {
-  display: grid;
-  gap: 0.4rem;
-}
-[aria-label='Reader settings'] input,
-[aria-label='Reader settings'] select {
-  color: var(--vscode-input-foreground);
-  background: var(--vscode-input-background);
-  border: 1px solid var(--vscode-input-border, var(--vscode-contrastBorder));
+  gap: var(--moyu-space-4);
 }
 
-[aria-label='Reader settings'] input:focus-visible,
-[aria-label='Reader settings'] select:focus-visible {
+.moyu-settings > h1 {
+  margin: 0;
+}
+
+.moyu-settings__form {
+  display: grid;
+  gap: var(--moyu-space-4);
+  max-width: 48rem;
+}
+
+.moyu-settings__section {
+  display: grid;
+  gap: var(--moyu-space-4);
+  padding: var(--moyu-space-5);
+  border: 1px solid var(--moyu-border);
+  border-radius: var(--moyu-radius-small);
+  color: var(--moyu-foreground);
+  background: var(--moyu-surface-raised);
+}
+
+.moyu-settings__section-heading {
+  display: grid;
+  gap: var(--moyu-space-1);
+}
+
+.moyu-settings__section-heading h2,
+.moyu-settings__section-heading p,
+.moyu-settings__description,
+.moyu-settings__preview h3 {
+  margin: 0;
+}
+
+.moyu-settings__section-heading p,
+.moyu-settings__description {
+  color: var(--moyu-muted);
+}
+
+.moyu-settings__field {
+  display: grid;
+  gap: var(--moyu-space-2);
+}
+
+.moyu-settings__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--moyu-space-3);
+  font-weight: 600;
+}
+
+.moyu-settings__value {
+  color: var(--moyu-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+.moyu-settings__field input,
+.moyu-settings__field select {
+  box-sizing: border-box;
+  min-height: var(--moyu-control-height);
+  width: 100%;
+  color: var(--moyu-input-foreground);
+  background: var(--moyu-input-background);
+  border: 1px solid var(--moyu-input-border);
+  border-radius: var(--moyu-radius-control);
+  font: inherit;
+}
+
+.moyu-settings__field input[type='range'] {
+  min-height: 1.5rem;
+  accent-color: var(--moyu-focus);
+}
+
+.moyu-settings__field select {
+  padding: 0 var(--moyu-space-2);
+}
+
+.moyu-settings__field input:focus-visible,
+.moyu-settings__field select:focus-visible,
+.moyu-settings__reset:focus-visible {
   outline: 2px solid var(--vscode-focusBorder);
   outline-offset: 2px;
 }
 
-body.vscode-high-contrast [aria-label='Reader settings'] input,
-body.vscode-high-contrast [aria-label='Reader settings'] select,
-body.vscode-high-contrast-light [aria-label='Reader settings'] input,
-body.vscode-high-contrast-light [aria-label='Reader settings'] select {
+.moyu-settings__preview {
+  display: grid;
+  gap: var(--moyu-space-2);
+  padding: var(--moyu-space-3);
+  border: 1px solid var(--moyu-border);
+  border-radius: var(--moyu-radius-small);
+  background: var(--moyu-input-background);
+}
+
+.moyu-settings__preview pre {
+  max-height: 15rem;
+  margin: 0;
+  overflow: auto;
+  color: var(--moyu-input-foreground);
+  background: transparent;
+  font-family: var(--vscode-editor-font-family, monospace);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.moyu-settings__reset {
+  justify-self: start;
+}
+
+@media (max-width: 520px) {
+  .moyu-settings__section {
+    padding: var(--moyu-space-4);
+  }
+
+  .moyu-settings__label {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--moyu-space-1);
+  }
+}
+
+@media (forced-colors: active) {
+  .moyu-settings__section,
+  .moyu-settings__field input,
+  .moyu-settings__field select,
+  .moyu-settings__preview {
+    border-color: CanvasText;
+  }
+
+  .moyu-settings__field input:focus-visible,
+  .moyu-settings__field select:focus-visible,
+  .moyu-settings__reset:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+body.vscode-high-contrast .moyu-settings__section,
+body.vscode-high-contrast .moyu-settings__field input,
+body.vscode-high-contrast .moyu-settings__field select,
+body.vscode-high-contrast-light .moyu-settings__section,
+body.vscode-high-contrast-light .moyu-settings__field input,
+body.vscode-high-contrast-light .moyu-settings__field select {
   border-color: var(--vscode-contrastBorder);
 }
 
 @media (prefers-contrast: more) {
-  [aria-label='Reader settings'] input,
-  [aria-label='Reader settings'] select {
+  .moyu-settings__section,
+  .moyu-settings__field input,
+  .moyu-settings__field select,
+  .moyu-settings__preview {
     border-color: var(--vscode-contrastBorder);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [aria-label='Reader settings'] * {
+  .moyu-settings,
+  .moyu-settings * {
     scroll-behavior: auto;
     transition: none;
   }

@@ -4,6 +4,7 @@ import {
   DEFAULT_READER_SETTINGS,
   validateSettings,
 } from '../../../src/domain/reader/settings';
+import { BOSS_TEMPLATES } from '../../../webview/boss/templates';
 import { SettingsView } from '../../../webview/settings/SettingsView';
 import { createApp } from '../../../webview/shell/app';
 
@@ -22,6 +23,7 @@ class ElementStub {
   readonly attributes = new Map<string, string>();
   readonly listeners = new Map<string, Listener[]>();
   textContent = '';
+  className = '';
   id = '';
   value = '';
   type = '';
@@ -29,6 +31,7 @@ class ElementStub {
   max = '';
   step = '';
   selected = false;
+  disabled = false;
   ownerDocument!: DocumentStub;
 
   constructor(readonly tagName = 'div') {}
@@ -141,6 +144,87 @@ describe('SettingsView', () => {
     );
   });
 
+  it('renders grouped descriptions and updates visible range values immediately', () => {
+    const root = createRoot();
+    const update = vi.fn();
+    new SettingsView(root as unknown as HTMLElement, update).render({
+      fontSize: 18,
+      lineHeight: 1.8,
+      contentWidth: 880,
+      bossTemplate: 'json',
+    });
+
+    expect(root.fullText).toContain('Reading');
+    expect(root.fullText).toContain('Boss Mode');
+    expect(root.fullText).toContain('Reader text size.');
+    expect(root.fullText).toContain('Space between lines.');
+    expect(root.fullText).toContain('Maximum reader width.');
+    expect(root.findById('font-size-value')?.textContent).toBe('18 px');
+    expect(root.findById('font-size-value')?.attributes.get('aria-live')).toBe(
+      'polite',
+    );
+    expect(root.findById('line-height-value')?.textContent).toBe('1.8');
+    expect(root.findById('content-width-value')?.textContent).toBe('880 px');
+
+    const fontSize = root.findById('font-size')!;
+    fontSize.value = '22';
+    fontSize.dispatch('input');
+    expect(root.findById('font-size-value')?.textContent).toBe('22 px');
+    expect(update).not.toHaveBeenCalled();
+
+    fontSize.dispatch('change');
+    expect(update).toHaveBeenCalledWith({ fontSize: 22 });
+  });
+
+  it('maps template IDs to readable labels and updates a local text preview', () => {
+    const root = createRoot();
+    const onPreview = vi.fn();
+    new SettingsView(root as unknown as HTMLElement, vi.fn(), {
+      onPreview,
+    }).render(DEFAULT_READER_SETTINGS);
+
+    const options = root.findById('boss-template')?.children ?? [];
+    expect(options.map((option) => option.textContent)).toEqual([
+      'TypeScript',
+      'JSON',
+      'Build Log',
+    ]);
+    expect(root.findById('boss-template-preview-title')?.textContent).toBe(
+      'extension.ts',
+    );
+    expect(root.findById('boss-template-preview')?.textContent).toBe(
+      BOSS_TEMPLATES.typescript,
+    );
+
+    const select = root.findById('boss-template')!;
+    select.value = 'json';
+    select.dispatch('change');
+    expect(root.findById('boss-template-preview-title')?.textContent).toBe(
+      'settings.json',
+    );
+    expect(root.findById('boss-template-preview')?.textContent).toBe(
+      BOSS_TEMPLATES.json,
+    );
+    expect(onPreview).toHaveBeenCalledWith('json');
+    expect(onPreview).toHaveBeenCalledOnce();
+  });
+
+  it('emits a typed reset action separate from durable settings persistence', () => {
+    const root = createRoot();
+    const onReset = vi.fn();
+    new SettingsView(root as unknown as HTMLElement, vi.fn(), {
+      onReset,
+    }).render({
+      fontSize: 28,
+      lineHeight: 2.1,
+      contentWidth: 1120,
+      bossTemplate: 'buildLog',
+    });
+
+    root.findById('reset-reader-settings')?.dispatch('click');
+    expect(onReset).toHaveBeenCalledOnce();
+  });
+
   it('emits typed setting patches from native change events', () => {
     const root = createRoot();
     const update = vi.fn();
@@ -208,6 +292,40 @@ describe('SettingsView', () => {
         '--moyu-font-size',
       ),
     ).toBe('22px');
+  });
+
+  it('resets only reading fields through the current base version', async () => {
+    const root = createRoot();
+    const client = {
+      readSettings: vi.fn().mockResolvedValue({
+        version: 7,
+        settings: {
+          fontSize: 22,
+          lineHeight: 2,
+          contentWidth: 900,
+          bossTemplate: 'json' as const,
+        },
+      }),
+      updateSettings: vi.fn().mockResolvedValue({
+        version: 8,
+        settings: {
+          ...DEFAULT_READER_SETTINGS,
+          bossTemplate: 'json' as const,
+        },
+      }),
+    };
+    const app = createApp(root as unknown as HTMLElement, client);
+
+    app.router.navigate('settings');
+    await flushPromises();
+    root.findById('reset-reader-settings')?.dispatch('click');
+    await flushPromises();
+
+    expect(client.updateSettings).toHaveBeenCalledWith(7, {
+      fontSize: DEFAULT_READER_SETTINGS.fontSize,
+      lineHeight: DEFAULT_READER_SETTINGS.lineHeight,
+      contentWidth: DEFAULT_READER_SETTINGS.contentWidth,
+    });
   });
 
   it('renders a safe local state when the initial settings read rejects', async () => {

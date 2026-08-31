@@ -208,9 +208,21 @@ export function createApp(
   let bossSnapshot: ModuleSnapshot | undefined;
   let activeBossTemplate: BossTemplate = DEFAULT_READER_SETTINGS.bossTemplate;
   let settingsVersion = 0;
-  const settingsView = new SettingsView(normalRegion, (patch) => {
-    void updateSettings(patch);
-  });
+  const settingsView = new SettingsView(
+    normalRegion,
+    (patch) => {
+      void updateSettings(patch);
+    },
+    {
+      onReset: () => {
+        void updateSettings({
+          fontSize: DEFAULT_READER_SETTINGS.fontSize,
+          lineHeight: DEFAULT_READER_SETTINGS.lineHeight,
+          contentWidth: DEFAULT_READER_SETTINGS.contentWidth,
+        });
+      },
+    },
+  );
 
   const renderSettingsSnapshot = (snapshot: ReaderSettingsSnapshot): void => {
     settingsVersion = snapshot.version;
