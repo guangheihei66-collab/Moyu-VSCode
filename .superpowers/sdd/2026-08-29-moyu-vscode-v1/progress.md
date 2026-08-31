@@ -253,3 +253,10 @@ Tests: RED reproduced with `resolved: false`; focused GREEN; full unit regressio
 Bundle/package evidence: `dist/extension.js` and the VSIX both contain `registerWebviewViewProvider("moyu.sidebar", ...)` and `resolveWebviewView`; the packaged manifest declares `moyu.sidebar` as `type: "webview"`.
 Manual acceptance: the old 0.1.0 VSIX reproduced the failure in an isolated profile. A second isolated profile was prepared for the fixed VSIX, but Computer Use was stopped by the physical Escape key before the fixed UI click-through could be completed; no user profile was changed.
 Next: repeat the fixed VSIX manual click-through when UI control is available: Moyu Activity Bar → Sidebar Home/Books/2048/Settings → click a destination → one main WebviewPanel.
+
+UI Redesign Task 1: complete
+Commit: 736b91c
+Tests: focused shared component/token tests 7/7; full unit regression 267/267; format check, lint, build, and Webview typecheck PASS.
+Review: added safe DOM primitives, semantic buttons, local decorative icons, section/empty/progress components, keyboard-operable ActionMenu, focus-returning Modal, and VS Code-variable-backed token/component CSS. No domain, protocol, Host, or service files changed; no dynamic HTML or external resource was introduced.
+Known issues: coverage provider remains unavailable; existing non-Task-1 hardcoded fallback in Boss CSS remains for the later responsive/theme polish task.
+Next: Task 2 — native Sidebar redesign with layered Webview/provider/real Extension Host coverage.

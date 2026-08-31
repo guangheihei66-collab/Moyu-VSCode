@@ -80,3 +80,47 @@ The production VSIX integration bug is fixed and committed. The manifest/runtime
 ### Next Exact Action
 
 Repeat the fixed VSIX manual acceptance in an isolated profile: click the Moyu Activity Bar icon, verify Home/Books/2048/Settings render without the data-provider error, and click a destination to confirm the single main WebviewPanel opens. Preserve the no-push/no-publish boundary.
+
+## UI Redesign continuation — latest checkpoint
+
+Updated: 2026-08-31
+
+### Current Task
+
+Task 2 — native Sidebar redesign.
+
+### Completed in this checkpoint
+
+- Approved Spec/Plan gates amended and committed as `0db2201`.
+- UI Redesign Task 1 completed and committed as `736b91c`.
+- Added the shared safe DOM/component layer, keyboard ActionMenu, accessible
+  Modal, progress component, token aliases, shared component CSS, and deterministic
+  base-style imports.
+- Task 1 did not modify domain, protocol, Extension Host, parser, persistence,
+  or service code.
+
+### Tests
+
+- Focused Task 1 tests: 7/7 PASS.
+- Full unit regression: 267/267 PASS.
+- `npm run format:check`: PASS.
+- `npm run lint`: PASS.
+- `npm run build`: PASS.
+- Webview typecheck: PASS.
+
+### Known Issues
+
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- Existing non-Task-1 Boss CSS fallback remains for the later theme/accessibility
+  polish task.
+
+### Last Good Commit
+
+`736b91c feat: add Moyu presentation tokens and shared components`
+
+### Next Exact Action
+
+Implement Task 2 from the amended plan: the four-entry Sidebar bundle and
+provider lifecycle while preserving the `moyu.sidebar` Webview contribution and
+single main WebviewPanel architecture. Use layered Sidebar tests; do not require
+the provider shell to contain visible labels.
