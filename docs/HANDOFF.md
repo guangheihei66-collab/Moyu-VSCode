@@ -209,3 +209,49 @@ Task 4 — Bookshelf presentation and safe actions.
 Implement Task 4 from the amended plan: compact Bookshelf rows, local search and
 type filters, safe overflow actions, source-missing recovery, and the existing
 validated import/relocate/reselect/remove/open flows without source deletion.
+
+## UI Redesign Task 4 checkpoint
+
+Updated: 2026-08-31
+
+### Current Task
+
+Task 5 — Reader presentation and safe navigation.
+
+### Completed
+
+- Task 4 committed as `5dd94bb feat: redesign Moyu Bookshelf presentation`.
+- Books now renders compact safe rows from a validated snapshot DTO with title,
+  type, progress, last-opened/chapter metadata, and source-missing state without
+  exposing source paths.
+- Search and TXT/EPUB filters are local presentation state; empty, no-match, and
+  source-missing states are explicit and accessible.
+- Overflow actions use the shared ActionMenu with exact Open, Relocate file,
+  Reselect encoding, and Remove from bookshelf semantics. Native picker,
+  confirmation, source-retaining removal, and existing service workflows remain
+  Host-side.
+- Typed `books/*` messages return safe snapshots and preserve the existing single
+  WebviewPanel and Reader/Books route lifecycle.
+
+### Tests
+
+- Focused Task 4 tests: 50/50 PASS.
+- Full unit regression: 285/285 PASS.
+- Current and VS Code 1.96.0 Extension Host lanes: PASS.
+- Format, lint, build, and extension/Webview typechecks: PASS.
+
+### Known Issues
+
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- Existing non-Task-1 Boss CSS fallback remains for the later theme/accessibility
+  polish task.
+
+### Last Good Commit
+
+`5dd94bb feat: redesign Moyu Bookshelf presentation`
+
+### Next Exact Action
+
+Implement Task 5 from the amended plan: the Reader presentation layer using the
+existing reader service through `EpubPresentationAdapter`, safe DTOs, ChapterDrawer
+navigation, and preserved parser/security/cache/chapter identity/progress semantics.

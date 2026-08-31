@@ -274,3 +274,10 @@ Tests: focused Home/protocol/adapter/dispatcher/router tests 19/19 PASS; full un
 Review: Home uses a read-only PresentationSnapshotProvider to join existing bookshelf, progress, game, and file-stat services into path-free DTOs. Home renders Continue Reading, Quick Access, Recent Books, and safe empty/source-missing states through shared safe DOM components. The typed home/read transport remains correlated to the current Webview session and does not add a store or mutate durable data.
 Known issues: coverage remains unavailable because @vitest/coverage-v8 is not installed; existing non-Task-1 Boss CSS fallback remains for the later responsive/theme polish task.
 Next: Task 4 — Bookshelf presentation and safe actions.
+
+UI Redesign Task 4: complete
+Commit: 5dd94bb feat: redesign Moyu Bookshelf presentation
+Tests: focused Task 4 tests 50/50 PASS; full unit regression 285/285 PASS; current and VS Code 1.96.0 Extension Host lanes PASS; format check, lint, build, and Extension Host/Webview typechecks PASS.
+Review: Books is a compact snapshot-driven presentation with local case-insensitive search and type filters. ActionMenu exposes exact safe actions, source-missing books offer Relocate, and import/relocate/reselect/remove/open remain delegated to existing Host-side picker, confirmation, service, and progress workflows. No source path is rendered or deleted.
+Known issues: coverage remains unavailable because @vitest/coverage-v8 is not installed; existing non-Task-1 Boss CSS fallback remains for the later theme/accessibility polish task.
+Next: Task 5 — Reader presentation and safe navigation.
