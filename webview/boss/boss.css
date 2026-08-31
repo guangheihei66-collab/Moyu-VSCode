@@ -8,6 +8,7 @@
   overflow: auto;
   box-sizing: border-box;
   min-height: 100%;
+  min-width: 0;
   padding: var(--moyu-space-4);
   color: var(--moyu-foreground);
   background: var(--moyu-surface);
@@ -19,6 +20,7 @@
 
 [data-boss-overlay] header,
 [data-boss-overlay] pre {
+  min-width: 0;
   width: min(100%, 80rem);
   box-sizing: border-box;
   margin-inline: auto;
@@ -55,6 +57,13 @@
 [data-boss-overlay]:focus-visible {
   outline: 2px solid var(--vscode-focusBorder);
   outline-offset: -2px;
+}
+
+@media (prefers-contrast: more) {
+  [data-boss-overlay] header,
+  [data-boss-overlay] pre {
+    border-color: var(--vscode-contrastBorder, var(--moyu-border));
+  }
 }
 
 @media (forced-colors: active) {

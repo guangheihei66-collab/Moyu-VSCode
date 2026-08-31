@@ -6,3 +6,25 @@ body.vscode-high-contrast,
 body.vscode-high-contrast-light {
   color-scheme: only light;
 }
+
+@media (prefers-contrast: more) {
+  :root {
+    --moyu-border: var(--vscode-contrastBorder, var(--vscode-panel-border));
+    --moyu-focus: var(--vscode-focusBorder, var(--vscode-contrastBorder));
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --moyu-border: CanvasText;
+    --moyu-focus: Highlight;
+    --moyu-selected: Highlight;
+    --moyu-selected-foreground: HighlightText;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    scroll-behavior: auto;
+  }
+}

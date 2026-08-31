@@ -11,11 +11,13 @@
   width: 100%;
   max-width: var(--moyu-content-max-width, 1100px);
   min-height: 100%;
+  min-width: 0;
   height: 100%;
   margin: 0 auto;
   padding: var(--moyu-space-3, 12px) clamp(12px, 4vw, 40px)
     var(--moyu-space-5, 24px);
   overflow-y: auto;
+  overflow-x: hidden;
   color: var(--vscode-editor-foreground);
   background: var(--vscode-editor-background, var(--moyu-surface));
   font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
@@ -30,6 +32,7 @@
   display: grid;
   align-items: center;
   gap: var(--moyu-space-3, 12px);
+  min-width: 0;
   width: min(100%, var(--moyu-content-max-width, 1100px));
   margin-inline: auto;
 }
@@ -94,6 +97,8 @@
   display: flex;
   align-items: center;
   justify-content: end;
+  min-width: 0;
+  flex-wrap: wrap;
   gap: var(--moyu-space-2, 8px);
 }
 
@@ -103,8 +108,8 @@
   margin: calc(var(--moyu-space-4, 16px) * -1) auto var(--moyu-space-4, 16px);
   padding: var(--moyu-space-3, 12px);
   border: 1px solid var(--moyu-border, var(--vscode-panel-border));
-  background: var(--vscode-sideBar-background, var(--moyu-surface-elevated));
-  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  background: var(--vscode-sideBar-background, var(--moyu-surface-raised));
+  box-shadow: var(--vscode-widget-shadow, none);
 }
 
 .moyu-chapter-drawer h2 {
@@ -130,7 +135,7 @@
 }
 
 .moyu-chapter-drawer__list button[aria-current='true'] {
-  color: var(--moyu-accent-foreground, var(--vscode-textLink-foreground));
+  color: var(--moyu-selected-foreground, var(--vscode-textLink-foreground));
   font-weight: 600;
 }
 
@@ -206,17 +211,34 @@
   }
 }
 
+@media (max-width: 420px) {
+  .moyu-reader__toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .moyu-reader__toolbar > [data-reader-action='back'],
+  .moyu-reader__toolbar > [data-reader-progress] {
+    grid-column: 1 / -1;
+  }
+
+  .moyu-reader__navigation {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
 @media (prefers-contrast: more) {
   .moyu-reader__toolbar,
   .moyu-reader__navigation,
-  .moyu-reader__block {
+  .moyu-reader__block,
+  .moyu-chapter-drawer {
     border-color: var(--vscode-contrastBorder);
   }
 }
 
 @media (forced-colors: active) {
   .moyu-reader__toolbar,
-  .moyu-reader__navigation {
+  .moyu-reader__navigation,
+  .moyu-chapter-drawer {
     border-color: CanvasText;
   }
 }
@@ -225,7 +247,8 @@
   .moyu-reader,
   .moyu-reader__toolbar,
   .moyu-reader__toolbar [data-reader-progress],
-  .moyu-reader__navigation [data-reader-progress] {
+  .moyu-reader__navigation [data-reader-progress],
+  .moyu-chapter-drawer {
     scroll-behavior: auto;
     transition: none;
   }

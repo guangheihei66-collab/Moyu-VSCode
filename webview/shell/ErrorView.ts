@@ -2,7 +2,10 @@ import {
   present,
   type PresentedError,
 } from '../../src/extension/errorPresenter';
-import type { RecoveryAction } from '../../src/domain/shared/errors';
+import {
+  RECOVERY_ACTIONS,
+  type RecoveryAction,
+} from '../../src/domain/shared/errors';
 
 export type RecoveryActionHandler = (action: RecoveryAction) => void;
 
@@ -16,13 +19,19 @@ const ACTION_LABELS: Record<RecoveryAction, string> = {
   startNewGame: 'Start New Game',
 };
 
+function isRecoveryAction(value: unknown): value is RecoveryAction {
+  return (RECOVERY_ACTIONS as readonly unknown[]).includes(value);
+}
+
 function isPresentedError(value: unknown): value is PresentedError {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Partial<PresentedError>;
   return (
     typeof candidate.code === 'string' &&
     typeof candidate.message === 'string' &&
-    Array.isArray(candidate.actions)
+    Array.isArray(candidate.actions) &&
+    candidate.actions.length <= RECOVERY_ACTIONS.length &&
+    candidate.actions.every(isRecoveryAction)
   );
 }
 
@@ -66,7 +75,9 @@ export class ErrorView {
     const message = document.createElement('p');
     message.textContent = displayed.message;
     const actions = document.createElement('div');
+    actions.setAttribute('role', 'group');
     actions.setAttribute('aria-label', 'Recovery actions');
+    actions.setAttribute('data-error-actions', 'true');
 
     for (const action of displayed.actions) {
       const button = document.createElement('button');

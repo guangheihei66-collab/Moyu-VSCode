@@ -2,9 +2,11 @@
   box-sizing: border-box;
   display: grid;
   gap: var(--moyu-space-4);
+  min-width: 0;
   width: min(100%, 42rem);
   margin: 0 auto;
   padding: var(--moyu-space-5);
+  overflow-x: hidden;
   color: var(--moyu-foreground);
 }
 
@@ -155,6 +157,15 @@
   .moyu-game2048__board {
     gap: var(--moyu-space-1);
     padding: var(--moyu-space-1);
+  }
+}
+
+@media (prefers-contrast: more) {
+  .moyu-game2048__stat,
+  .moyu-game2048__board,
+  .moyu-game2048__cell,
+  .moyu-game2048__dialog-actions {
+    border-color: var(--vscode-contrastBorder, var(--moyu-border));
   }
 }
 

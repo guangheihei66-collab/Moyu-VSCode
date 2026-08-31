@@ -84,6 +84,8 @@ export function createApp(
 ): MoyuApp {
   const document = root.ownerDocument;
   const normalRegion = document.createElement('div');
+  normalRegion.setAttribute('role', 'main');
+  normalRegion.setAttribute('aria-label', 'Moyu content');
   normalRegion.setAttribute('data-normal-region', 'true');
   root.replaceChildren(normalRegion);
 

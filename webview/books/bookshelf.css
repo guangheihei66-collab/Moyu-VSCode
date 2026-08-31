@@ -1,6 +1,7 @@
 .moyu-bookshelf {
   display: grid;
   gap: var(--moyu-space-4);
+  min-width: 0;
   width: min(100%, var(--moyu-content-max-width));
   margin: 0 auto;
 }
@@ -8,6 +9,7 @@
 .moyu-bookshelf__search {
   display: grid;
   gap: var(--moyu-space-1);
+  min-width: 0;
 }
 
 .moyu-bookshelf__search label {
@@ -46,6 +48,7 @@
 .moyu-bookshelf__list {
   display: grid;
   gap: var(--moyu-space-2);
+  min-width: 0;
 }
 
 .moyu-book-row {
@@ -98,6 +101,20 @@
 
   .moyu-book-row__actions {
     justify-content: flex-start;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .moyu-book-row,
+  .moyu-bookshelf__search input {
+    border-color: var(--vscode-contrastBorder, var(--moyu-border));
+  }
+}
+
+@media (forced-colors: active) {
+  .moyu-book-row,
+  .moyu-bookshelf__search input {
+    border-color: CanvasText;
   }
 }
 

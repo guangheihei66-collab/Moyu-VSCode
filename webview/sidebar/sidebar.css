@@ -17,12 +17,16 @@ body {
 #sidebar-app {
   box-sizing: border-box;
   min-height: 100vh;
+  min-width: 0;
+  overflow-x: hidden;
   padding: var(--moyu-space-2);
 }
 
 .moyu-sidebar {
   display: grid;
   gap: var(--moyu-space-2);
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .moyu-sidebar h1 {
@@ -37,6 +41,7 @@ body {
 .moyu-sidebar__list {
   display: grid;
   gap: var(--moyu-space-1);
+  min-width: 0;
 }
 
 .moyu-sidebar__entry {
@@ -99,6 +104,17 @@ body {
   }
 }
 
+@media (prefers-contrast: more) {
+  .moyu-sidebar__entry {
+    border-color: var(--vscode-contrastBorder, var(--moyu-border));
+  }
+
+  .moyu-sidebar__entry[aria-current='page'] {
+    outline: 1px solid var(--vscode-contrastBorder, var(--moyu-border));
+    outline-offset: -1px;
+  }
+}
+
 @media (forced-colors: active) {
   .moyu-sidebar__entry {
     border-color: CanvasText;
@@ -107,5 +123,11 @@ body {
   .moyu-sidebar__entry[aria-current='page'] {
     color: HighlightText;
     background: Highlight;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moyu-sidebar__entry {
+    transition: none;
   }
 }

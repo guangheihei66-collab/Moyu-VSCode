@@ -1,6 +1,8 @@
 .moyu-settings {
   display: grid;
   gap: var(--moyu-space-4);
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .moyu-settings > h1 {
@@ -10,6 +12,7 @@
 .moyu-settings__form {
   display: grid;
   gap: var(--moyu-space-4);
+  min-width: 0;
   max-width: 48rem;
 }
 
@@ -97,6 +100,7 @@
 }
 
 .moyu-settings__preview pre {
+  min-width: 0;
   max-height: 15rem;
   margin: 0;
   overflow: auto;

@@ -194,6 +194,16 @@
   border-radius: 0 0 var(--moyu-radius-control) var(--moyu-radius-control);
 }
 
+@media (prefers-contrast: more) {
+  .moyu-button,
+  .moyu-empty-state,
+  .moyu-action-menu,
+  .moyu-modal__header,
+  .moyu-modal__body {
+    border-color: var(--vscode-contrastBorder, var(--moyu-border));
+  }
+}
+
 @media (forced-colors: active) {
   .moyu-button,
   .moyu-empty-state,
