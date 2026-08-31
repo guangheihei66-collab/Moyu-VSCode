@@ -220,3 +220,11 @@ Tests: focused Boss/Webview/protocol/extension suite 88/88 PASS; Boss extension 
 Review: independent review found and fixed production Reader anchor mapping (logical locator capture/restore) and unstable shell module identity during transient route changes. Durable Reader/2048 transports, non-empty state restoration, serializer/disposal generation barriers, title/context acknowledgement, and no synthetic production transport were rechecked.
 Known issues: coverage provider is not installed; parse5/entities Node engine metadata still needs explicit VS Code 1.96 Extension Host acceptance in Task 22. No failing tests in this checkpoint.
 Next: Task 21
+
+Task 21: complete
+Commit: 0090e46
+Tests: Task 21 focused error/session/Webview/Panel recovery tests 16/16; full regression 257/257; Extension contract 5/5; format check, lint, build, and Extension Host/Webview typechecks PASS.
+Review: stable domain and adapter error codes are presented through fixed path-free messages and bounded actions; ErrorView uses accessible text-only controls; RefreshCoordinator rereads locked repository adapters at create, restore, reveal, navigation, and pre-mutation boundaries with cancellation; WebviewSessionRegistry is process-local and safely unregisters disposed panels. PanelController and activation are wired without adding cross-process IPC or realtime claims.
+Known issues: coverage provider is not installed; parse5/entities Node engine metadata still needs explicit VS Code 1.96 Extension Host acceptance in Task 22. Cross-window UI can remain temporarily stale until a declared refresh point, as specified.
+Uncommitted files: none.
+Next: Task 22

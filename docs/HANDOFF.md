@@ -7,7 +7,7 @@ Updated: 2026-08-31
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `470b522 fix: restore production module anchors safely`; working tree is clean before this handoff update.
+HEAD: `0090e46 feat: add recovery UX and multi-window refresh`; working tree is clean before this handoff update.
 
 ### Completed Tasks
 
@@ -29,6 +29,7 @@ HEAD: `470b522 fix: restore production module anchors safely`; working tree is c
 - Task 18: implementation complete and committed as `fcb6185`; safe Bookshelf cards/controller, native TXT/EPUB picker, relocation, bounded encoding previews, explicit removal confirmation, source-preserving cleanup, protocol validation, and Host smoke pass.
 - Task 19: implementation complete as `1a4ba01` plus review fix `83e0b8f`; closed settings read/update flow, transactional field merge, strict envelope/range validation, accessible native controls, theme tokens, safe correlated errors, and app recovery pass independent review.
 - Task 20: implementation and review fixes complete as `ac16118`, `54ff694`, `1910c34`, and `470b522`; persistent accessible Boss overlay, logical Reader/2048 module restoration, durable Host/Webview transports, non-empty state identity checks, acknowledgement-gated title/context changes, serializer/disposal cancellation barriers, and stable shell-route restoration pass independent review.
+- Task 21: implementation complete as `0090e46`; stable path-free error codes/messages/actions, accessible recovery controls, cancellable locked-repository refresh coordination, Panel lifecycle refresh hooks, same-Extension-Host session registration, and committed local notices pass focused and full regression checks.
 
 ### Current Task
 
@@ -36,7 +37,7 @@ Task 21 — Error Mapping, Refresh Strategy, and Recovery UX.
 
 ### Current Task Status
 
-Task 20 is GREEN, committed, independently reviewed, and checkpointed. Task 21 is ready to start.
+Task 21 is GREEN, committed, independently reviewed, and checkpointed. Task 22 is ready to start.
 
 ### Uncommitted Changes
 
@@ -44,9 +45,10 @@ Task 20 is GREEN, committed, independently reviewed, and checkpointed. Task 21 i
 
 ### Passing Tests
 
-- Full regression: 245/245 tests.
+- Full regression: 257/257 tests.
+- Focused Task 21 error/session/Webview/Panel recovery tests: 16/16.
 - Focused Task 20 Boss/Webview/protocol/extension tests: 88/88.
-- Boss extension contract: 3/3 tests; unrelated import tests skipped by the Boss grep.
+- Extension contract: 5/5 tests.
 - `npm run format:check`
 - `npm run lint`
 - `npm run build`
@@ -60,8 +62,8 @@ Task 20 is GREEN, committed, independently reviewed, and checkpointed. Task 21 i
 
 ### Last Good Commit
 
-`470b522 fix: restore production module anchors safely`
+`0090e46 feat: add recovery UX and multi-window refresh`
 
 ### Next Exact Action
 
-Read the complete Task 21 plan, write RED tests for stable error presentation and refresh points, then implement bounded recovery actions and same-host/cross-window refresh coordination without expanding into Task 22 acceptance work.
+Read the complete Task 22 plan, write RED activation/restart/multi-window tests, then add the isolated current/minimum VS Code acceptance harness and deterministic fixtures without weakening production lifecycle or storage guarantees.
