@@ -1,0 +1,111 @@
+@import '../styles/tokens.css';
+@import '../components/components.css';
+
+:root {
+  font-family: var(--vscode-font-family, sans-serif);
+  color: var(--moyu-foreground);
+  background: var(--vscode-sideBar-background, var(--moyu-surface));
+}
+
+body {
+  min-width: 0;
+  margin: 0;
+  color: var(--moyu-foreground);
+  background: var(--vscode-sideBar-background, var(--moyu-surface));
+}
+
+#sidebar-app {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: var(--moyu-space-2);
+}
+
+.moyu-sidebar {
+  display: grid;
+  gap: var(--moyu-space-2);
+}
+
+.moyu-sidebar h1 {
+  margin: var(--moyu-space-1) var(--moyu-space-2) var(--moyu-space-2);
+  color: var(--vscode-sideBar-foreground, var(--moyu-foreground));
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.moyu-sidebar__list {
+  display: grid;
+  gap: var(--moyu-space-1);
+}
+
+.moyu-sidebar__entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  justify-content: start;
+  min-width: 0;
+  width: 100%;
+  min-height: var(--moyu-control-height);
+  padding: var(--moyu-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--moyu-radius-small);
+  color: var(--vscode-sideBar-foreground, var(--moyu-foreground));
+  text-align: start;
+}
+
+.moyu-sidebar__entry:hover {
+  background: var(--vscode-list-hoverBackground, var(--moyu-hover));
+}
+
+.moyu-sidebar__entry:focus-visible {
+  outline: 2px solid var(--vscode-focusBorder, var(--moyu-focus));
+  outline-offset: -2px;
+}
+
+.moyu-sidebar__entry[aria-current='page'] {
+  color: var(
+    --vscode-list-activeSelectionForeground,
+    var(--moyu-selected-foreground)
+  );
+  background: var(
+    --vscode-list-activeSelectionBackground,
+    var(--moyu-selected)
+  );
+}
+
+.moyu-sidebar__entry[aria-current='page']:focus-visible {
+  outline-color: var(--vscode-focusBorder, var(--moyu-focus));
+}
+
+.moyu-sidebar__entry .moyu-icon {
+  margin-inline-end: var(--moyu-space-2);
+}
+
+.moyu-sidebar__entry > span:not(.moyu-icon) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.moyu-sidebar__summary {
+  grid-column: 3;
+  color: var(--vscode-descriptionForeground, var(--moyu-muted));
+  font-size: 0.85em;
+  text-align: end;
+}
+
+@media (max-width: 220px) {
+  .moyu-sidebar__summary {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .moyu-sidebar__entry {
+    border-color: CanvasText;
+  }
+
+  .moyu-sidebar__entry[aria-current='page'] {
+    color: HighlightText;
+    background: Highlight;
+  }
+}

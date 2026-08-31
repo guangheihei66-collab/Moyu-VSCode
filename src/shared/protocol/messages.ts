@@ -20,7 +20,25 @@ export type {
 
 export const PROTOCOL_VERSION = 1 as const;
 
-export type AppSection = 'books' | 'reader' | 'game2048' | 'settings';
+export type AppSection = 'home' | 'books' | 'reader' | 'game2048' | 'settings';
+
+export type SidebarSection = 'home' | 'books' | 'game2048' | 'settings';
+
+export interface SidebarViewModel {
+  active: SidebarSection;
+  booksCount: number;
+  bestScore: number;
+}
+
+export type SidebarMessage = {
+  type: 'navigate';
+  section: SidebarSection;
+};
+
+export type SidebarHostMessage = {
+  type: 'state';
+  model: SidebarViewModel;
+};
 
 export interface Envelope<Type extends string, Payload> {
   protocol: typeof PROTOCOL_VERSION;

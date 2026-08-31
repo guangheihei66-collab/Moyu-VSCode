@@ -29,7 +29,31 @@ const webviewStyleBuild = {
   target: 'chrome128',
 };
 
-const builds = [extensionBuild, webviewScriptBuild, webviewStyleBuild];
+const sidebarScriptBuild = {
+  bundle: true,
+  entryPoints: ['webview/sidebar/main.ts'],
+  outfile: 'dist/webview/sidebar.js',
+  platform: 'browser',
+  sourcemap: true,
+  target: 'chrome128',
+};
+
+const sidebarStyleBuild = {
+  bundle: true,
+  entryPoints: ['webview/sidebar/sidebar.css'],
+  outfile: 'dist/webview/sidebar.css',
+  platform: 'browser',
+  sourcemap: true,
+  target: 'chrome128',
+};
+
+const builds = [
+  extensionBuild,
+  webviewScriptBuild,
+  webviewStyleBuild,
+  sidebarScriptBuild,
+  sidebarStyleBuild,
+];
 
 if (process.argv.includes('--watch')) {
   await Promise.all(

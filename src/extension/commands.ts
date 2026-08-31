@@ -105,9 +105,12 @@ export function registerCommands(
   registry: PanelRegistry,
   windowId: string,
   workflows?: BookWorkflows,
+  onNavigate?: (section: AppSection) => void,
 ): void {
-  const open = (section: AppSection) =>
-    registry.openOrReveal(windowId, section);
+  const open = (section: AppSection) => {
+    onNavigate?.(section);
+    return registry.openOrReveal(windowId, section);
+  };
   context.subscriptions.push(
     vscode.commands.registerCommand('moyu.open', () => open('books')),
     vscode.commands.registerCommand('moyu.openBooks', () => open('books')),

@@ -9,6 +9,10 @@ import {
   type ProtocolError,
   type ProtocolErrorCode,
   PROTOCOL_VERSION,
+  type SidebarHostMessage,
+  type SidebarMessage,
+  type SidebarSection,
+  type SidebarViewModel,
 } from './messages';
 import { failure, success, type Result } from './result';
 import {
@@ -30,8 +34,15 @@ const ERROR_MESSAGES: Readonly<Record<ProtocolErrorCode, string>> = {
 };
 
 const APP_SECTIONS: ReadonlySet<AppSection> = new Set([
+  'home',
   'books',
   'reader',
+  'game2048',
+  'settings',
+]);
+const SIDEBAR_SECTIONS: ReadonlySet<SidebarSection> = new Set([
+  'home',
+  'books',
   'game2048',
   'settings',
 ]);
@@ -69,6 +80,17 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
+function isSidebarViewModel(value: unknown): value is SidebarViewModel {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ['active', 'booksCount', 'bestScore']) &&
+    typeof value.active === 'string' &&
+    SIDEBAR_SECTIONS.has(value.active as SidebarSection) &&
+    isNonNegativeInteger(value.booksCount) &&
+    isNonNegativeInteger(value.bestScore)
+  );
 }
 
 function isLogicalLocator(value: unknown): value is LogicalLocator {
@@ -442,6 +464,29 @@ export function serializedUtf8Size(value: unknown): number {
     throw new TypeError('Value is not JSON-serializable.');
   }
   return new TextEncoder().encode(serialized).byteLength;
+}
+
+/** Validates the un-enveloped navigation message sent by the Sidebar bundle. */
+export function isSidebarMessage(value: unknown): value is SidebarMessage {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ['type', 'section']) &&
+    value.type === 'navigate' &&
+    typeof value.section === 'string' &&
+    SIDEBAR_SECTIONS.has(value.section as SidebarSection)
+  );
+}
+
+/** Validates the state event sent from the provider to the Sidebar bundle. */
+export function isSidebarHostMessage(
+  value: unknown,
+): value is SidebarHostMessage {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ['type', 'model']) &&
+    value.type === 'state' &&
+    isSidebarViewModel(value.model)
+  );
 }
 
 /** Validates an untrusted Webview request before it reaches a Host handler. */

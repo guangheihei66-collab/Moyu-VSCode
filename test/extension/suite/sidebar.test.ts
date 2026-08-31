@@ -1,4 +1,6 @@
 import { strict as assert } from 'node:assert';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import * as vscode from 'vscode';
 
 interface SidebarStatus {
@@ -27,6 +29,24 @@ export async function runSidebarProviderAcceptance(): Promise<void> {
     const status = await readSidebarStatus();
     if (status.resolved) {
       assert.deepEqual(status, { registered: true, resolved: true });
+      const extension = vscode.extensions.all.find(
+        (candidate) => candidate.packageJSON?.name === 'moyu-vscode',
+      );
+      assert.ok(extension, 'Moyu extension must be discoverable in the Host.');
+      assert.equal(
+        existsSync(
+          join(extension.extensionPath, 'dist', 'webview', 'sidebar.js'),
+        ),
+        true,
+        'packaged Sidebar JavaScript must exist in the active extension',
+      );
+      assert.equal(
+        existsSync(
+          join(extension.extensionPath, 'dist', 'webview', 'sidebar.css'),
+        ),
+        true,
+        'packaged Sidebar CSS must exist in the active extension',
+      );
       return;
     }
     await new Promise<void>((resolve) => setTimeout(resolve, 20));

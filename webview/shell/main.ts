@@ -12,6 +12,7 @@ declare function acquireVsCodeApi(): {
 };
 
 const SECTIONS: readonly AppSection[] = [
+  'home',
   'books',
   'reader',
   'game2048',

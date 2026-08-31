@@ -32,7 +32,7 @@ export interface PanelLifecycleServices {
 function refreshTarget(
   section: AppSection,
 ): 'bookshelf' | 'reader' | 'game2048' | 'settings' {
-  return section === 'books' ? 'bookshelf' : section;
+  return section === 'books' || section === 'home' ? 'bookshelf' : section;
 }
 
 function isMutation(request: HostRequest): request is Extract<

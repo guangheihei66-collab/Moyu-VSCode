@@ -104,13 +104,33 @@ export function activate(context: vscode.ExtensionContext): void {
     contextKeys,
     () => boss.reset(),
   );
-  registerCommands(context, registry, windowId, {
-    bookshelf,
-    encoding: new EncodingSelectionService(bookshelfRepository),
-    boss: { service: boss, settings },
-  });
-  const sidebarProvider = new MoyuSidebarProvider(registry, windowId);
+  const sidebarProvider = new MoyuSidebarProvider(
+    registry,
+    windowId,
+    context.extensionUri,
+  );
+  registerCommands(
+    context,
+    registry,
+    windowId,
+    {
+      bookshelf,
+      encoding: new EncodingSelectionService(bookshelfRepository),
+      boss: { service: boss, settings },
+    },
+    (section) => {
+      if (
+        section === 'home' ||
+        section === 'books' ||
+        section === 'game2048' ||
+        section === 'settings'
+      ) {
+        sidebarProvider.setActiveSection(section);
+      }
+    },
+  );
   const lifecycleSubscriptions: vscode.Disposable[] = [
+    sidebarProvider,
     vscode.window.registerWebviewViewProvider('moyu.sidebar', sidebarProvider),
     vscode.window.registerWebviewPanelSerializer(
       'moyu.main',
