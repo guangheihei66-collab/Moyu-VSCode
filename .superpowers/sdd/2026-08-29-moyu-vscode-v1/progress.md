@@ -244,3 +244,12 @@ Review: README documents installation, F5, all core workflows, Ctrl+M conflict/r
 Known issues: coverage provider is not installed; parse5/entities metadata declares a Node 20.19 floor while the bundled EPUB path passes under the isolated VS Code 1.96.0 Extension Host lane; this host exposes Node 26.4.0 rather than Node 22 and no system/toolchain change was made; cross-window UI can remain temporarily stale until a declared refresh point.
 Uncommitted files: documentation handoff update only, to be committed separately.
 Next: V1 implementation complete; review `docs/todo.md` and run the manual Windows checklist when a human UI/visual acceptance pass is scheduled.
+
+Post-implementation VSIX Sidebar integration fix: complete
+Commit: ae6c97a
+Root cause: `package.json` contributed `moyu.sidebar` without `type: "webview"`, so VS Code treated the view as a TreeView while production activation correctly registered a `WebviewViewProvider`. The resulting real UI error was “There is no data provider registered that can provide view data.”
+Regression: manifest test now compares the declared View ID character-for-character with the `registerWebviewViewProvider` runtime argument and requires `type: "webview"`; the real Extension Host suite opens the Moyu container and `moyu.sidebar`, then observes the actual provider instance resolving. Packaged current/minimum smoke runs the same provider check against the extracted VSIX.
+Tests: RED reproduced with `resolved: false`; focused GREEN; full unit regression 262/262; current and VS Code 1.96.0 Extension Host lanes PASS; lint, format, Extension Host/Webview typechecks, build, secret scan, VSIX archive verification, and packaged current/minimum install smoke PASS.
+Bundle/package evidence: `dist/extension.js` and the VSIX both contain `registerWebviewViewProvider("moyu.sidebar", ...)` and `resolveWebviewView`; the packaged manifest declares `moyu.sidebar` as `type: "webview"`.
+Manual acceptance: the old 0.1.0 VSIX reproduced the failure in an isolated profile. A second isolated profile was prepared for the fixed VSIX, but Computer Use was stopped by the physical Escape key before the fixed UI click-through could be completed; no user profile was changed.
+Next: repeat the fixed VSIX manual click-through when UI control is available: Moyu Activity Bar → Sidebar Home/Books/2048/Settings → click a destination → one main WebviewPanel.
