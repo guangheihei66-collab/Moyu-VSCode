@@ -281,3 +281,10 @@ Tests: focused Task 4 tests 50/50 PASS; full unit regression 285/285 PASS; curre
 Review: Books is a compact snapshot-driven presentation with local case-insensitive search and type filters. ActionMenu exposes exact safe actions, source-missing books offer Relocate, and import/relocate/reselect/remove/open remain delegated to existing Host-side picker, confirmation, service, and progress workflows. No source path is rendered or deleted.
 Known issues: coverage remains unavailable because @vitest/coverage-v8 is not installed; existing non-Task-1 Boss CSS fallback remains for the later theme/accessibility polish task.
 Next: Task 5 — Reader presentation and safe navigation.
+
+UI Redesign Task 5: complete
+Commit: 00a01ab feat: redesign Moyu Reader presentation
+Tests: focused Reader/toolbar/block-window/Boss tests 17/17 PASS; full unit regression 288/288 PASS; current and VS Code 1.96.0 Extension Host lanes PASS; format check, lint, build, and Extension Host/Webview typechecks PASS.
+Review: Reader presentation is model-driven and safe: title/type/percentage/chapter metadata, quiet toolbar and overflow actions, centered bounded content, inert paragraph text, progress, and boundary-aware paging. ReaderController continues to own the existing bounded block window, TXT logical locators, focus/progress capture, pause/resume, and lifecycle. No durable reader service or parser was changed.
+Known issues: coverage remains unavailable because @vitest/coverage-v8 is not installed; EPUB chapter protocol and Host presentation adapter remain Task 6 work.
+Next: Task 6 — EPUB chapter navigation UI and Host adapter.

@@ -252,6 +252,55 @@ Task 5 — Reader presentation and safe navigation.
 
 ### Next Exact Action
 
-Implement Task 5 from the amended plan: the Reader presentation layer using the
-existing reader service through `EpubPresentationAdapter`, safe DTOs, ChapterDrawer
-navigation, and preserved parser/security/cache/chapter identity/progress semantics.
+Implement Task 5 from the amended plan: Reader shell, typography, toolbar, bounded
+content, safe paragraph rendering, logical focus/progress retention, and existing
+viewport paging. Keep EPUB chapter adapter work for Task 6; do not change durable
+reader services.
+
+## UI Redesign Task 5 checkpoint
+
+Updated: 2026-08-31
+
+### Current Task
+
+Task 6 — EPUB chapter navigation UI and Host adapter.
+
+### Completed
+
+- Task 5 committed as `00a01ab feat: redesign Moyu Reader presentation`.
+- Added the presentation-only `ReaderPresentationModel` and a Reader shell with
+  Back to Books, title/type/percentage context, quiet overflow actions, bounded
+  centered content, progress, and boundary-aware Previous/Next controls.
+- Reader paragraphs remain inert `textContent` nodes with the existing block IDs;
+  `ReaderController` still owns bounded block loading, logical locators,
+  pause/resume, capture/restore, and progress calls.
+- Reader route actions return to Books or open Settings through the existing
+  Router, and Reader/Game controllers are disposed with the app lifecycle.
+- Reader CSS consumes the existing font-size, line-height, and content-width
+  variables and includes narrow-panel, contrast, forced-colors, and
+  reduced-motion hooks.
+
+### Tests
+
+- Focused Reader/toolbar/block-window/Boss tests: 17/17 PASS.
+- Full unit regression: 288/288 PASS.
+- Current and VS Code 1.96.0 Extension Host lanes: PASS.
+- Format, lint, build, and extension/Webview typechecks: PASS.
+
+### Known Issues
+
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- EPUB chapter protocol and Host presentation adapter remain Task 6 work; the
+  existing EPUB service has not been modified.
+
+### Last Good Commit
+
+`00a01ab feat: redesign Moyu Reader presentation`
+
+### Next Exact Action
+
+Implement Task 6 from the amended plan: add `ChapterDrawer` and
+`EpubPresentationAdapter`, the closed chapter request/response families, and
+text-only EPUB chapter navigation. Do not modify
+`src/application/reader/EpubReaderService.ts`; preserve parser, security, cache,
+chapter identity, and progress semantics.
