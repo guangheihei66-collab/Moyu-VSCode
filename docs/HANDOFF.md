@@ -1,13 +1,13 @@
 # Moyu VS Code V1 Handoff
 
-Updated: 2026-08-30
+Updated: 2026-08-31
 
 ## RESUME REPORT
 
 Repository: `D:\Moyu\Moyu-VSCode`
 Branch: `feature/moyu-v1-implementation`
 Worktree: `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`
-HEAD: `83e0b8f fix: align settings controls and error handling`; working tree is clean before this handoff update.
+HEAD: `470b522 fix: restore production module anchors safely`; working tree is clean before this handoff update.
 
 ### Completed Tasks
 
@@ -28,14 +28,15 @@ HEAD: `83e0b8f fix: align settings controls and error handling`; working tree is
 - Task 17: implementation complete and committed as `b92d493`; container/OPF/spine parsing, ordered sanitized chapters, source-bound atomic cache, chapter navigation, domain EPUB locator reuse, and logical progress restore pass.
 - Task 18: implementation complete and committed as `fcb6185`; safe Bookshelf cards/controller, native TXT/EPUB picker, relocation, bounded encoding previews, explicit removal confirmation, source-preserving cleanup, protocol validation, and Host smoke pass.
 - Task 19: implementation complete as `1a4ba01` plus review fix `83e0b8f`; closed settings read/update flow, transactional field merge, strict envelope/range validation, accessible native controls, theme tokens, safe correlated errors, and app recovery pass independent review.
+- Task 20: implementation and review fixes complete as `ac16118`, `54ff694`, `1910c34`, and `470b522`; persistent accessible Boss overlay, logical Reader/2048 module restoration, durable Host/Webview transports, non-empty state identity checks, acknowledgement-gated title/context changes, serializer/disposal cancellation barriers, and stable shell-route restoration pass independent review.
 
 ### Current Task
 
-Task 20 — Boss Overlay and Full Module Restoration.
+Task 21 — Error Mapping, Refresh Strategy, and Recovery UX.
 
 ### Current Task Status
 
-Task 19 is GREEN, committed, and independently approved. Task 20 is ready to start.
+Task 20 is GREEN, committed, independently reviewed, and checkpointed. Task 21 is ready to start.
 
 ### Uncommitted Changes
 
@@ -43,23 +44,24 @@ Task 19 is GREEN, committed, and independently approved. Task 20 is ready to sta
 
 ### Passing Tests
 
-- Full regression: 209/209 tests.
-- Focused final Task 19 settings/protocol/Host/Webview tests: 70/70.
+- Full regression: 245/245 tests.
+- Focused Task 20 Boss/Webview/protocol/extension tests: 88/88.
+- Boss extension contract: 3/3 tests; unrelated import tests skipped by the Boss grep.
 - `npm run format:check`
 - `npm run lint`
 - `npm run build`
-- Extension Host TypeScript typecheck.
-- `npm audit --omit=dev`: 0 vulnerabilities, including 0 high/critical.
+- Extension Host and Webview TypeScript typechecks.
 
-### Failing Tests
+### Known Issues
 
+- No failing tests in this checkpoint.
 - Coverage is unavailable because the dependency set does not include `@vitest/coverage-v8`; no coverage dependency was installed.
 - `parse5@8.0.1` resolves `entities@8.0.0`, whose package metadata declares Node >=20.19 while the minimum VS Code 1.96 runtime is Node 20.18; esbuild bundles it and current tests/build pass, but Task 22 Extension Host acceptance must explicitly verify this path.
 
 ### Last Good Commit
 
-`83e0b8f fix: align settings controls and error handling`
+`470b522 fix: restore production module anchors safely`
 
 ### Next Exact Action
 
-Write Task 20 RED tests for overlay/title/focus/module identity restoration, then implement static Boss templates, the Webview module lifecycle adapter, and the real visibility-gated `Ctrl+M` integration without destroying Reader or 2048 state.
+Read the complete Task 21 plan, write RED tests for stable error presentation and refresh points, then implement bounded recovery actions and same-host/cross-window refresh coordination without expanding into Task 22 acceptance work.

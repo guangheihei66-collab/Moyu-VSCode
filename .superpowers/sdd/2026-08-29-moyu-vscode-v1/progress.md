@@ -213,3 +213,10 @@ Tests: focused final 70/70 and full regression 209/209 PASS; format, lint, build
 Review: inherited uncommitted implementation reviewed; Critical end-to-end wiring and validation/accessibility gaps fixed; two remaining Important findings fixed in round 1; scoped re-review Approved.
 Rulings: transactional preferences storage retained because Design permits but does not mandate globalState, while locked field merge prevents silent cross-window overwrite. Task19-local safe correlated errors do not expand Task21 recovery UX scope.
 Next: Task 20
+
+Task 20: complete
+Commits: ac16118, 54ff694, 1910c34, 470b522
+Tests: focused Boss/Webview/protocol/extension suite 88/88 PASS; Boss extension contract 3/3 PASS; full regression 245/245 PASS; format check, lint, build, and Extension Host/Webview typechecks PASS.
+Review: independent review found and fixed production Reader anchor mapping (logical locator capture/restore) and unstable shell module identity during transient route changes. Durable Reader/2048 transports, non-empty state restoration, serializer/disposal generation barriers, title/context acknowledgement, and no synthetic production transport were rechecked.
+Known issues: coverage provider is not installed; parse5/entities Node engine metadata still needs explicit VS Code 1.96 Extension Host acceptance in Task 22. No failing tests in this checkpoint.
+Next: Task 21
