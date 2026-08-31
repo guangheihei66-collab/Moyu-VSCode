@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { BossOverlay } from '../../../webview/boss/BossOverlay';
 import {
@@ -83,6 +83,7 @@ class TestElement {
   readonly children: TestElement[] = [];
   readonly dataset: Record<string, string> = {};
   readonly attributes = new Map<string, string>();
+  readonly style = { setProperty: () => {} };
   ownerDocument!: TestDocument;
   hidden = false;
   inert = false;
@@ -156,6 +157,11 @@ class TestElement {
 class TestDocument {
   activeElement: TestElement | null = null;
   lastFocusOptions: FocusOptions | undefined;
+  readonly documentElement: TestElement;
+
+  constructor() {
+    this.documentElement = this.createElement('html');
+  }
 
   createElement(tagName: string): TestElement {
     const element = new TestElement(tagName.toUpperCase());
@@ -329,6 +335,54 @@ describe('BossOverlay', () => {
     expect((gameAfter.moduleState as { board: unknown }).board).toBe(
       (gameBefore.moduleState as { board: unknown }).board,
     );
+  });
+
+  it('captures and restores the production Reader logical anchor', async () => {
+    const restoreLogicalAnchor = vi.spyOn(
+      ReaderController.prototype,
+      'restoreLogicalAnchor',
+    );
+    const document = new TestDocument();
+    const root = document.createElement('main');
+    const app = createApp(
+      root as unknown as HTMLElement,
+      productionModuleClient(),
+      'reader',
+    );
+    const normalRegion = root.children[0]!;
+    const controller = app.captureModuleSnapshot()
+      .controller as ReaderController;
+
+    await controller.open('reader-book');
+    normalRegion.querySelector('[data-block-id]')!.focus();
+    const before = app.captureModuleSnapshot();
+
+    expect(before.logicalAnchor).toEqual(durableReaderAnchor);
+    app.setBossMode('BOSS_MODE', 'typescript');
+    app.setBossMode('NORMAL', 'typescript');
+
+    expect(restoreLogicalAnchor).toHaveBeenCalledWith(durableReaderAnchor);
+    restoreLogicalAnchor.mockRestore();
+    app.dispose();
+  });
+
+  it('restores the stable shell module after a transient route change', () => {
+    const document = new TestDocument();
+    const root = document.createElement('main');
+    const app = createApp(
+      root as unknown as HTMLElement,
+      productionModuleClient(),
+      'settings',
+    );
+    const before = app.captureModuleSnapshot();
+
+    app.setBossMode('BOSS_MODE', 'typescript');
+    app.router.navigate('books');
+    app.setBossMode('NORMAL', 'typescript');
+
+    expect(app.router.current).toBe('settings');
+    expect(app.captureModuleSnapshot().controller).toBe(before.controller);
+    app.dispose();
   });
 
   it('defers navigation while Boss mode is active so the captured module cannot change', () => {

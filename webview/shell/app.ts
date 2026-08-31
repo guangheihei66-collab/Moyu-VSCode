@@ -5,7 +5,10 @@ import {
   type ReaderSettingsPatch,
   type ReaderSettingsSnapshot,
 } from '../../src/domain/reader/settings';
-import type { AppSection } from '../../src/shared/protocol/messages';
+import type {
+  AppSection,
+  LogicalLocator,
+} from '../../src/shared/protocol/messages';
 import { BossOverlay } from '../boss/BossOverlay';
 import {
   Game2048Controller,
@@ -86,9 +89,7 @@ export function createApp(
       : new Game2048Controller(moduleClient);
   const shellController = {};
   const shellModule: ModuleBinding = {
-    get id() {
-      return `shell:${router.current}`;
-    },
+    id: 'shell',
     controller: shellController,
     pause: () => normalRegion.setAttribute('data-paused', 'true'),
     resume: () => normalRegion.removeAttribute('data-paused'),
@@ -107,9 +108,11 @@ export function createApp(
     restoreFocus: (token) => {
       if (token !== undefined) readerController.restoreFocus(token as never);
     },
-    captureAnchor: () => readerController.captureAnchor(),
+    captureAnchor: () => readerController.captureLogicalAnchor(),
     restoreAnchor: (anchor) => {
-      if (anchor !== undefined) readerController.restoreFocus(anchor as never);
+      if (anchor !== undefined) {
+        readerController.restoreLogicalAnchor(anchor as LogicalLocator);
+      }
     },
     captureScroll: () => readerController.captureScroll(),
     restoreScroll: (scroll) => readerController.restoreScroll(scroll as number),
