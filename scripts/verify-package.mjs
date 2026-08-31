@@ -223,9 +223,22 @@ const PACKAGE_SMOKE_SUITE = `
 const assert = require('node:assert/strict');
 const vscode = require('vscode');
 
+async function waitForSidebarProvider() {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const status = await vscode.commands.executeCommand('moyu.__testSidebarStatus');
+    if (status && status.resolved) return status;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  return vscode.commands.executeCommand('moyu.__testSidebarStatus');
+}
+
 exports.run = (_args, callback) => {
   void (async () => {
     await vscode.commands.executeCommand('moyu.openBooks');
+    await vscode.commands.executeCommand('workbench.view.extension.moyu');
+    await vscode.commands.executeCommand('workbench.action.openView', 'moyu.sidebar');
+    assert.deepEqual(await waitForSidebarProvider(), { registered: true, resolved: true });
     const commands = await vscode.commands.getCommands(true);
     for (const command of [
       'moyu.open',
@@ -270,6 +283,7 @@ async function runPackagedLane(lane, extensionRoot, smokeRoot) {
   const options = {
     extensionDevelopmentPath: extensionRoot,
     extensionTestsPath: suitePath,
+    extensionTestsEnv: { MOYU_TEST_SIDEBAR_PROBE: '1' },
     launchArgs: [
       workspace,
       '--disable-extensions',

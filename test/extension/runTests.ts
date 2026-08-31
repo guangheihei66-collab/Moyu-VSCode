@@ -165,6 +165,7 @@ async function main(): Promise<void> {
         MOYU_TEST_NODE_EXECUTABLE: process.execPath,
         MOYU_TEST_TXT_BOOK: join(fixtures.root, 'workspace', 'fixture.txt'),
         MOYU_TEST_EPUB_BOOK: join(fixtures.root, 'workspace', 'fixture.epub'),
+        MOYU_TEST_SIDEBAR_PROBE: '1',
       },
       launchArgs: [
         fixtures.workspace,

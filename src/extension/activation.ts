@@ -109,16 +109,23 @@ export function activate(context: vscode.ExtensionContext): void {
     encoding: new EncodingSelectionService(bookshelfRepository),
     boss: { service: boss, settings },
   });
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(
-      'moyu.sidebar',
-      new MoyuSidebarProvider(registry, windowId),
-    ),
+  const sidebarProvider = new MoyuSidebarProvider(registry, windowId);
+  const lifecycleSubscriptions: vscode.Disposable[] = [
+    vscode.window.registerWebviewViewProvider('moyu.sidebar', sidebarProvider),
     vscode.window.registerWebviewPanelSerializer(
       'moyu.main',
       new PanelSerializer(registry, windowId, context.extensionUri),
     ),
-  );
+  ];
+  if (process.env.MOYU_TEST_SIDEBAR_PROBE === '1') {
+    lifecycleSubscriptions.push(
+      vscode.commands.registerCommand('moyu.__testSidebarStatus', () => ({
+        registered: true,
+        resolved: sidebarProvider.isResolved,
+      })),
+    );
+  }
+  context.subscriptions.push(...lifecycleSubscriptions);
 }
 
 export function deactivate(): void {}

@@ -8,6 +8,7 @@ export default defineConfig({
       'test/extension/suite/activation.test.ts',
       'test/extension/suite/restartRecovery.test.ts',
       'test/extension/suite/multiWindow.test.ts',
+      'test/extension/suite/sidebar.test.ts',
     ],
   },
 });
