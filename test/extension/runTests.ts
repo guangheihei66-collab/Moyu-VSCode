@@ -152,6 +152,8 @@ async function main(): Promise<void> {
 
   const stdout = capture(join(fixtures.root, `extension-${lane}.stdout.log`));
   const stderr = capture(join(fixtures.root, `extension-${lane}.stderr.log`));
+  const minimumCache =
+    process.env.MOYU_VSCODE_MIN_CACHE ?? join(fixtures.root, 'vscode-cache');
   let passed = false;
   try {
     const options = {
@@ -184,7 +186,7 @@ async function main(): Promise<void> {
         : await runTests({
             ...options,
             version: '1.96.0',
-            cachePath: join(fixtures.root, 'vscode-cache'),
+            cachePath: minimumCache,
           });
     if (code !== 0)
       throw new Error(`Extension Host test lane exited with ${code}.`);

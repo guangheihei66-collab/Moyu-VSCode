@@ -16,7 +16,6 @@ const GENERATED_NAMES = [
   'extensions',
   'global-storage',
   'multi-window-state',
-  'vscode-cache',
   'suite.cjs',
   'transaction-child.cjs',
 ];
