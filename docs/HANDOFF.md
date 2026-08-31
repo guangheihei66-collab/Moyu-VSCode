@@ -358,3 +358,49 @@ Implement Task 7 from the amended plan: redesign the 2048 presentation with
 compact Score/Best blocks, the bounded 16-cell semantic board, keyboard help,
 secondary New Game action, and accessible win/Game Over dialogs while
 preserving the existing Game2048Controller transport and lifecycle semantics.
+
+## UI Redesign Task 7 checkpoint
+
+Updated: 2026-09-01
+
+### Current Task
+
+Task 8 — Settings form and template preview.
+
+### Completed
+
+- Task 7 committed as `930b926 feat: refine Moyu 2048 presentation`.
+- 2048 now presents compact accessible Score/Best blocks above a bounded
+  semantic 16-cell board. Each cell retains text-only values and exposes a
+  `data-value` styling hook using VS Code surface/contrast tokens rather than
+  rainbow or brand colors.
+- Added keyboard guidance, responsive layout/state hooks, a secondary New Game
+  control below the board, and shared `Modal`-backed victory/Game Over dialogs.
+  Continue and New Game return focus to the board; paused/Boss state blocks
+  movement and closes active modal presentation.
+- `Game2048Controller` transport, capture/restore lifecycle, durable game
+  state, session identity, move sequence, engine, and persistence behavior were
+  preserved.
+
+### Tests
+
+- Focused Task 7 view/keyboard tests: 6/6 PASS.
+- Full unit regression: 297/297 PASS.
+- Format check, lint, build, and Webview typecheck: PASS.
+
+### Known Issues
+
+- Coverage remains unavailable because `@vitest/coverage-v8` is not installed.
+- Existing cross-window UI staleness and `parse5/entities` Node engine notes
+  remain unchanged.
+
+### Last Good Commit
+
+`930b926 feat: refine Moyu 2048 presentation`
+
+### Next Exact Action
+
+Implement Task 8 from the amended plan: redesign Settings with Reading and Boss
+Mode sections, labelled descriptions/current range outputs, native controls with
+the existing exact ranges, template preview/reset callbacks, and unchanged
+versioned ReaderSettingsService persistence.

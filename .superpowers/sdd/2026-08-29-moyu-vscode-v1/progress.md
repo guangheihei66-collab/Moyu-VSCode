@@ -295,3 +295,10 @@ Tests: EPUB/Webview/dispatcher/adapter focused tests PASS; full unit regression 
 Review: added the closed EPUB chapter protocol families, strict bounded DTO validation, MessageClient identity checks, an EpubPresentationAdapter over the existing EpubReaderService, and activation wiring. ReaderController now restores and navigates EPUB chapter locators through a text-only ChapterDrawer with safe DOM rendering, focus return, boundary guards, and Boss pause disposal. Minimal parser type-compatibility fixes were required when activation brought the existing EPUB parser into Extension Host typechecking; EpubReaderService.ts was not modified.
 Known issue: coverage remains unavailable because @vitest/coverage-v8 is not installed; parse5/entities Node engine metadata remains a dependency audit note already covered by the minimum Extension Host lane.
 Next: Task 7
+
+UI Redesign Task 7: complete
+Commit: 930b926 feat: refine Moyu 2048 presentation
+Tests: focused 2048 view/keyboard tests 6/6 PASS; full unit regression 297/297 PASS; format check, lint, build, and Webview typecheck PASS.
+Review: 2048 now presents compact accessible Score/Best blocks, a bounded semantic 16-cell board with theme-derived value hooks, keyboard help, responsive/paused state hooks, and shared Modal-backed victory/Game Over actions with focus return. Game2048Controller transport, durable state, session identity, move sequence, engine, and persistence semantics remain unchanged.
+Known issue: coverage remains unavailable because @vitest/coverage-v8 is not installed; the existing cross-window and parse5 dependency notes remain unchanged.
+Next: Task 8
