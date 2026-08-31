@@ -3,6 +3,7 @@ import type {
   HostResponse,
 } from '../../src/shared/protocol/messages';
 import { PROTOCOL_VERSION } from '../../src/shared/protocol/messages';
+import type { BossMode } from '../../src/domain/boss/types';
 import type {
   ReaderSettingsPatch,
   ReaderSettingsSnapshot,
@@ -76,6 +77,16 @@ export class MessageClient {
       sessionId: this.sessionId,
       type: 'settings/update',
       payload: { baseVersion, patch },
+    });
+  }
+
+  acknowledgeBoss(requestId: string, mode: BossMode): void {
+    this.api.postMessage({
+      protocol: PROTOCOL_VERSION,
+      id: this.createRequestId(),
+      sessionId: this.sessionId,
+      type: 'boss/ack',
+      payload: { requestId, mode },
     });
   }
 

@@ -5,6 +5,7 @@ const vscodeHarness = vi.hoisted(() => {
   const postMessage = vi.fn().mockResolvedValue(true);
   const panel = {
     visible: true,
+    title: 'Moyu',
     webview: {
       cspSource: 'vscode-webview://test',
       html: '',
@@ -108,4 +109,87 @@ describe('PanelController settings wiring', () => {
       );
     });
   });
+
+  it('correlates a Boss transition acknowledgement before changing panel state', async () => {
+    const states: { visible: boolean; open: boolean; bossMode?: boolean }[] =
+      [];
+    const controller = new PanelController(
+      { extensionUri: { path: 'extension' } } as never,
+      { read: vi.fn(), update: vi.fn() } as never,
+      (state) => states.push(state),
+    );
+    vscodeHarness.panel.title = 'Moyu';
+    controller.open('reader');
+
+    expect(controller.captureSnapshot()).toMatchObject({
+      route: 'reader',
+      moduleId: 'reader',
+      panelTitle: 'Moyu',
+    });
+    const transition = controller.requestBossTransition(
+      {
+        from: 'NORMAL',
+        mode: 'BOSS_MODE',
+        snapshot: controller.captureSnapshot(),
+      },
+      'buildLog',
+    );
+    const event = vscodeHarness.postMessage.mock.calls.at(-1)?.[0] as {
+      payload: { requestId: string };
+    };
+    expect(event).toMatchObject({
+      type: 'boss/modeChanged',
+      payload: { mode: 'BOSS_MODE', template: 'buildLog' },
+    });
+
+    let settled = false;
+    void transition.then(() => (settled = true));
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    await vscodeHarness.receive({
+      protocol: 1,
+      id: 'boss-ack-1',
+      sessionId: eventSessionId(event),
+      type: 'boss/ack',
+      payload: {
+        requestId: event.payload.requestId,
+        mode: 'BOSS_MODE',
+      },
+    });
+    await transition;
+
+    controller.setPanelTitle('build.log');
+    controller.setBossContext(true);
+    expect(vscodeHarness.panel.title).toBe('build.log');
+    expect(states.at(-1)).toMatchObject({ bossMode: true, open: true });
+  });
+
+  it('attaches a restored panel in NORMAL without revealing or replacing it', () => {
+    const states: { visible: boolean; open: boolean; bossMode?: boolean }[] =
+      [];
+    const controller = new PanelController(
+      { extensionUri: { path: 'extension' } } as never,
+      { read: vi.fn(), update: vi.fn() } as never,
+      (state) => states.push(state),
+    );
+    vscodeHarness.panel.title = 'build.log';
+    vscodeHarness.panel.reveal.mockClear();
+
+    controller.restore(vscodeHarness.panel as never, 'books');
+
+    expect(vscodeHarness.panel.title).toBe('Moyu');
+    expect(vscodeHarness.panel.reveal).not.toHaveBeenCalled();
+    expect(vscodeHarness.panel.webview.html).toContain(
+      'data-initial-section="books"',
+    );
+    expect(states.at(-1)).toEqual({
+      visible: true,
+      open: true,
+      bossMode: false,
+    });
+  });
 });
+
+function eventSessionId(event: unknown): string {
+  return (event as { sessionId: string }).sessionId;
+}

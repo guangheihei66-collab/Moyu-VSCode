@@ -4,7 +4,9 @@ import type {
   BossSnapshot,
   BossTransition,
   BossMode,
+  BossTemplate,
 } from '../../domain/boss/types';
+import { BOSS_PANEL_TITLES } from '../../domain/boss/types';
 
 export interface BossModeServiceOptions {
   machine?: BossModeMachine;
@@ -29,6 +31,7 @@ export class BossModeService {
   private readonly timeoutMs: number;
   private readonly bossTitle: string;
   private readonly normalTitle: string;
+  private activeTemplate: BossTemplate = 'typescript';
   private queue: Promise<void> = Promise.resolve();
 
   constructor(options: BossModeServiceOptions = {}) {
@@ -47,18 +50,25 @@ export class BossModeService {
     return this.machine.mode;
   }
 
-  toggle(panelSession?: BossPanelSession | null): Promise<void> {
-    const operation = this.queue.then(() => this.performToggle(panelSession));
+  toggle(
+    panelSession?: BossPanelSession | null,
+    template: BossTemplate = 'typescript',
+  ): Promise<void> {
+    const operation = this.queue.then(() =>
+      this.performToggle(panelSession, template),
+    );
     this.queue = operation.catch(() => undefined);
     return operation;
   }
 
   reset(): void {
     this.machine.restore('NORMAL');
+    this.activeTemplate = 'typescript';
   }
 
   private async performToggle(
     panelSession?: BossPanelSession | null,
+    requestedTemplate: BossTemplate = 'typescript',
   ): Promise<void> {
     if (
       panelSession === undefined ||
@@ -69,6 +79,9 @@ export class BossModeService {
     }
     const previousMode = this.machine.mode;
     const previousSnapshot = this.machine.snapshot;
+    const previousTemplate = this.activeTemplate;
+    const transitionTemplate =
+      previousMode === 'NORMAL' ? requestedTemplate : previousTemplate;
     const transition = this.machine.toggle(() => {
       if (panelSession.captureSnapshot === undefined) {
         throw new Error('A visible panel must provide a Boss Mode snapshot.');
@@ -76,14 +89,30 @@ export class BossModeService {
       return panelSession.captureSnapshot();
     });
     try {
-      await this.awaitAcknowledgement(panelSession, transition);
+      await this.awaitAcknowledgement(
+        panelSession,
+        transition,
+        transitionTemplate,
+      );
       await panelSession.setPanelTitle?.(
-        transition.mode === 'BOSS_MODE' ? this.bossTitle : this.normalTitle,
+        transition.mode === 'BOSS_MODE'
+          ? this.bossTitle === 'extension.ts'
+            ? BOSS_PANEL_TITLES[transitionTemplate]
+            : this.bossTitle
+          : (transition.restoredSnapshot?.panelTitle ?? this.normalTitle),
       );
       await panelSession.setBossContext?.(transition.mode === 'BOSS_MODE');
+      this.activeTemplate =
+        transition.mode === 'BOSS_MODE' ? transitionTemplate : 'typescript';
     } catch (error) {
       this.machine.restore(previousMode, previousSnapshot);
-      await this.tryRollback(panelSession, previousMode, previousSnapshot);
+      this.activeTemplate = previousTemplate;
+      await this.tryRollback(
+        panelSession,
+        previousMode,
+        previousSnapshot,
+        previousTemplate,
+      );
       throw error;
     }
   }
@@ -91,6 +120,7 @@ export class BossModeService {
   private async awaitAcknowledgement(
     panelSession: BossPanelSession,
     transition: BossTransition,
+    template: BossTemplate,
   ): Promise<void> {
     if (panelSession.requestBossTransition === undefined) {
       return;
@@ -98,7 +128,7 @@ export class BossModeService {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
-        panelSession.requestBossTransition(transition),
+        panelSession.requestBossTransition(transition, template),
         new Promise<never>((_, reject) => {
           timer = setTimeout(
             () => reject(new BossModeAcknowledgementTimeout()),
@@ -115,6 +145,7 @@ export class BossModeService {
     panelSession: BossPanelSession,
     mode: BossMode,
     snapshot: BossSnapshot | undefined,
+    template: BossTemplate,
   ): Promise<void> {
     if (panelSession.requestBossTransition === undefined) return;
     const rollback: BossTransition =
@@ -122,9 +153,13 @@ export class BossModeService {
         ? { from: 'BOSS_MODE', mode: 'NORMAL', restoredSnapshot: snapshot }
         : { from: 'NORMAL', mode: 'BOSS_MODE', snapshot };
     try {
-      await this.awaitAcknowledgement(panelSession, rollback);
+      await this.awaitAcknowledgement(panelSession, rollback, template);
       await panelSession.setPanelTitle?.(
-        mode === 'BOSS_MODE' ? this.bossTitle : this.normalTitle,
+        mode === 'BOSS_MODE'
+          ? this.bossTitle === 'extension.ts'
+            ? BOSS_PANEL_TITLES[template]
+            : this.bossTitle
+          : (snapshot?.panelTitle ?? this.normalTitle),
       );
       await panelSession.setBossContext?.(mode === 'BOSS_MODE');
     } catch {

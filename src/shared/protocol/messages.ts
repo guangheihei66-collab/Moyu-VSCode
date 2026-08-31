@@ -1,8 +1,10 @@
 import type { EpubLocator, TxtLocator } from '../../domain/reader/locator';
 import type {
+  BossTemplate,
   ReaderSettingsPatch,
   ReaderSettingsSnapshot,
 } from '../../domain/reader/settings';
+import type { BossMode } from '../../domain/boss/types';
 
 export type {
   EpubLocator,
@@ -35,6 +37,7 @@ export type GameDirection = 'left' | 'right' | 'up' | 'down';
 
 export type HostRequest =
   | Envelope<'app/ready', Record<string, never>>
+  | Envelope<'boss/ack', { requestId: string; mode: BossMode }>
   | Envelope<'app/navigate', { section: AppSection }>
   | Envelope<'books/list', Record<string, never>>
   | Envelope<'books/import', { uri: string }>
@@ -101,4 +104,8 @@ export type HostResponse =
 export type HostEvent =
   | Envelope<'app/error', { error: ProtocolError }>
   | Envelope<'app/notice', { message: string }>
-  | Envelope<'app/navigate', { section: AppSection }>;
+  | Envelope<'app/navigate', { section: AppSection }>
+  | Envelope<
+      'boss/modeChanged',
+      { requestId: string; mode: BossMode; template: BossTemplate }
+    >;

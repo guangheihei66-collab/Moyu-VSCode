@@ -40,6 +40,8 @@ const GAME_STATUSES: ReadonlySet<Game2048State['status']> = new Set([
   'won',
   'lost',
 ]);
+const BOSS_MODES = new Set(['NORMAL', 'BOSS_MODE']);
+const BOSS_TEMPLATES = new Set(['typescript', 'json', 'buildLog']);
 const MAX_2048_TILE = 2 ** 52;
 
 function protocolError(code: ProtocolErrorCode): Result<never, ProtocolError> {
@@ -164,6 +166,13 @@ function isPayloadForType(type: string, payload: unknown): boolean {
     case 'app/ready':
     case 'books/list':
       return hasExactKeys(payload, []);
+    case 'boss/ack':
+      return (
+        hasExactKeys(payload, ['requestId', 'mode']) &&
+        isNonEmptyString(payload.requestId) &&
+        typeof payload.mode === 'string' &&
+        BOSS_MODES.has(payload.mode)
+      );
     case 'app/navigate':
       return (
         hasExactKeys(payload, ['section']) &&
@@ -282,6 +291,15 @@ function isEventPayloadForType(type: string, payload: unknown): boolean {
         typeof payload.section === 'string' &&
         APP_SECTIONS.has(payload.section as AppSection)
       );
+    case 'boss/modeChanged':
+      return (
+        hasExactKeys(payload, ['requestId', 'mode', 'template']) &&
+        isNonEmptyString(payload.requestId) &&
+        typeof payload.mode === 'string' &&
+        BOSS_MODES.has(payload.mode) &&
+        typeof payload.template === 'string' &&
+        BOSS_TEMPLATES.has(payload.template)
+      );
     default:
       return false;
   }
@@ -340,6 +358,7 @@ export function validateHostRequest(
     }
     if (
       envelope.value.type !== 'app/ready' &&
+      envelope.value.type !== 'boss/ack' &&
       envelope.value.type !== 'app/navigate' &&
       envelope.value.type !== 'books/list' &&
       envelope.value.type !== 'books/import' &&
@@ -407,7 +426,8 @@ export function validateHostEvent(
     if (
       envelope.value.type !== 'app/error' &&
       envelope.value.type !== 'app/notice' &&
-      envelope.value.type !== 'app/navigate'
+      envelope.value.type !== 'app/navigate' &&
+      envelope.value.type !== 'boss/modeChanged'
     ) {
       return protocolError('UNKNOWN_EVENT_TYPE');
     }

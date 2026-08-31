@@ -5,6 +5,8 @@ import type { BookshelfService } from '../application/books/BookshelfService';
 import type { BookMetadata, BookType } from '../domain/books/types';
 import type { EncodingSelectionService } from '../application/reader/EncodingSelectionService';
 import type { TxtEncoding } from '../domain/books/types';
+import type { BossModeService } from '../application/boss/BossModeService';
+import type { ReaderSettingsService } from '../application/reader/ReaderSettingsService';
 
 interface EncodingChoice extends vscode.QuickPickItem {
   encoding: TxtEncoding;
@@ -29,6 +31,10 @@ export interface BookWorkflows {
   bookshelf: BookshelfService;
   encoding?: EncodingSelectionService;
   window?: BookWorkflowWindow;
+  boss?: {
+    service: BossModeService;
+    settings: ReaderSettingsService;
+  };
 }
 
 export async function pickBookUri(
@@ -109,10 +115,15 @@ export function registerCommands(
     vscode.commands.registerCommand('moyu.openSettings', () =>
       open('settings'),
     ),
-    vscode.commands.registerCommand('moyu.toggleBossMode', () => {
+    vscode.commands.registerCommand('moyu.toggleBossMode', async () => {
       const panel = registry.get(windowId);
       if (panel?.isVisible !== true) return undefined;
-      return undefined;
+      if (workflows?.boss === undefined) return undefined;
+      const snapshot = await workflows.boss.settings.read();
+      return workflows.boss.service.toggle(
+        panel,
+        snapshot.settings.bossTemplate,
+      );
     }),
     vscode.commands.registerCommand('moyu.importBook', async () => {
       if (workflows === undefined) return undefined;

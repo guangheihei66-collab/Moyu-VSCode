@@ -14,6 +14,7 @@ import { IndexStore } from '../infrastructure/txt/IndexStore';
 import { EpubCache } from '../infrastructure/epub/EpubCache';
 import { ReaderSettingsService } from '../application/reader/ReaderSettingsService';
 import { PreferencesRepository } from '../infrastructure/storage/preferencesRepository';
+import { BossModeService } from '../application/boss/BossModeService';
 
 export function activate(context: vscode.ExtensionContext): void {
   const windowId = String(vscode.env.sessionId);
@@ -21,9 +22,11 @@ export function activate(context: vscode.ExtensionContext): void {
   const settings = new ReaderSettingsService(
     new PreferencesRepository(context.globalStorageUri.fsPath),
   );
+  const boss = new BossModeService();
   const registry = new PanelRegistry(
     (_, onStateChange) => new PanelController(context, settings, onStateChange),
     contextKeys,
+    () => boss.reset(),
   );
   const bookshelfRepository = new BookshelfRepository(
     context.globalStorageUri.fsPath,
@@ -44,6 +47,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerCommands(context, registry, windowId, {
     bookshelf,
     encoding: new EncodingSelectionService(bookshelfRepository),
+    boss: { service: boss, settings },
   });
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(

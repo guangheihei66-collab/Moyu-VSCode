@@ -42,6 +42,22 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     validation.value.type === 'app/navigate'
   ) {
     app.router.navigate(validation.value.payload.section);
+    return;
+  }
+  if (
+    validation.ok &&
+    validation.value.protocol === PROTOCOL_VERSION &&
+    validation.value.sessionId === sessionId &&
+    validation.value.type === 'boss/modeChanged'
+  ) {
+    app.setBossMode(
+      validation.value.payload.mode,
+      validation.value.payload.template,
+    );
+    client.acknowledgeBoss(
+      validation.value.payload.requestId,
+      validation.value.payload.mode,
+    );
   }
 });
 

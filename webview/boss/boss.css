@@ -1,0 +1,42 @@
+[data-boss-overlay] {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  overflow: auto;
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 1rem;
+  color: var(--vscode-editor-foreground);
+  background: var(--vscode-editor-background);
+}
+
+[data-boss-overlay][hidden] {
+  display: none;
+}
+
+[data-boss-overlay] pre {
+  max-width: 80rem;
+  margin: 0;
+  color: inherit;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--vscode-editor-font-size, 13px);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+[data-boss-overlay]:focus-visible {
+  outline: 2px solid var(--vscode-focusBorder, #3794ff);
+  outline-offset: -2px;
+}
+
+@media (forced-colors: active) {
+  [data-boss-overlay]:focus-visible {
+    outline-color: Highlight;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-boss-overlay] {
+    scroll-behavior: auto;
+  }
+}

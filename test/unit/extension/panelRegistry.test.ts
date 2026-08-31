@@ -37,4 +37,24 @@ describe('PanelRegistry', () => {
     expect(registry.get('window-a')).toBeUndefined();
     expect(contextKeys.clear).toHaveBeenCalledOnce();
   });
+
+  it('resets the window-local Boss state when its panel is disposed', async () => {
+    let stateChange:
+      | ((state: { visible: boolean; open: boolean }) => void)
+      | undefined;
+    const resetBossMode = vi.fn();
+    const registry = new PanelRegistry(
+      (_id, callback) => {
+        stateChange = callback;
+        return { open: vi.fn(), isVisible: true } as never;
+      },
+      { set: vi.fn(), clear: vi.fn() } as never,
+      resetBossMode,
+    );
+    await registry.openOrReveal('window-a', 'reader');
+
+    stateChange?.({ visible: false, open: false });
+
+    expect(resetBossMode).toHaveBeenCalledOnce();
+  });
 });

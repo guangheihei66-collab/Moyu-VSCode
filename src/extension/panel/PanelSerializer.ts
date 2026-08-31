@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import type { PanelRegistry } from './PanelRegistry';
-import { createWebviewHtml } from './webviewHtml';
 
 export class PanelSerializer implements vscode.WebviewPanelSerializer {
   constructor(
@@ -13,9 +12,7 @@ export class PanelSerializer implements vscode.WebviewPanelSerializer {
     state: unknown,
   ): Promise<void> {
     void state;
-    await this.registry.openOrReveal(this.windowId, 'books');
-    if (this.extensionUri !== undefined) {
-      panel.webview.html = createWebviewHtml(panel.webview, this.extensionUri);
-    }
+    void this.extensionUri;
+    this.registry.restore(this.windowId, panel, 'books');
   }
 }
