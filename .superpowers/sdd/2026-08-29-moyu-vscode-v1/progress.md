@@ -228,3 +228,11 @@ Review: stable domain and adapter error codes are presented through fixed path-f
 Known issues: coverage provider is not installed; parse5/entities Node engine metadata still needs explicit VS Code 1.96 Extension Host acceptance in Task 22. Cross-window UI can remain temporarily stale until a declared refresh point, as specified.
 Uncommitted files: none.
 Next: Task 22
+
+Task 22: complete
+Commit: e3e3a00
+Tests: Full regression `npm run build && npm test && npm run test:extension:current && npm run test:extension:min` PASS; 257/257 unit tests; current Extension Host lane PASS; minimum VS Code 1.96.0 lane PASS; Extension contract 5/5; lint, format, Extension Host/Webview typechecks PASS.
+Review: isolated TEMP fixtures are marker-protected and never use normal user data; the Extension Host runner resolves the installed current Code.exe or downloads only the pinned 1.96.0 lane; the suite covers activation, one-panel reuse, Webview session/message flow, Sidebar navigation, serializer delegation, picker cancellation, context state/disposal, TXT/EPUB import-read, 2048 recovery, Boss acknowledgement, and competing child-process transaction recovery. No production lifecycle or storage guarantees were weakened.
+Known issues: coverage provider is not installed; parse5/entities metadata declares a Node 20.19 floor while the bundled EPUB path passes under the isolated VS Code 1.96.0 Extension Host lane; cross-window UI can remain temporarily stale until a declared refresh point, as specified.
+Uncommitted files: documentation handoff update only, to be committed separately.
+Next: Task 23 — read the complete packaging/README plan, add allowlisted package verification and documentation assets, run final regression, and produce a local VSIX without publishing.
