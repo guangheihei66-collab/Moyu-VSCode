@@ -90,6 +90,50 @@
   justify-self: end;
 }
 
+.moyu-reader__actions {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: var(--moyu-space-2, 8px);
+}
+
+.moyu-chapter-drawer {
+  box-sizing: border-box;
+  width: min(100%, var(--moyu-content-width));
+  margin: calc(var(--moyu-space-4, 16px) * -1) auto var(--moyu-space-4, 16px);
+  padding: var(--moyu-space-3, 12px);
+  border: 1px solid var(--moyu-border, var(--vscode-panel-border));
+  background: var(--vscode-sideBar-background, var(--moyu-surface-elevated));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.moyu-chapter-drawer h2 {
+  margin: 0 0 var(--moyu-space-2, 8px);
+  font-size: 0.95em;
+}
+
+.moyu-chapter-drawer__list {
+  display: grid;
+  gap: var(--moyu-space-1, 4px);
+  margin: 0;
+  padding-inline-start: var(--moyu-space-4, 16px);
+}
+
+.moyu-chapter-drawer__list li::marker {
+  color: var(--vscode-descriptionForeground, var(--moyu-muted));
+}
+
+.moyu-chapter-drawer__list button {
+  width: 100%;
+  justify-content: start;
+  text-align: start;
+}
+
+.moyu-chapter-drawer__list button[aria-current='true'] {
+  color: var(--moyu-accent-foreground, var(--vscode-textLink-foreground));
+  font-weight: 600;
+}
+
 .moyu-reader__content {
   box-sizing: border-box;
   flex: 1 0 auto;

@@ -1,11 +1,14 @@
 import type {
   BookshelfSnapshot,
+  EpubChapterListSnapshot,
+  EpubChapterSnapshot,
   HomeSnapshot,
   Game2048State,
   HostRequest,
   HostResponse,
   LogicalLocator,
   ReaderBlockBatch,
+  ReaderOpenSnapshot,
   ReaderProgressSnapshot,
 } from '../../src/shared/protocol/messages';
 import { PROTOCOL_VERSION } from '../../src/shared/protocol/messages';
@@ -151,10 +154,7 @@ export class MessageClient {
     });
   }
 
-  async open(bookId: string): Promise<{
-    version: number;
-    anchor: LogicalLocator | null;
-  }> {
+  async open(bookId: string): Promise<ReaderOpenSnapshot> {
     const response = await this.request({
       protocol: PROTOCOL_VERSION,
       id: this.createRequestId(),
@@ -169,10 +169,41 @@ export class MessageClient {
     ) {
       throw new Error('The Host returned an unexpected reader-open response.');
     }
-    return {
-      version: response.payload.snapshot.version,
-      anchor: response.payload.snapshot.anchor,
-    };
+    return response.payload.snapshot;
+  }
+
+  listChapters(bookId: string): Promise<EpubChapterListSnapshot> {
+    return this.requestReaderChapterList({
+      protocol: PROTOCOL_VERSION,
+      id: this.createRequestId(),
+      sessionId: this.sessionId,
+      type: 'reader/listChapters',
+      payload: { bookId },
+    });
+  }
+
+  openChapter(bookId: string, chapterId: string): Promise<EpubChapterSnapshot> {
+    return this.requestReaderChapter({
+      protocol: PROTOCOL_VERSION,
+      id: this.createRequestId(),
+      sessionId: this.sessionId,
+      type: 'reader/openChapter',
+      payload: { bookId, chapterId },
+    });
+  }
+
+  navigateChapter(
+    bookId: string,
+    chapterId: string,
+    direction: 'previous' | 'next',
+  ): Promise<EpubChapterSnapshot> {
+    return this.requestReaderChapter({
+      protocol: PROTOCOL_VERSION,
+      id: this.createRequestId(),
+      sessionId: this.sessionId,
+      type: 'reader/navigateChapter',
+      payload: { bookId, chapterId, direction },
+    });
   }
 
   async readBlocks(
@@ -316,6 +347,38 @@ export class MessageClient {
     this.throwIfError(response);
     if (response.type !== 'books/snapshot') {
       throw new Error('The Host returned an unexpected bookshelf response.');
+    }
+    return response.payload.snapshot;
+  }
+
+  private async requestReaderChapterList(
+    request: Extract<HostRequest, { type: 'reader/listChapters' }>,
+  ): Promise<EpubChapterListSnapshot> {
+    const response = await this.request(request);
+    this.throwIfError(response);
+    if (
+      response.type !== 'reader/chapters' ||
+      response.payload.snapshot.bookId !== request.payload.bookId
+    ) {
+      throw new Error('The Host returned an unexpected chapter-list response.');
+    }
+    return response.payload.snapshot;
+  }
+
+  private async requestReaderChapter(
+    request: Extract<
+      HostRequest,
+      { type: 'reader/openChapter' | 'reader/navigateChapter' }
+    >,
+  ): Promise<EpubChapterSnapshot> {
+    const response = await this.request(request);
+    this.throwIfError(response);
+    if (
+      response.type !== 'reader/chapter' ||
+      response.payload.snapshot.bookId !== request.payload.bookId ||
+      response.payload.snapshot.chapterId !== request.payload.chapterId
+    ) {
+      throw new Error('The Host returned an unexpected chapter response.');
     }
     return response.payload.snapshot;
   }

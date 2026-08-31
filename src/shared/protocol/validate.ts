@@ -6,6 +6,9 @@ import {
   type HostResponse,
   type HostEvent,
   type BookshelfSnapshot,
+  type EpubChapterListSnapshot,
+  type EpubChapterSnapshot,
+  type EpubChapterSummary,
   type HomeSnapshot,
   type LogicalLocator,
   type PresentationBook,
@@ -52,6 +55,9 @@ const SIDEBAR_SECTIONS: ReadonlySet<SidebarSection> = new Set([
 const BOSS_MODES = new Set(['NORMAL', 'BOSS_MODE']);
 const BOSS_TEMPLATES = new Set(['typescript', 'json', 'buildLog']);
 const MAX_2048_TILE = 2 ** 52;
+const MAX_EPUB_CHAPTERS = 2048;
+const MAX_EPUB_PARAGRAPHS = 4096;
+const MAX_EPUB_PARAGRAPH_CHARS = 1_000_000;
 
 function protocolError(code: ProtocolErrorCode): Result<never, ProtocolError> {
   return failure({ code, message: ERROR_MESSAGES[code] });
@@ -154,6 +160,55 @@ function isBookshelfSnapshot(value: unknown): value is BookshelfSnapshot {
     isNonNegativeInteger(value.version) &&
     Array.isArray(value.books) &&
     value.books.every(isPresentationBook)
+  );
+}
+
+function isEpubChapterSummary(value: unknown): value is EpubChapterSummary {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ['chapterId', 'title', 'position']) &&
+    isNonEmptyString(value.chapterId) &&
+    isNonEmptyString(value.title) &&
+    isNonNegativeInteger(value.position)
+  );
+}
+
+function isEpubChapterListSnapshot(
+  value: unknown,
+): value is EpubChapterListSnapshot {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, ['bookId', 'chapters']) &&
+    isNonEmptyString(value.bookId) &&
+    Array.isArray(value.chapters) &&
+    value.chapters.length <= MAX_EPUB_CHAPTERS &&
+    value.chapters.every(isEpubChapterSummary)
+  );
+}
+
+function isEpubChapterSnapshot(value: unknown): value is EpubChapterSnapshot {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, [
+      'bookId',
+      'chapterId',
+      'title',
+      'position',
+      'contentFingerprint',
+      'paragraphs',
+    ]) &&
+    isNonEmptyString(value.bookId) &&
+    isNonEmptyString(value.chapterId) &&
+    isNonEmptyString(value.title) &&
+    isNonNegativeInteger(value.position) &&
+    isNonEmptyString(value.contentFingerprint) &&
+    Array.isArray(value.paragraphs) &&
+    value.paragraphs.length <= MAX_EPUB_PARAGRAPHS &&
+    value.paragraphs.every(
+      (paragraph) =>
+        typeof paragraph === 'string' &&
+        paragraph.length <= MAX_EPUB_PARAGRAPH_CHARS,
+    )
   );
 }
 
@@ -327,6 +382,23 @@ function isPayloadForType(type: string, payload: unknown): boolean {
         hasOnlyKeys(payload, [], ['uri']) &&
         (payload.uri === undefined || isNonEmptyString(payload.uri))
       );
+    case 'reader/listChapters':
+      return (
+        hasExactKeys(payload, ['bookId']) && isNonEmptyString(payload.bookId)
+      );
+    case 'reader/openChapter':
+      return (
+        hasExactKeys(payload, ['bookId', 'chapterId']) &&
+        isNonEmptyString(payload.bookId) &&
+        isNonEmptyString(payload.chapterId)
+      );
+    case 'reader/navigateChapter':
+      return (
+        hasExactKeys(payload, ['bookId', 'chapterId', 'direction']) &&
+        isNonEmptyString(payload.bookId) &&
+        isNonEmptyString(payload.chapterId) &&
+        (payload.direction === 'previous' || payload.direction === 'next')
+      );
     case 'books/remove':
     case 'books/selectEncoding':
     case 'reader/open':
@@ -447,11 +519,35 @@ function isResponsePayloadForType(type: string, payload: unknown): boolean {
         hasExactKeys(payload, ['requestId', 'snapshot']) &&
         isNonEmptyString(payload.requestId) &&
         isRecord(payload.snapshot) &&
-        hasExactKeys(payload.snapshot, ['bookId', 'version', 'anchor']) &&
+        hasOnlyKeys(
+          payload.snapshot,
+          ['bookId', 'version', 'anchor', 'title', 'type', 'percentage'],
+          ['chapterTitle'],
+        ) &&
         isNonEmptyString(payload.snapshot.bookId) &&
         isNonNegativeInteger(payload.snapshot.version) &&
         (payload.snapshot.anchor === null ||
-          isLogicalLocator(payload.snapshot.anchor))
+          isLogicalLocator(payload.snapshot.anchor)) &&
+        isNonEmptyString(payload.snapshot.title) &&
+        (payload.snapshot.type === 'txt' || payload.snapshot.type === 'epub') &&
+        typeof payload.snapshot.percentage === 'number' &&
+        Number.isFinite(payload.snapshot.percentage) &&
+        payload.snapshot.percentage >= 0 &&
+        payload.snapshot.percentage <= 100 &&
+        (payload.snapshot.chapterTitle === undefined ||
+          isNonEmptyString(payload.snapshot.chapterTitle))
+      );
+    case 'reader/chapters':
+      return (
+        hasExactKeys(payload, ['requestId', 'snapshot']) &&
+        isNonEmptyString(payload.requestId) &&
+        isEpubChapterListSnapshot(payload.snapshot)
+      );
+    case 'reader/chapter':
+      return (
+        hasExactKeys(payload, ['requestId', 'snapshot']) &&
+        isNonEmptyString(payload.requestId) &&
+        isEpubChapterSnapshot(payload.snapshot)
       );
     case 'reader/blocks':
       return (
@@ -606,6 +702,9 @@ export function validateHostRequest(
       envelope.value.type !== 'books/remove' &&
       envelope.value.type !== 'books/relocate' &&
       envelope.value.type !== 'books/selectEncoding' &&
+      envelope.value.type !== 'reader/listChapters' &&
+      envelope.value.type !== 'reader/openChapter' &&
+      envelope.value.type !== 'reader/navigateChapter' &&
       envelope.value.type !== 'reader/open' &&
       envelope.value.type !== 'settings/read' &&
       envelope.value.type !== 'settings/update' &&
@@ -645,6 +744,8 @@ export function validateHostResponse(
       envelope.value.type !== 'books/snapshot' &&
       envelope.value.type !== 'settings/snapshot' &&
       envelope.value.type !== 'reader/opened' &&
+      envelope.value.type !== 'reader/chapters' &&
+      envelope.value.type !== 'reader/chapter' &&
       envelope.value.type !== 'reader/blocks' &&
       envelope.value.type !== 'reader/progressSaved' &&
       envelope.value.type !== 'game2048/session' &&

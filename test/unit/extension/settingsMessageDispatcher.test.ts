@@ -151,6 +151,119 @@ describe('SettingsMessageDispatcher', () => {
     });
   });
 
+  it('routes EPUB reader requests through the presentation adapter boundary', async () => {
+    await withStorageDirectory(async (root) => {
+      const locator = {
+        kind: 'epub' as const,
+        chapterId: 'chapter-1',
+        paragraphIndex: 0,
+        characterOffset: 0,
+        contentFingerprint: 'fingerprint-1',
+      };
+      const epub = {
+        open: vi.fn(async () => ({
+          bookId: 'epub-book',
+          version: 3,
+          anchor: locator,
+          title: 'EPUB book',
+          type: 'epub' as const,
+          percentage: 50,
+          chapterTitle: 'Chapter 1',
+        })),
+        listChapters: vi.fn(async () => ({
+          bookId: 'epub-book',
+          chapters: [
+            { chapterId: 'chapter-1', title: 'Chapter 1', position: 0 },
+          ],
+        })),
+        openChapter: vi.fn(async () => ({
+          bookId: 'epub-book',
+          chapterId: 'chapter-1',
+          title: 'Chapter 1',
+          position: 0,
+          contentFingerprint: 'fingerprint-1',
+          paragraphs: ['Safe text'],
+        })),
+        navigateChapter: vi.fn(),
+        saveProgress: vi.fn(async () => ({ version: 4, locator })),
+      };
+      const dispatcher = new SettingsMessageDispatcher(
+        'session-current',
+        new ReaderSettingsService(new PreferencesRepository(root)),
+        {
+          presentation: {
+            readBooks: async () => ({
+              version: 3,
+              books: [
+                {
+                  bookId: 'epub-book',
+                  title: 'EPUB book',
+                  type: 'epub' as const,
+                  percentage: 50,
+                  sourceMissing: false,
+                },
+              ],
+            }),
+          },
+          epub,
+        } as never,
+        () => 'response-epub',
+      );
+
+      await expect(
+        dispatcher.dispatch({
+          protocol: 1,
+          id: 'reader-open-epub',
+          sessionId: 'session-current',
+          type: 'reader/open',
+          payload: { bookId: 'epub-book' },
+        }),
+      ).resolves.toMatchObject({
+        type: 'reader/opened',
+        payload: { snapshot: { type: 'epub', chapterTitle: 'Chapter 1' } },
+      });
+      await expect(
+        dispatcher.dispatch({
+          protocol: 1,
+          id: 'reader-list-epub',
+          sessionId: 'session-current',
+          type: 'reader/listChapters',
+          payload: { bookId: 'epub-book' },
+        }),
+      ).resolves.toMatchObject({
+        type: 'reader/chapters',
+        payload: { snapshot: { chapters: [{ chapterId: 'chapter-1' }] } },
+      });
+      await expect(
+        dispatcher.dispatch({
+          protocol: 1,
+          id: 'reader-open-chapter-epub',
+          sessionId: 'session-current',
+          type: 'reader/openChapter',
+          payload: { bookId: 'epub-book', chapterId: 'chapter-1' },
+        }),
+      ).resolves.toMatchObject({
+        type: 'reader/chapter',
+        payload: { snapshot: { paragraphs: ['Safe text'] } },
+      });
+      await expect(
+        dispatcher.dispatch({
+          protocol: 1,
+          id: 'reader-save-epub',
+          sessionId: 'session-current',
+          type: 'reader/saveProgress',
+          payload: { bookId: 'epub-book', baseVersion: 3, locator },
+        }),
+      ).resolves.toMatchObject({
+        type: 'reader/progressSaved',
+        payload: { snapshot: { version: 4, locator } },
+      });
+      expect(epub.open).toHaveBeenCalledWith('epub-book');
+      expect(epub.openChapter).toHaveBeenCalledWith('epub-book', 'chapter-1');
+      expect(epub.saveProgress).toHaveBeenCalledWith('epub-book', 3, locator);
+    });
+  });
+
   it('dispatches read and update requests through the real settings service', async () => {
     await withStorageDirectory(async (root) => {
       let responseSequence = 0;

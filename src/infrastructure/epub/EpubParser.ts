@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { stat } from 'node:fs/promises';
-import path from 'node:path';
+import * as path from 'node:path';
 import type { EpubBookIndex, EpubChapter } from '../../domain/reader/epub';
 import { BoundedZip } from './BoundedZip';
 import { EPUB_LIMITS, EpubSecurityError, assertWithinLimit } from './limits';

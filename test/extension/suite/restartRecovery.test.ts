@@ -1,4 +1,5 @@
 import { strict as assert } from 'node:assert';
+import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as vscode from 'vscode';
 
@@ -8,6 +9,10 @@ import { EncodingSelectionService } from '../../../src/application/reader/Encodi
 import { ReaderService } from '../../../src/application/reader/ReaderService';
 import { createNodeFileStatProvider } from '../../../src/infrastructure/filesystem/fileIdentity';
 import { EpubParser } from '../../../src/infrastructure/epub/EpubParser';
+import { EpubCache } from '../../../src/infrastructure/epub/EpubCache';
+import { EpubReaderService } from '../../../src/application/reader/EpubReaderService';
+import { EpubPresentationAdapter } from '../../../src/extension/panel/EpubPresentationAdapter';
+import type { BookMetadata } from '../../../src/domain/books/types';
 import { BookshelfRepository } from '../../../src/infrastructure/storage/bookshelfRepository';
 import { GameRepository } from '../../../src/infrastructure/storage/gameRepository';
 import { ProgressRepository } from '../../../src/infrastructure/storage/progressRepository';
@@ -87,4 +92,53 @@ export async function runBookImportReadAcceptance(): Promise<void> {
   const epub = await new EpubParser().parse({ fsPath: epubPath });
   assert.equal(epub.chapters.length, 1);
   assert.match(epub.chapters[0]?.paragraphs.join(' ') ?? '', /isolated EPUB/);
+
+  const epubStat = await stat(epubPath);
+  const epubBook: BookMetadata = {
+    id: 'acceptance-epub-1',
+    title: 'Isolated EPUB',
+    uri: epubPath,
+    type: 'epub',
+    fingerprint: 'acceptance-epub-fingerprint',
+    size: epubStat.size,
+    modifiedAt: Math.trunc(epubStat.mtimeMs),
+    addedAt: 1_700_000_000_002,
+    metadataVersion: 1,
+  };
+  const epubStorage = join(fixtureRoot, 'epub-global-storage');
+  const epubProgress = new ProgressRepository(epubStorage);
+  const epubParser = new EpubParser();
+  const epubCache = new EpubCache(epubStorage);
+  const epubReader = new EpubReaderService({
+    parser: epubParser,
+    cache: epubCache,
+    progress: epubProgress,
+    bookProvider: async (bookId) =>
+      bookId === epubBook.id ? epubBook : undefined,
+  });
+  const epubPresentation = new EpubPresentationAdapter({
+    reader: epubReader,
+    parser: epubParser,
+    cache: epubCache,
+    progress: epubProgress,
+    bookProvider: async (bookId) =>
+      bookId === epubBook.id ? epubBook : undefined,
+  });
+  assert.deepEqual(await epubPresentation.listChapters(epubBook.id), {
+    bookId: epubBook.id,
+    chapters: [{ chapterId: 'chapter-1', title: 'chapter-1', position: 0 }],
+  });
+  const openedEpub = await epubPresentation.open(epubBook.id);
+  assert.equal(openedEpub.type, 'epub');
+  assert.equal(openedEpub.anchor, null);
+  const openedChapter = await epubPresentation.openChapter(
+    epubBook.id,
+    'chapter-1',
+  );
+  assert.match(openedChapter.paragraphs.join(' '), /isolated EPUB/);
+  assert.equal(
+    openedChapter.paragraphs.some((paragraph) => /<\/?[a-z]/i.test(paragraph)),
+    false,
+    'EPUB presentation output must contain text paragraphs, not markup.',
+  );
 }

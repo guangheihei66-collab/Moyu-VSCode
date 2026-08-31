@@ -75,9 +75,7 @@ function findTitle(nodes: readonly Node[], depth: number): string | undefined {
   assertWithinLimit('chapter markup depth', depth, EPUB_LIMITS.markupDepth);
   for (const node of nodes) {
     if ('tagName' in node && node.tagName.toLowerCase() === 'title') {
-      return node.childNodes
-        .map((child) => ('value' in child ? child.value : ''))
-        .join(' ');
+      return node.childNodes.map(textValue).join(' ');
     }
     if ('childNodes' in node) {
       const found = findTitle(node.childNodes, depth + 1);
@@ -94,7 +92,7 @@ function visit(
   insideBlock: boolean,
 ): string {
   assertWithinLimit('chapter markup depth', depth, EPUB_LIMITS.markupDepth);
-  if (node.nodeName === '#text') return normalize(node.value);
+  if (node.nodeName === '#text') return normalize(textValue(node));
   if (!('tagName' in node)) return '';
   const tag = node.tagName.toLowerCase();
   if (blocked.has(tag)) return '';
@@ -115,6 +113,11 @@ function visit(
   if (isBlock && !insideBlock && text.length > 0) output.push(text);
   else if (!isBlock && !insideBlock && text.length > 0) output.push(text);
   return text;
+}
+
+function textValue(node: Node): string {
+  if (node.nodeName !== '#text') return '';
+  return (node as DefaultTreeAdapterTypes.TextNode).value;
 }
 
 function hasBlockChild(node: DefaultTreeAdapterTypes.Element): boolean {

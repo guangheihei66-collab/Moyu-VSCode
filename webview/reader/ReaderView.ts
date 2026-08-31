@@ -1,8 +1,10 @@
 import type { ReaderBlock } from '../../src/domain/reader/locator';
+import type { EpubChapterSummary } from '../../src/shared/protocol/messages';
 import { ActionMenu, type MenuItem } from '../components/ActionMenu';
 import { createButton } from '../components/Button';
 import { createProgress } from '../components/ProgressBar';
 import { createText } from '../components/dom';
+import { ChapterDrawer } from './ChapterDrawer';
 import {
   createReaderPresentationModel,
   type ReaderPresentationModel,
@@ -25,6 +27,8 @@ export interface ReaderViewActions {
 export class ReaderView {
   private readonly document: Document;
   private actionMenu: ActionMenu | undefined;
+  private chapterDrawer: ChapterDrawer | undefined;
+  private chapterTrigger: HTMLButtonElement | undefined;
   private toolbar: HTMLElement | undefined;
   private progressRegions: HTMLElement[] = [];
   private quiet = false;
@@ -45,6 +49,9 @@ export class ReaderView {
   ): void {
     this.actionMenu?.dispose();
     this.actionMenu = undefined;
+    this.chapterDrawer?.dispose();
+    this.chapterDrawer = undefined;
+    this.chapterTrigger = undefined;
 
     const toolbar = this.renderToolbar(model);
     const content = this.renderContent(model, blocks);
@@ -94,9 +101,31 @@ export class ReaderView {
     return restoreFocusAnchor(this.root, anchor);
   }
 
+  openChapterDrawer(
+    chapters: readonly EpubChapterSummary[],
+    currentId: string,
+    onSelect: (chapterId: string) => void,
+  ): void {
+    if (this.chapterTrigger === undefined) return;
+    this.chapterDrawer?.dispose();
+    this.chapterDrawer = new ChapterDrawer(
+      this.root,
+      this.chapterTrigger,
+      onSelect,
+    );
+    this.chapterDrawer.open(chapters, currentId);
+  }
+
+  closeChapterDrawer(): void {
+    this.chapterDrawer?.close();
+  }
+
   dispose(): void {
     this.actionMenu?.dispose();
     this.actionMenu = undefined;
+    this.chapterDrawer?.dispose();
+    this.chapterDrawer = undefined;
+    this.chapterTrigger = undefined;
     this.toolbar = undefined;
     this.progressRegions = [];
   }
@@ -152,7 +181,25 @@ export class ReaderView {
     const menu = new ActionMenu(this.document);
     menu.mount(menuTrigger, this.menuItems(model));
     this.actionMenu = menu;
-    toolbar.append(back, context, progress, menuHost);
+    const actions = this.document.createElement('div');
+    actions.className = 'moyu-reader__actions';
+    if (model.type === 'epub') {
+      this.chapterTrigger = createButton(this.document, {
+        label: 'Chapters',
+        variant: 'quiet',
+        onClick: () => {
+          if (this.chapterDrawer === undefined) {
+            this.actions.onAction?.('chapters');
+          } else {
+            this.closeChapterDrawer();
+          }
+        },
+      });
+      this.chapterTrigger.setAttribute('data-reader-chapter-trigger', 'true');
+      actions.append(this.chapterTrigger);
+    }
+    actions.append(menuHost);
+    toolbar.append(back, context, progress, actions);
     return toolbar;
   }
 
@@ -167,9 +214,20 @@ export class ReaderView {
     content.setAttribute('aria-label', 'Reading content');
 
     if (blocks.length > 0) {
-      content.append(...blocks.map((block) => this.renderBlock(block)));
+      content.append(
+        ...blocks.map((block) =>
+          this.renderBlock(block, model.type === 'epub'),
+        ),
+      );
     } else if (model.paragraphs.length > 0) {
-      content.append(this.renderParagraphBlock(model.bookId, model.paragraphs));
+      content.append(
+        this.renderParagraphBlock(
+          model.bookId,
+          model.paragraphs,
+          undefined,
+          model.type === 'epub',
+        ),
+      );
     } else {
       const empty = createText(this.document, 'p', 'Nothing to read yet.');
       empty.setAttribute('data-reader-empty', 'true');
@@ -178,14 +236,23 @@ export class ReaderView {
     return content;
   }
 
-  private renderBlock(block: ReaderBlock): HTMLElement {
-    return this.renderParagraphBlock(block.id, block.paragraphs, block);
+  private renderBlock(
+    block: ReaderBlock,
+    includeParagraphIndex: boolean,
+  ): HTMLElement {
+    return this.renderParagraphBlock(
+      block.id,
+      block.paragraphs,
+      block,
+      includeParagraphIndex,
+    );
   }
 
   private renderParagraphBlock(
     blockId: string,
     paragraphs: readonly string[],
     block?: ReaderBlock,
+    includeParagraphIndex = false,
   ): HTMLElement {
     const article = this.document.createElement('article');
     article.className = 'moyu-reader__block';
@@ -195,16 +262,22 @@ export class ReaderView {
     if (block !== undefined)
       article.dataset.blockFingerprint = block.contentFingerprint;
 
-    for (const paragraphText of paragraphs) {
+    paragraphs.forEach((paragraphText, paragraphIndex) => {
       const paragraph = this.document.createElement('p');
       paragraph.className = 'moyu-reader__paragraph';
       paragraph.setAttribute('data-reader-paragraph', 'true');
       paragraph.setAttribute('data-block-id', blockId);
       paragraph.dataset.blockId = blockId;
+      if (includeParagraphIndex) {
+        paragraph.setAttribute(
+          'data-reader-paragraph-index',
+          String(paragraphIndex),
+        );
+      }
       paragraph.tabIndex = 0;
       paragraph.textContent = paragraphText;
       article.append(paragraph);
-    }
+    });
     return article;
   }
 

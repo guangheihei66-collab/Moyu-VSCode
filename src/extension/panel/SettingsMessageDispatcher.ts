@@ -7,11 +7,16 @@ import type { VersionedGameState } from '../../application/game2048/Game2048Serv
 import type { PresentationSnapshotReader } from './PresentationSnapshotProvider';
 import type {
   BookshelfSnapshot,
+  EpubChapterListSnapshot,
+  EpubChapterSnapshot,
   Game2048SessionSnapshot,
   HomeSnapshot,
   HostRequest,
   HostResponse,
+  LogicalLocator,
   ProtocolError,
+  ReaderOpenSnapshot,
+  ReaderProgressSnapshot,
 } from '../../shared/protocol/messages';
 import { PROTOCOL_VERSION } from '../../shared/protocol/messages';
 import {
@@ -33,6 +38,7 @@ export interface HostModuleServices {
   game?: Game2048Service;
   presentation?: PresentationSnapshotReader;
   books?: HostBookOperations;
+  epub?: HostEpubOperations;
 }
 
 export interface HostBookOperations {
@@ -40,6 +46,22 @@ export interface HostBookOperations {
   remove(bookId: string): Promise<void>;
   relocate(bookId: string, uri?: string): Promise<void>;
   selectEncoding(bookId: string): Promise<void>;
+}
+
+export interface HostEpubOperations {
+  open(bookId: string): Promise<ReaderOpenSnapshot>;
+  listChapters(bookId: string): Promise<EpubChapterListSnapshot>;
+  openChapter(bookId: string, chapterId: string): Promise<EpubChapterSnapshot>;
+  navigateChapter(
+    bookId: string,
+    chapterId: string,
+    direction: 'previous' | 'next',
+  ): Promise<EpubChapterSnapshot>;
+  saveProgress(
+    bookId: string,
+    baseVersion: number,
+    locator: LogicalLocator,
+  ): Promise<ReaderProgressSnapshot>;
 }
 
 function validatedResponse(response: HostResponse): HostResponse {
@@ -164,7 +186,26 @@ export class SettingsMessageDispatcher {
         });
       }
       case 'reader/open': {
-        const opened = await this.requireReader().open(request.payload.bookId);
+        const metadata = await this.readerMetadata(request.payload.bookId);
+        let snapshot: ReaderOpenSnapshot;
+        if (metadata?.type === 'epub') {
+          snapshot = await this.requireEpub().open(request.payload.bookId);
+        } else {
+          const opened = await this.requireReader().open(
+            request.payload.bookId,
+          );
+          snapshot = {
+            bookId: request.payload.bookId,
+            version: opened.version,
+            anchor: opened.locator ?? null,
+            title: metadata?.title ?? request.payload.bookId,
+            type: 'txt',
+            percentage: metadata?.percentage ?? 0,
+            ...(metadata?.chapterLabel === undefined
+              ? {}
+              : { chapterTitle: metadata.chapterLabel }),
+          };
+        }
         return validatedResponse({
           protocol: PROTOCOL_VERSION,
           id,
@@ -172,14 +213,35 @@ export class SettingsMessageDispatcher {
           type: 'reader/opened',
           payload: {
             requestId: request.id,
-            snapshot: {
-              bookId: request.payload.bookId,
-              version: opened.version,
-              anchor: opened.locator ?? null,
-            },
+            snapshot,
           },
         });
       }
+      case 'reader/listChapters':
+        return this.readerChaptersResponse(
+          id,
+          request.id,
+          await this.requireEpub().listChapters(request.payload.bookId),
+        );
+      case 'reader/openChapter':
+        return this.readerChapterResponse(
+          id,
+          request.id,
+          await this.requireEpub().openChapter(
+            request.payload.bookId,
+            request.payload.chapterId,
+          ),
+        );
+      case 'reader/navigateChapter':
+        return this.readerChapterResponse(
+          id,
+          request.id,
+          await this.requireEpub().navigateChapter(
+            request.payload.bookId,
+            request.payload.chapterId,
+            request.payload.direction,
+          ),
+        );
       case 'reader/readBlocks': {
         if (request.payload.anchor.kind !== 'txt') {
           throw new Error('The active reader supports TXT locators only.');
@@ -199,8 +261,16 @@ export class SettingsMessageDispatcher {
         });
       }
       case 'reader/saveProgress': {
-        if (request.payload.locator.kind !== 'txt') {
-          throw new Error('The active reader supports TXT locators only.');
+        if (request.payload.locator.kind === 'epub') {
+          return this.readerProgressResponse(
+            id,
+            request.id,
+            await this.requireEpub().saveProgress(
+              request.payload.bookId,
+              request.payload.baseVersion,
+              request.payload.locator,
+            ),
+          );
         }
         const saved = await this.requireReader().saveProgress(
           request.payload.bookId,
@@ -296,6 +366,48 @@ export class SettingsMessageDispatcher {
     });
   }
 
+  private readerChaptersResponse(
+    id: string,
+    requestId: string,
+    snapshot: EpubChapterListSnapshot,
+  ): HostResponse {
+    return validatedResponse({
+      protocol: PROTOCOL_VERSION,
+      id,
+      sessionId: this.sessionId,
+      type: 'reader/chapters',
+      payload: { requestId, snapshot },
+    });
+  }
+
+  private readerChapterResponse(
+    id: string,
+    requestId: string,
+    snapshot: EpubChapterSnapshot,
+  ): HostResponse {
+    return validatedResponse({
+      protocol: PROTOCOL_VERSION,
+      id,
+      sessionId: this.sessionId,
+      type: 'reader/chapter',
+      payload: { requestId, snapshot },
+    });
+  }
+
+  private readerProgressResponse(
+    id: string,
+    requestId: string,
+    snapshot: ReaderProgressSnapshot,
+  ): HostResponse {
+    return validatedResponse({
+      protocol: PROTOCOL_VERSION,
+      id,
+      sessionId: this.sessionId,
+      type: 'reader/progressSaved',
+      payload: { requestId, snapshot },
+    });
+  }
+
   private requireReader(): ReaderService {
     if (this.moduleServices.reader === undefined) {
       throw new Error('Reader service is unavailable.');
@@ -322,6 +434,40 @@ export class SettingsMessageDispatcher {
       throw new Error('Bookshelf operations are unavailable.');
     }
     return this.moduleServices.books;
+  }
+
+  private requireEpub(): HostEpubOperations {
+    if (this.moduleServices.epub === undefined) {
+      throw new Error('EPUB presentation is unavailable.');
+    }
+    return this.moduleServices.epub;
+  }
+
+  private async readerMetadata(bookId: string): Promise<
+    | {
+        title: string;
+        type: 'txt' | 'epub';
+        percentage: number;
+        chapterLabel?: string;
+      }
+    | undefined
+  > {
+    const presentation = this.moduleServices.presentation;
+    if (presentation === undefined) return undefined;
+    const snapshot = await presentation.readBooks();
+    const book = snapshot.books.find(
+      (candidate) => candidate.bookId === bookId,
+    );
+    return book === undefined
+      ? undefined
+      : {
+          title: book.title,
+          type: book.type,
+          percentage: book.percentage,
+          ...(book.chapterLabel === undefined
+            ? {}
+            : { chapterLabel: book.chapterLabel }),
+        };
   }
 
   private safeCorrelatedError(request: HostRequest, id: string): HostResponse {

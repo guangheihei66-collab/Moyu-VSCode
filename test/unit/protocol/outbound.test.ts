@@ -115,7 +115,14 @@ describe('outbound protocol validation', () => {
         type: 'reader/opened',
         payload: {
           requestId: 'reader-open-request',
-          snapshot: { bookId: 'book-1', version: 4, anchor: readerAnchor },
+          snapshot: {
+            bookId: 'book-1',
+            version: 4,
+            anchor: readerAnchor,
+            title: 'Book 1',
+            type: 'txt',
+            percentage: 25,
+          },
         },
       }),
     ).toMatchObject({ ok: true });

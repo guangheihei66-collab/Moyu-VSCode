@@ -73,13 +73,20 @@ describe('MessageClient', () => {
             bookId: 'reader-book',
             version: 4,
             anchor: durableReaderAnchor,
+            title: 'Reader book',
+            type: 'txt',
+            percentage: 25,
           },
         },
       }),
     ).toBe(true);
     await expect(opened).resolves.toEqual({
+      bookId: 'reader-book',
       version: 4,
       anchor: durableReaderAnchor,
+      title: 'Reader book',
+      type: 'txt',
+      percentage: 25,
     });
 
     const blocks = client.readBlocks(
@@ -192,6 +199,105 @@ describe('MessageClient', () => {
       version: 8,
       data: { state: durableGameState },
     });
+  });
+
+  it('routes EPUB chapter requests with exact book and chapter identities', async () => {
+    const api = { postMessage: vi.fn() };
+    const ids = ['chapter-list-1', 'chapter-open-1', 'chapter-next-1'];
+    const client = new MessageClient(
+      api,
+      'session-1',
+      10_000,
+      () => ids.shift()!,
+    );
+
+    const chapters = client.listChapters('book-1');
+    expect(api.postMessage).toHaveBeenLastCalledWith({
+      protocol: 1,
+      id: 'chapter-list-1',
+      sessionId: 'session-1',
+      type: 'reader/listChapters',
+      payload: { bookId: 'book-1' },
+    });
+    client.handleMessage({
+      protocol: 1,
+      id: 'host-chapter-list-1',
+      sessionId: 'session-1',
+      type: 'reader/chapters',
+      payload: {
+        requestId: 'chapter-list-1',
+        snapshot: {
+          bookId: 'book-1',
+          chapters: [
+            { chapterId: 'chapter-1', title: 'Chapter 1', position: 0 },
+          ],
+        },
+      },
+    });
+    await expect(chapters).resolves.toMatchObject({
+      bookId: 'book-1',
+      chapters: [{ chapterId: 'chapter-1' }],
+    });
+
+    const chapter = client.openChapter('book-1', 'chapter-1');
+    expect(api.postMessage).toHaveBeenLastCalledWith({
+      protocol: 1,
+      id: 'chapter-open-1',
+      sessionId: 'session-1',
+      type: 'reader/openChapter',
+      payload: { bookId: 'book-1', chapterId: 'chapter-1' },
+    });
+    client.handleMessage({
+      protocol: 1,
+      id: 'host-chapter-open-1',
+      sessionId: 'session-1',
+      type: 'reader/chapter',
+      payload: {
+        requestId: 'chapter-open-1',
+        snapshot: {
+          bookId: 'book-1',
+          chapterId: 'chapter-1',
+          title: 'Chapter 1',
+          position: 0,
+          contentFingerprint: 'fingerprint-1',
+          paragraphs: ['Safe text'],
+        },
+      },
+    });
+    await expect(chapter).resolves.toMatchObject({ chapterId: 'chapter-1' });
+
+    const next = client.navigateChapter('book-1', 'chapter-1', 'next');
+    expect(api.postMessage).toHaveBeenLastCalledWith({
+      protocol: 1,
+      id: 'chapter-next-1',
+      sessionId: 'session-1',
+      type: 'reader/navigateChapter',
+      payload: {
+        bookId: 'book-1',
+        chapterId: 'chapter-1',
+        direction: 'next',
+      },
+    });
+    client.handleMessage({
+      protocol: 1,
+      id: 'host-chapter-next-1',
+      sessionId: 'session-1',
+      type: 'reader/chapter',
+      payload: {
+        requestId: 'chapter-next-1',
+        snapshot: {
+          bookId: 'book-1',
+          chapterId: 'chapter-2',
+          title: 'Chapter 2',
+          position: 1,
+          contentFingerprint: 'fingerprint-2',
+          paragraphs: ['Next text'],
+        },
+      },
+    });
+    await expect(next).rejects.toThrow(
+      'The Host returned an unexpected chapter response.',
+    );
   });
 
   it('correlates responses by request id', async () => {

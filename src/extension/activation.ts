@@ -19,14 +19,17 @@ import { ProgressRepository } from '../infrastructure/storage/progressRepository
 import { IndexStore } from '../infrastructure/txt/indexStore';
 import { TxtBlockReader } from '../infrastructure/txt/TxtBlockReader';
 import { EpubCache } from '../infrastructure/epub/EpubCache';
+import { EpubParser } from '../infrastructure/epub/EpubParser';
 import { ReaderSettingsService } from '../application/reader/ReaderSettingsService';
 import { ReaderService } from '../application/reader/ReaderService';
+import { EpubReaderService } from '../application/reader/EpubReaderService';
 import { PreferencesRepository } from '../infrastructure/storage/preferencesRepository';
 import { BossModeService } from '../application/boss/BossModeService';
 import { Game2048Service } from '../application/game2048/Game2048Service';
 import { GameRepository } from '../infrastructure/storage/gameRepository';
 import { WebviewSessionRegistry } from '../application/sessions/WebviewSessionRegistry';
 import { RefreshCoordinator } from '../application/sessions/RefreshCoordinator';
+import { EpubPresentationAdapter } from './panel/EpubPresentationAdapter';
 import type { BookMetadata } from '../domain/books/types';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -91,6 +94,20 @@ export function activate(context: vscode.ExtensionContext): void {
       indexStore: txtIndexes,
     }),
   });
+  const epubParser = new EpubParser();
+  const epubReader = new EpubReaderService({
+    parser: epubParser,
+    cache: epubCache,
+    progress,
+    bookProvider,
+  });
+  const epubPresentation = new EpubPresentationAdapter({
+    reader: epubReader,
+    parser: epubParser,
+    cache: epubCache,
+    progress,
+    bookProvider,
+  });
   const gameRepository = new GameRepository(context.globalStorageUri.fsPath);
   const game = new Game2048Service(gameRepository);
   const presentation = new PresentationSnapshotProvider({
@@ -144,7 +161,13 @@ export function activate(context: vscode.ExtensionContext): void {
         context,
         settings,
         onStateChange,
-        { reader, game, presentation, books: bookOperations },
+        {
+          reader,
+          game,
+          presentation,
+          books: bookOperations,
+          epub: epubPresentation,
+        },
         { sessionRegistry, refreshCoordinator },
       ),
     contextKeys,

@@ -63,6 +63,26 @@ export interface BookshelfSnapshot {
   books: readonly PresentationBook[];
 }
 
+export interface EpubChapterSummary {
+  chapterId: string;
+  title: string;
+  position: number;
+}
+
+export interface EpubChapterListSnapshot {
+  bookId: string;
+  chapters: readonly EpubChapterSummary[];
+}
+
+export interface EpubChapterSnapshot {
+  bookId: string;
+  chapterId: string;
+  title: string;
+  position: number;
+  contentFingerprint: string;
+  paragraphs: readonly string[];
+}
+
 export interface Envelope<Type extends string, Payload> {
   protocol: typeof PROTOCOL_VERSION;
   id: string;
@@ -87,6 +107,16 @@ export type HostRequest =
   | Envelope<'books/remove', { bookId: string }>
   | Envelope<'books/relocate', { bookId: string; uri?: string }>
   | Envelope<'books/selectEncoding', { bookId: string }>
+  | Envelope<'reader/listChapters', { bookId: string }>
+  | Envelope<'reader/openChapter', { bookId: string; chapterId: string }>
+  | Envelope<
+      'reader/navigateChapter',
+      {
+        bookId: string;
+        chapterId: string;
+        direction: 'previous' | 'next';
+      }
+    >
   | Envelope<'reader/open', { bookId: string }>
   | Envelope<'settings/read', Record<string, never>>
   | Envelope<
@@ -140,6 +170,10 @@ export interface ReaderOpenSnapshot {
   bookId: string;
   version: number;
   anchor: LogicalLocator | null;
+  title: string;
+  type: 'txt' | 'epub';
+  percentage: number;
+  chapterTitle?: string;
 }
 
 export interface ReaderProgressSnapshot {
@@ -166,6 +200,14 @@ export type HostResponse =
   | Envelope<
       'reader/opened',
       { requestId: string; snapshot: ReaderOpenSnapshot }
+    >
+  | Envelope<
+      'reader/chapters',
+      { requestId: string; snapshot: EpubChapterListSnapshot }
+    >
+  | Envelope<
+      'reader/chapter',
+      { requestId: string; snapshot: EpubChapterSnapshot }
     >
   | Envelope<'reader/blocks', { requestId: string; batch: ReaderBlockBatch }>
   | Envelope<

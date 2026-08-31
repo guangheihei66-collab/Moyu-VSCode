@@ -1,8 +1,14 @@
 import type {
   ReaderBlock,
   ReaderBlockBatch,
+  EpubLocator,
 } from '../../src/domain/reader/locator';
-import type { LogicalLocator } from '../../src/shared/protocol/messages';
+import type {
+  EpubChapterListSnapshot,
+  EpubChapterSnapshot,
+  EpubChapterSummary,
+  LogicalLocator,
+} from '../../src/shared/protocol/messages';
 import { BlockWindow } from './blockWindow';
 import type { FocusAnchor } from './focusAnchor';
 import { ReaderView, type ReaderViewActions } from './ReaderView';
@@ -32,6 +38,13 @@ export interface ReaderTransport {
     baseVersion: number,
     locator: LogicalLocator,
   ): Promise<{ version: number; locator: LogicalLocator }>;
+  listChapters?(bookId: string): Promise<EpubChapterListSnapshot>;
+  openChapter?(bookId: string, chapterId: string): Promise<EpubChapterSnapshot>;
+  navigateChapter?(
+    bookId: string,
+    chapterId: string,
+    direction: 'previous' | 'next',
+  ): Promise<EpubChapterSnapshot>;
 }
 
 export class ReaderController {
@@ -50,6 +63,8 @@ export class ReaderController {
   };
   private atStart = true;
   private atEnd = true;
+  private epubChapters: readonly EpubChapterSummary[] = [];
+  private currentChapterId: string | undefined;
 
   constructor(private readonly transport: ReaderTransport) {}
 
@@ -63,8 +78,13 @@ export class ReaderController {
     this.root = root;
     this.view = new ReaderView(root, {
       ...actions,
-      onPrevious: actions.onPrevious ?? (() => this.pageUp()),
-      onNext: actions.onNext ?? (() => this.pageDown()),
+      onAction: (action) => {
+        if (action === 'chapters') void this.openChapterList();
+        actions.onAction?.(action);
+      },
+      onPrevious:
+        actions.onPrevious ?? (() => void this.previousPageOrChapter()),
+      onNext: actions.onNext ?? (() => void this.nextPageOrChapter()),
     });
     this.view.setPaused(this.paused);
     if (!hasRenderedReader) this.render();
@@ -82,6 +102,14 @@ export class ReaderController {
       chapterTitle: opened.chapterTitle,
     };
     this.locatorsByBlockId.clear();
+    this.epubChapters = [];
+    this.currentChapterId = undefined;
+    if (opened.type === 'epub' || opened.anchor?.kind === 'epub') {
+      await this.openEpubDocument(
+        opened.anchor?.kind === 'epub' ? opened.anchor : undefined,
+      );
+      return;
+    }
     if (opened.anchor === null) {
       this.blockWindow.replace([]);
       this.atStart = true;
@@ -103,10 +131,18 @@ export class ReaderController {
   }
 
   async loadBefore(): Promise<void> {
+    if (this.presentation.type === 'epub') {
+      await this.navigateChapter('previous');
+      return;
+    }
     await this.load('before');
   }
 
   async loadAfter(): Promise<void> {
+    if (this.presentation.type === 'epub') {
+      await this.navigateChapter('next');
+      return;
+    }
     await this.load('after');
   }
 
@@ -132,6 +168,7 @@ export class ReaderController {
 
   pause(): void {
     this.paused = true;
+    this.view?.closeChapterDrawer();
     this.view?.setPaused(true);
   }
 
@@ -153,6 +190,19 @@ export class ReaderController {
     if (focus === undefined) return undefined;
     const locator = this.locatorsByBlockId.get(focus.blockId);
     if (locator === undefined) return undefined;
+    if (locator.kind === 'epub') {
+      const paragraphIndex = focus.paragraphIndex ?? locator.paragraphIndex;
+      const paragraphChanged = paragraphIndex !== locator.paragraphIndex;
+      return {
+        ...locator,
+        paragraphIndex,
+        characterOffset: paragraphChanged
+          ? 0
+          : focus.characterOffset === 0
+            ? locator.characterOffset
+            : focus.characterOffset,
+      };
+    }
     return {
       ...locator,
       characterOffset:
@@ -181,11 +231,19 @@ export class ReaderController {
   }
 
   restoreLogicalAnchor(locator: LogicalLocator): boolean {
-    if (locator.kind !== 'txt') return false;
-    this.locatorsByBlockId.set(locator.blockId, locator);
+    if (locator.kind === 'txt') {
+      this.locatorsByBlockId.set(locator.blockId, locator);
+      return this.restoreFocus({
+        blockId: locator.blockId,
+        characterOffset: locator.characterOffset,
+      });
+    }
+    this.locatorsByBlockId.set(locator.chapterId, locator);
+    this.currentChapterId = locator.chapterId;
     return this.restoreFocus({
-      blockId: locator.blockId,
+      blockId: locator.chapterId,
       characterOffset: locator.characterOffset,
+      paragraphIndex: locator.paragraphIndex,
     });
   }
 
@@ -203,8 +261,177 @@ export class ReaderController {
     };
     this.atStart = true;
     this.atEnd = true;
+    this.epubChapters = [];
+    this.currentChapterId = undefined;
     this.locatorsByBlockId.clear();
     this.blockWindow.replace([]);
+  }
+
+  private async openEpubDocument(
+    retainedAnchor: EpubLocator | undefined,
+  ): Promise<void> {
+    const listChapters = this.transport.listChapters;
+    const openChapter = this.transport.openChapter;
+    if (
+      this.bookId === undefined ||
+      listChapters === undefined ||
+      openChapter === undefined
+    ) {
+      this.blockWindow.replace([]);
+      this.atStart = true;
+      this.atEnd = true;
+      this.render();
+      return;
+    }
+
+    const list = await listChapters.call(this.transport, this.bookId);
+    this.epubChapters = list.chapters;
+    const chapterId = retainedAnchor?.chapterId ?? list.chapters[0]?.chapterId;
+    if (chapterId === undefined) {
+      this.blockWindow.replace([]);
+      this.atStart = true;
+      this.atEnd = true;
+      this.render();
+      return;
+    }
+    const chapter = await openChapter.call(
+      this.transport,
+      this.bookId,
+      chapterId,
+    );
+    this.renderEpubChapter(
+      chapter,
+      retainedAnchor,
+      this.presentation.percentage,
+    );
+  }
+
+  private async openChapter(chapterId: string): Promise<void> {
+    if (this.paused || this.bookId === undefined) return;
+    const openChapter = this.transport.openChapter;
+    if (openChapter === undefined) return;
+    this.view?.closeChapterDrawer();
+    const chapter = await openChapter.call(
+      this.transport,
+      this.bookId,
+      chapterId,
+    );
+    this.renderEpubChapter(chapter);
+  }
+
+  private async navigateChapter(direction: 'previous' | 'next'): Promise<void> {
+    if (
+      this.paused ||
+      this.bookId === undefined ||
+      this.currentChapterId === undefined
+    ) {
+      return;
+    }
+    if (
+      (direction === 'previous' && this.atStart) ||
+      (direction === 'next' && this.atEnd)
+    ) {
+      return;
+    }
+    const navigateChapter = this.transport.navigateChapter;
+    if (navigateChapter === undefined) return;
+    const chapter = await navigateChapter.call(
+      this.transport,
+      this.bookId,
+      this.currentChapterId,
+      direction,
+    );
+    this.renderEpubChapter(chapter);
+  }
+
+  private async openChapterList(): Promise<void> {
+    if (
+      this.paused ||
+      this.presentation.type !== 'epub' ||
+      this.bookId === undefined
+    ) {
+      return;
+    }
+    const listChapters = this.transport.listChapters;
+    if (listChapters === undefined) return;
+    const list = await listChapters.call(this.transport, this.bookId);
+    this.epubChapters = list.chapters;
+    this.view?.openChapterDrawer(
+      this.epubChapters,
+      this.currentChapterId ?? '',
+      (chapterId) => void this.openChapter(chapterId),
+    );
+  }
+
+  private previousPageOrChapter(): void {
+    if (this.presentation.type === 'epub')
+      void this.navigateChapter('previous');
+    else this.pageUp();
+  }
+
+  private nextPageOrChapter(): void {
+    if (this.presentation.type === 'epub') void this.navigateChapter('next');
+    else this.pageDown();
+  }
+
+  private renderEpubChapter(
+    chapter: EpubChapterSnapshot,
+    retainedAnchor?: EpubLocator,
+    percentageOverride?: number,
+  ): void {
+    if (this.bookId === undefined) return;
+    const block: ReaderBlock = {
+      id: chapter.chapterId,
+      paragraphs: chapter.paragraphs,
+      decodedLength: chapter.paragraphs.reduce(
+        (total, paragraph) => total + paragraph.length,
+        0,
+      ),
+      contentFingerprint: chapter.contentFingerprint,
+    };
+    this.blockWindow.replace([block]);
+    this.currentChapterId = chapter.chapterId;
+    const locator =
+      retainedAnchor?.chapterId === chapter.chapterId &&
+      retainedAnchor.contentFingerprint === chapter.contentFingerprint
+        ? retainedAnchor
+        : this.defaultEpubLocator(chapter);
+    this.locatorsByBlockId.delete(chapter.chapterId);
+    if (locator !== undefined) {
+      this.locatorsByBlockId.set(chapter.chapterId, locator);
+    }
+    this.presentation = {
+      ...this.presentation,
+      bookId: this.bookId,
+      type: 'epub',
+      percentage:
+        percentageOverride ?? this.chapterPercentage(chapter.position),
+      chapterTitle: chapter.title,
+    };
+    this.atStart = chapter.position <= 0;
+    this.atEnd =
+      this.epubChapters.length === 0 ||
+      chapter.position >= this.epubChapters.length - 1;
+    this.render();
+  }
+
+  private defaultEpubLocator(
+    chapter: EpubChapterSnapshot,
+  ): EpubLocator | undefined {
+    if (chapter.paragraphs.length === 0) return undefined;
+    return {
+      kind: 'epub',
+      chapterId: chapter.chapterId,
+      paragraphIndex: 0,
+      characterOffset: 0,
+      contentFingerprint: chapter.contentFingerprint,
+    };
+  }
+
+  private chapterPercentage(position: number): number {
+    return this.epubChapters.length === 0
+      ? 0
+      : Math.round((Math.max(0, position) / this.epubChapters.length) * 100);
   }
 
   private async load(direction: 'before' | 'after'): Promise<void> {
