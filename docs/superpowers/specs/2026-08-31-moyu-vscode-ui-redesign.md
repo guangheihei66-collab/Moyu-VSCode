@@ -227,6 +227,13 @@ The provider owns all message-listener and Webview lifecycle disposables. The
 HTML document uses the same deny-by-default resource discipline as the main
 Webview, with packaged Sidebar assets and a nonce-bearing script.
 
+Sidebar verification is layered. Webview unit tests cover the four entries,
+selected/hover/focus states, keyboard activation, and typed navigation. Provider
+and Extension Host tests cover the exact contributed View ID, Webview lifecycle,
+listener disposal, nonce/CSP, packaged JS/CSS URIs, and production asset
+resolution. The provider shell is not required to contain the visible labels;
+tests must not duplicate Sidebar markup merely to make a string assertion pass.
+
 ## 7. Home
 
 Home is a compact starting surface for high-frequency actions.
@@ -772,6 +779,23 @@ assert behavior and safety.
 - protocol tests validate every new DTO, request, response, stale session,
   invalid route, and message-size boundary.
 
+### Sidebar integration tests
+
+Sidebar coverage has three explicit layers:
+
+1. Webview unit tests verify Home, Books, 2048, and Settings, including selected,
+   hover, focus, keyboard activation, and typed navigation messages.
+2. Provider/unit tests verify the exact View ID, Webview lifecycle, listener
+   registration and disposal, nonce/CSP, and packaged JS/CSS URI references.
+3. Real Extension Host tests verify that `package.json` declares
+   `moyu.sidebar` with `type: "webview"`, runtime registers `moyu.sidebar`, the
+   provider resolves, and the production Sidebar JS/CSS assets exist and load
+   through the expected resource boundary.
+
+The provider shell is not required to contain the four visible labels. Unit and
+Extension Host tests must not duplicate the production markup solely to satisfy
+a label-string assertion.
+
 ### Home and Books tests
 
 - Continue Reading renders the correct book and percentage;
@@ -854,10 +878,19 @@ Record PASS/FAIL for:
    styled controls, template preview, and reset action.
 10. Boss Mode shows only the selected neutral document, hides/inerts the
     normal module, and does not expose the forbidden identity words.
-11. Ctrl+M enters and exits without changing the Reader or 2048 state,
-    controller identity, panel count, or real editor tabs.
-12. Keyboard-only navigation, screen-reader names, visible focus, High
+11. Reader Boss flow: open a book, move to a known chapter and position, press
+    Ctrl+M, observe the neutral document, press Ctrl+M again, and confirm the
+    same book, chapter, logical position, single panel, and restored title.
+12. 2048 Boss flow: create a non-empty board, note the score and board, press
+    Ctrl+M, observe the neutral document, press Ctrl+M again, and confirm the
+    same board and score/session behavior, one panel, and no real editor tab.
+13. Keyboard-only navigation, screen-reader names, visible focus, High
     Contrast borders, and reduced-motion behavior are usable.
+
+Controller identity, state-object identity, `ModuleSnapshot`, logical locator,
+`gameSessionId`, `moveSequence`, and panel-count assertions are automated
+regression checks. Manual acceptance records observable behavior and does not
+require inspecting JavaScript object identity.
 
 ## 24. Files Expected to Change
 
@@ -911,6 +944,7 @@ this design phase.
 
 - `src/extension/sidebar/MoyuSidebarProvider.ts`
 - `src/extension/sidebar/sidebarHtml.ts`
+- `src/extension/panel/EpubPresentationAdapter.ts`
 - `src/extension/panel/PanelController.ts`
 - `src/extension/panel/SettingsMessageDispatcher.ts`
 - `src/extension/panel/PresentationSnapshotProvider.ts`

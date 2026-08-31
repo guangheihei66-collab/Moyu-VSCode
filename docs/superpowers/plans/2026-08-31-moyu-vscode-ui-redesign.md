@@ -26,8 +26,10 @@ dependency, font, backend, database, or network capability.
 1. Begin every task from a clean checkpoint on
    `feature/moyu-v1-implementation`. Inspect `git status`, the relevant
    ledger entry, and the current source before writing the first test.
-2. Follow RED → minimal implementation → focused GREEN → full regression →
-   review → fix → verify → commit.
+2. Tasks 1–10 follow RED → minimal implementation → focused GREEN → full
+   regression → review → fix → verify → commit. Task 11 is evidence-first
+   integrated verification and does not require an artificial RED run. Task 12
+   is release/package verification plus isolated observable manual acceptance.
 3. Keep the active worktree
    `D:\Moyu\Moyu-VSCode\.worktrees\moyu-v1-implementation`. Do not modify
    `D:\Moyu\Thief-Book-VSCode`, push, merge main, publish, or delete user
@@ -120,7 +122,7 @@ aliases to VS Code variables. `base.css` imports tokens, shared components,
 feature styles, and the existing reader-setting variables in a deterministic
 order.
 
-### RED test
+### Package contract
 
 Add tests for:
 
@@ -243,17 +245,16 @@ compatibility; Sidebar Home is the new Home entry.
 
 Add tests that require:
 
-- four entries with Home, Books, 2048, and Settings labels;
-- active, hover, focus, and summary states;
-- click and keyboard activation dispatching one typed navigation message;
-- invalid section messages being ignored;
-- packaged Sidebar HTML using a nonce script and packaged assets;
-- the provider retaining `isResolved` and registering a disposable message
-  listener.
+- Webview behavior: Home, Books, 2048, and Settings, selected/hover/focus
+  states, keyboard activation, and one typed navigation message;
+- provider behavior: exact View ID, Webview lifecycle, listener disposal,
+  nonce/CSP, and packaged JS/CSS URI references;
+- real Extension Host behavior: manifest declaration, runtime registration,
+  provider resolution, and production Sidebar asset existence/load through the
+  expected resource boundary.
 
-Extend the Extension Host Sidebar test to verify the real contributed
-`moyu.sidebar` Webview resolves and the four entries are present in its HTML
-or rendered resource path.
+The provider shell is not required to contain the four visible labels. Do not
+duplicate production Sidebar markup just to satisfy a label-string assertion.
 
 ### Expected failure
 
@@ -657,14 +658,13 @@ chapter navigation.
 Create:
 
 - `webview/reader/ChapterDrawer.ts`
+- `src/extension/panel/EpubPresentationAdapter.ts`
 - `test/unit/webview/epubChapterView.test.ts`
 
 Modify:
 
 - `src/shared/protocol/messages.ts`
 - `src/shared/protocol/validate.ts`
-- `src/application/reader/EpubReaderService.ts` only if a presentation-safe
-  adapter method is required; parser and security code are not in scope
 - `src/extension/panel/SettingsMessageDispatcher.ts`
 - `src/extension/panel/PanelController.ts`
 - `src/extension/activation.ts`
@@ -689,6 +689,13 @@ fingerprint, and bounded paragraph text. `reader/opened` gains safe title,
 type, and percentage metadata. `reader/saveProgress` routes an EPUB locator
 to the existing `EpubReaderService` and a TXT locator to the existing TXT
 ReaderService.
+
+`src/extension/panel/EpubPresentationAdapter.ts` is the only new EPUB
+presentation boundary. It consumes the existing `EpubReaderService` and
+projects safe chapter summaries and text into the typed protocol DTOs. Task 6
+must not modify `EpubReaderService.ts` or add UI-specific methods to it; EPUB
+parser/security limits, cache identity, chapter identity, and progress
+semantics remain untouched.
 
 `ChapterDrawer` exposes:
 
@@ -717,14 +724,16 @@ Add tests for:
 
 The RED run fails because the current protocol has no chapter response family,
 the active Dispatcher supports only TXT Reader operations, activation does not
-provide an EPUB Reader adapter to the panel, and the Reader has no drawer.
+provide an EPUB presentation adapter to the panel, and the Reader has no drawer.
 
 ### Implementation
 
 Instantiate the existing `EpubReaderService` in activation with the existing
-`EpubParser`, `EpubCache`, progress repository, and book provider. Inject it
-through the panel's Host module services. Add only the adapter dispatch and
-runtime validators required to expose its already safe text chapter output.
+`EpubParser`, `EpubCache`, progress repository, and book provider. Construct an
+`EpubPresentationAdapter` around it and inject the adapter through the panel's
+Host module services. Add only the adapter dispatch and runtime validators
+required to expose its already safe text chapter output. Do not modify
+`EpubReaderService.ts` or add UI-specific methods to the service.
 
 Keep all EPUB numerical limits, canonical archive paths, sanitization, cache
 fingerprints, and progress recovery unchanged. The drawer is view-only
@@ -1207,28 +1216,31 @@ integrated test must prove:
 - Boss exit restores the same Reader/2048 state objects and logical anchors;
 - provider declaration/runtime registration still match exactly.
 
-### RED test
+### Integrated regression matrix
 
-Add the full route × lifecycle × state identity matrix and run it before
-touching production code. Include a test that intentionally exercises every
-route after a panel restore and another that toggles Boss while a drawer or
-menu is open.
+Add the full route × lifecycle × state identity matrix. Include a test that
+exercises every route after a panel restore and another that toggles Boss while
+a drawer or menu is open. The matrix asserts ReaderController/Game2048Controller
+identity, state identity, `ModuleSnapshot`, logical locator, `gameSessionId`,
+`moveSequence`, panel count, and the exact Sidebar manifest/runtime View ID.
 
-### Expected failure
+### Run and interpretation
 
-The RED run should identify any missing route registration, stale listener,
-duplicate root, unvalidated message, state replacement, or package asset
-reference left by Tasks 1–10. A genuine failure is recorded in the ledger;
-tests are not weakened to obtain a green result.
+Run the matrix against the Tasks 1–10 implementation before changing
+production code. A GREEN run is a valid result: accept it and make no
+production change merely to manufacture a RED phase. If it fails, record the
+actual failure and root cause in the ledger, then apply only the smallest fix
+required by the already-defined contracts.
 
-### Implementation
+### Minimal fix only when required
 
-Make only the smallest integration fixes needed to satisfy the already
-defined contracts. Prefer focused route registration, disposal, adapter, or
-test-fixture corrections. Do not refactor domain or persistence code and do
-not introduce a synthetic transport that bypasses the real protocol.
+When the matrix fails, make only the smallest integration fix needed to satisfy
+the already-defined contracts. Prefer focused route registration, disposal,
+adapter, or test-fixture corrections. Do not refactor domain or persistence
+code and do not introduce a synthetic transport that bypasses the real
+protocol.
 
-### GREEN test
+### GREEN verification
 
 Run the complete local gate:
 
@@ -1307,7 +1319,7 @@ CSS, extension bundle, media, package metadata, README, license, and changelog
 only within the established runtime allowlist. No tests, fixtures, maps/logs,
 secrets, development dependencies, caches, or user data may enter the VSIX.
 
-### RED test
+### Package contract
 
 Update package/build tests to require:
 
@@ -1317,15 +1329,11 @@ Update package/build tests to require:
 - isolated current and minimum provider resolution;
 - the expanded manual checklist with Home and all three theme/width groups.
 
-Run the package contract before changing the release version. The expected RED
-result is a missing Sidebar asset or stale package allowlist if the build and
-packaging surfaces were not updated by the implementation tasks.
-
-### Expected failure
-
-The release RED run must fail on an actual missing output, stale archive
-allowlist, stale version assertion, or incomplete isolated smoke. It must not
-be bypassed by deleting the check or excluding the new asset.
+Run the package contract before changing the release version. It may be GREEN
+when the implementation tasks already provide every required output. If it is
+not GREEN, record the actual missing output, stale archive allowlist, stale
+version assertion, or incomplete isolated smoke; never force a failure and
+never bypass a check by deleting it or excluding the new asset.
 
 ### Implementation
 
@@ -1333,7 +1341,9 @@ Update only the package metadata and verifier expectations required to ship
 the already implemented presentation. Set the version to `0.2.0` after the
 focused and integrated gates pass. Extend the manual Windows checklist to
 cover Dark, Light, High Contrast, narrow/normal/wide, all seven visible
-surfaces, Sidebar provider resolution, EPUB drawer, and Ctrl+M state identity.
+surfaces, Sidebar provider resolution, EPUB drawer, and the observable Ctrl+M
+flows below. Controller/state identity and protocol snapshot assertions belong
+to automated tests, not manual visual inspection.
 
 Install the newly generated VSIX only in an isolated VS Code profile. Do not
 touch the user's normal profile or global storage.
@@ -1357,10 +1367,13 @@ Then manually verify in an isolated profile:
 5. Verify search/filter, import cancellation, safe removal wording, Reader
    width, EPUB drawer, 2048 modal, Settings preview/reset, and neutral Boss
    document output.
-6. Enter and exit Ctrl+M on Reader and 2048; compare controller/state identity,
-   logical progress, board/session, focus, title, and panel count before and
-   after.
-7. Record the exact VS Code version, extension commit, fixture root, theme,
+6. Reader Boss flow: open a book, move to a known chapter and position, press
+   Ctrl+M, observe the neutral document, press Ctrl+M again, and confirm the
+   same book, chapter, logical position, single panel, and restored title.
+7. 2048 Boss flow: create a non-empty board, note the score and board, press
+   Ctrl+M, observe the neutral document, press Ctrl+M again, and confirm the
+   same board and score/session behavior, one panel, and no real editor tab.
+8. Record the exact VS Code version, extension commit, fixture root, theme,
    and result in `test/acceptance/windows-v1-checklist.md` without private
    source paths or novel content.
 
