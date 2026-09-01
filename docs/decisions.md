@@ -3,8 +3,16 @@
 ## 2026-08-29 — Keep one main panel per window
 
 The Activity Bar and Sidebar remain native entry/navigation surfaces. Reader,
-2048, settings, and Boss Mode share one main WebviewPanel so lifecycle,
-focus, serializer, and visibility state have one owner.
+settings, and Boss Mode share one main WebviewPanel so lifecycle, focus,
+serializer, and visibility state have one owner.
+
+## 2026-09-01 — Remove 2048 without deleting legacy state
+
+The 0.2.1 product surface removes 2048 from the Sidebar, Home, routes,
+protocol, Host/Webview bundles, and persistence. Existing legacy game state is
+not deleted or migrated; it is intentionally orphaned because the extension no
+longer reads or writes it. Books, Reader, Settings, Boss Mode, and the shared
+lease/transaction infrastructure remain unchanged.
 
 ## 2026-08-29 — Keep shared state in locked local files
 

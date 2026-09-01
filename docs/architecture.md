@@ -8,7 +8,7 @@ Webview UI per VS Code window.
 ```text
 Activity Bar
     |
-native Sidebar (Home / Books / 2048 / Settings)
+native Sidebar (Home / Books / Settings)
     |
 one main WebviewPanel per VS Code window
     |-----------------------------|
@@ -18,9 +18,9 @@ persistence, parsing,          routing, accessible DOM
 lifecycle, recovery             no Node.js file access
 ```
 
-The Sidebar is an entry and light-navigation surface. Reader and 2048
-controllers live only in the main panel. Opening a route reveals that panel;
-it does not create a second reader or game.
+The Sidebar is an entry and light-navigation surface. Reader controllers live
+only in the main panel. Opening a route reveals that panel; it does not create
+a second reader surface.
 
 ## Boundaries
 
@@ -35,8 +35,8 @@ it does not create a second reader or game.
 
 ## Persistence and recovery
 
-Books, logical reader progress, settings, and 2048 state are stored below the
-extension's VS Code `globalStorage` directory. Each module uses a versioned
+Books, logical reader progress, and settings are stored below the extension's
+VS Code `globalStorage` directory. Each module uses a versioned
 envelope and a short lease-locked transaction. A stale lock is quarantined
 only after bounded liveness evidence; uncertain I/O fails closed. Repository
 merge rules preserve unrelated concurrent updates and reject stale same-item

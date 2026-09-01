@@ -392,3 +392,30 @@ commit).
 Next: when an approved non-private fixture is available, complete the remaining
 manual Reader/EPUB/Reader Boss/modal flows in the isolated profile, append the
 result to `test/acceptance/windows-v1-checklist.md`, and commit the docs.
+
+Moyu 2048 removal: complete locally — `0.2.1` bounded release
+Scope: remove the 2048 feature completely from production while preserving
+Books, TXT/EPUB Reader, Settings, neutral Boss Mode, and shared transactions.
+Historical V1 and UI redesign entries above remain unchanged as history.
+Done: RED/GREEN removal contracts; protocol/type/validator closure; Host,
+Sidebar/Home, Webview route/transport, persistence, error, and game-only test
+removal; acceptance-suite preservation for TXT/EPUB import-read; package
+version `0.2.1`; current docs and acceptance checklist update.
+Current test result: focused removal suite 33/33 PASS; full unit regression
+57 files, 283/283 PASS; format, lint, build, dual typecheck, Extension
+contract 5/5, current/minimum Host, secret scan, VSIX allowlist, and packaged
+current/minimum install smoke PASS.
+VSIX: `moyu-vscode-0.2.1.vsix`, 11 runtime-only entries; runtime scan found no
+removed game identifiers. Only EPUB chapter-limit numeric `2048` literals
+remain. CLI installation into the isolated profile succeeded and listed
+`undefined_publisher.moyu-vscode@0.2.1`; Computer Use could not complete the
+manual click-through because the returned VS Code window handle was stale.
+Legacy game-state files and the old 0.2.0 VSIX were not deleted or modified;
+legacy state is intentionally orphaned.
+Uncommitted files: none after the documentation checkpoint commit; ignored
+temporary verification logs remain local.
+Last good commit: `7b93f93 refactor: remove Moyu 2048 feature`.
+Next exact action: human retry of the retained isolated profile's visual
+Home/Books/Settings and one-panel route click-through when a targetable VS
+Code window is available; no source change is pending and no normal profile
+or old project should be modified.

@@ -1,8 +1,7 @@
 # Moyu VS Code
 
 Moyu is a local-only leisure center for Windows VS Code. V1 combines a quiet
-novel reader, a small 2048 game, and a reversible Boss Mode in one native
-Activity Bar entry.
+novel reader and a reversible Boss Mode in one native Activity Bar entry.
 
 ## Install
 
@@ -57,15 +56,13 @@ pushes anything.
 ## Use Moyu
 
 The Moyu Activity Bar entry opens a lightweight Sidebar with **Home**,
-**Books**, **2048**, and **Settings**. Those entries navigate one main
-WebviewPanel per VS Code window; opening another entry reveals the existing
-panel instead of creating a second reader or game.
+**Books**, and **Settings**. Those entries navigate one main WebviewPanel per
+VS Code window; opening another entry reveals the existing panel.
 
 The main navigation commands are:
 
 ```text
 moyu.openBooks
-moyu.open2048
 moyu.openSettings
 ```
 
@@ -84,19 +81,12 @@ Use **Relocate** when a book has moved.
 Remove from bookshelf never deletes the source file. It removes only Moyu
 metadata, progress, and derived cache data after the explicit confirmation.
 
-### 2048
-
-Open **2048** from the Sidebar or run `moyu.open2048`. Arrow keys and WASD
-move the focused board. The Extension Host persists the board, score, best
-score, move sequence, and active session through a crash-safe local
-transaction.
-
 ### Boss Mode
 
 With a visible Moyu panel, press **Ctrl+M** to enter Boss Mode and press it
-again to return. Boss Mode overlays the existing reader/game controller and
-does not replace real editor tabs. If the panel is hidden or closed, the
-command is a no-op.
+again to return. Boss Mode overlays the existing reader controller and does
+not replace real editor tabs. If the panel is hidden or closed, the command is
+a no-op.
 
 The keybinding is contributed by the extension and can be reassigned in
 **File > Preferences > Keyboard Shortcuts**. Search for **Moyu: Toggle Boss
@@ -105,8 +95,8 @@ Mode** if `Ctrl+M` conflicts with another command.
 ## Local data and privacy
 
 Books are never copied into Moyu's application data. Versioned metadata,
-progress, settings, game state, and derived indexes are stored under the
-extension's VS Code `globalStorage` directory. Cross-window writes use
+progress, settings, and derived indexes are stored under the extension's VS
+Code `globalStorage` directory. Cross-window writes use
 short-lived lease-locked transactions; the UI may remain briefly stale until
 the next documented refresh point.
 

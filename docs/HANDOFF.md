@@ -712,3 +712,88 @@ Reader/EPUB/Reader Boss/modal visual flows in the same isolated profile and
 append the result to `test/acceptance/windows-v1-checklist.md`; then commit
 the documentation checkpoint. Do not change the release package or normal
 user profile.
+
+## 2026-09-01 — Moyu 2048 feature removal checkpoint
+
+### Scope
+
+This is the approved bounded `0.2.1` change. Moyu 2048 is removed, not
+hidden: no Sidebar entry, Home card, AppSection route, protocol message,
+Host/Webview controller, game repository, best-score/session field, keyboard
+handler, victory/Game Over modal, or Boss restoration path remains in
+production. The historical V1/UI redesign specs and earlier ledger entries are
+preserved as history.
+
+### Completed Tasks
+
+- Added RED then GREEN removal contracts for production identifiers, the
+  manifest command, and rejection of legacy `game2048/*` requests.
+- Removed game types/messages/validation, Host wiring and dispatcher branches,
+  Sidebar/Home routes and fields, Webview transport/controller/view/styles,
+  game persistence, game-only error actions, and game-only tests.
+- Updated the current README, changelogs, architecture/decision notes,
+  PROJECT_CONTEXT, and Windows acceptance checklist for `0.2.1`.
+
+### Current Task
+
+Moyu 2048 complete removal — COMPLETE locally in release `0.2.1`.
+
+### Tests and Release Gates
+
+- Removal focused GREEN: 33/33.
+- Full unit regression: 57 test files, 283/283 PASS.
+- Format check, lint, production build, Extension Host/Webview typechecks, and
+  Extension contract 5/5: PASS.
+- Current and minimum VS Code 1.96.0 Extension Host lanes: PASS. The current
+  lane used `MOYU_VSCODE_EXECUTABLE` pointing to the official cached 1.96.0
+  Code.exe because no standard system Code.exe installation was discoverable;
+  the minimum lane used the same pinned official version through the existing
+  test cache.
+- Package-input secret scan: PASS; no secret patterns found in 9 files.
+- VSIX archive allowlist: PASS, 11 runtime-only entries.
+- Packaged current/minimum isolated install smoke: PASS.
+- Runtime archive scan: PASS; no `game2048`, `Game2048`, `open2048`,
+  `bestScore`, or `hasGameSession` identifier remains in package metadata,
+  Extension Host runtime, or Webview runtime. The only retained numeric
+  `2048` literals are EPUB chapter limits.
+
+### Isolated VSIX Installation
+
+- The actual `moyu-vscode-0.2.1.vsix` was installed through the official
+  cached VS Code `bin\code.cmd` into a new isolated profile. CLI verification
+  returned `undefined_publisher.moyu-vscode@0.2.1`.
+- Packaged smoke verified the Sidebar probe, command set, single panel, and
+  Boss toggle using extracted VSIX contents.
+- Manual click-through was not completed: Computer Use could list the
+  isolated window but repeatedly rejected its returned window handle as
+  stale. No manual Activity Bar/Sidebar screenshot assertion is claimed.
+- The isolated profile is retained for a human retry at:
+  `C:\Users\86157\AppData\Local\Temp\moyu-vscode-0.2.1-acceptance-cli-38b44a7d8333463984cfc8672e5b82f3`.
+
+### Known Issues
+
+- The old `0.2.0` VSIX remains untouched. Legacy user game-state files are not
+  deleted or migrated; they are intentionally orphaned.
+- No approved non-private book fixture is shipped, so Reader/EPUB manual
+  visual flow remains a separate documented gap.
+- A normal installed VS Code executable was not discoverable in this
+  environment; the pinned official 1.96.0 cache was used for automated Host
+  and CLI profile verification.
+
+### Uncommitted Files
+
+None after the documentation checkpoint commit. Temporary verification logs
+remain ignored and local; no push, publish, merge, normal-profile write, or
+old-project change was performed.
+
+### Last Good Commit
+
+`7b93f93 refactor: remove Moyu 2048 feature`
+
+### Next Exact Action
+
+For human acceptance, open the retained isolated profile and click Moyu to
+verify Home/Books/Settings visually and open each route in the single main
+panel. If the UI helper remains unavailable, the automated package/Host
+evidence above is the final local release checkpoint; do not alter the normal
+profile or restore the removed 2048 feature.
