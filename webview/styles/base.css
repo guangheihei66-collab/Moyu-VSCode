@@ -43,10 +43,6 @@ html {
   padding: 0;
 }
 
-#app:has(.moyu-game2048) {
-  max-width: 760px;
-}
-
 #app:has(.moyu-settings) {
   max-width: 760px;
 }

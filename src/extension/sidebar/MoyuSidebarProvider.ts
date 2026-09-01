@@ -19,7 +19,6 @@ export class MoyuSidebarProvider implements vscode.WebviewViewProvider {
   private model: SidebarViewModel = {
     active: 'home',
     booksCount: 0,
-    bestScore: 0,
   };
 
   constructor(
@@ -63,13 +62,10 @@ export class MoyuSidebarProvider implements vscode.WebviewViewProvider {
     this.postState();
   }
 
-  setSummary(
-    summary: Pick<SidebarViewModel, 'booksCount' | 'bestScore'>,
-  ): void {
+  setSummary(summary: Pick<SidebarViewModel, 'booksCount'>): void {
     this.model = {
       ...this.model,
       booksCount: boundedCount(summary.booksCount),
-      bestScore: boundedCount(summary.bestScore),
     };
     this.postState();
   }

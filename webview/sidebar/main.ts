@@ -15,7 +15,6 @@ if (root === null) throw new Error('Moyu Sidebar root is missing.');
 const initialModel: SidebarViewModel = {
   active: 'home',
   booksCount: 0,
-  bestScore: 0,
 };
 const api = acquireVsCodeApi();
 const view = new SidebarView(root, (message) => api.postMessage(message));

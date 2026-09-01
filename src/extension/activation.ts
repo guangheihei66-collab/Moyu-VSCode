@@ -25,8 +25,6 @@ import { ReaderService } from '../application/reader/ReaderService';
 import { EpubReaderService } from '../application/reader/EpubReaderService';
 import { PreferencesRepository } from '../infrastructure/storage/preferencesRepository';
 import { BossModeService } from '../application/boss/BossModeService';
-import { Game2048Service } from '../application/game2048/Game2048Service';
-import { GameRepository } from '../infrastructure/storage/gameRepository';
 import { WebviewSessionRegistry } from '../application/sessions/WebviewSessionRegistry';
 import { RefreshCoordinator } from '../application/sessions/RefreshCoordinator';
 import { EpubPresentationAdapter } from './panel/EpubPresentationAdapter';
@@ -108,12 +106,9 @@ export function activate(context: vscode.ExtensionContext): void {
     progress,
     bookProvider,
   });
-  const gameRepository = new GameRepository(context.globalStorageUri.fsPath);
-  const game = new Game2048Service(gameRepository);
   const presentation = new PresentationSnapshotProvider({
     bookshelf,
     progress,
-    game,
     fileStats,
   });
   const bookOperations = {
@@ -152,7 +147,6 @@ export function activate(context: vscode.ExtensionContext): void {
   const refreshCoordinator = new RefreshCoordinator({
     bookshelf: bookshelfRepository,
     reader: progress,
-    game2048: gameRepository,
     settings: preferencesRepository,
   });
   const registry = new PanelRegistry(
@@ -163,7 +157,6 @@ export function activate(context: vscode.ExtensionContext): void {
         onStateChange,
         {
           reader,
-          game,
           presentation,
           books: bookOperations,
           epub: epubPresentation,
@@ -188,12 +181,7 @@ export function activate(context: vscode.ExtensionContext): void {
       boss: { service: boss, settings },
     },
     (section) => {
-      if (
-        section === 'home' ||
-        section === 'books' ||
-        section === 'game2048' ||
-        section === 'settings'
-      ) {
+      if (section === 'home' || section === 'books' || section === 'settings') {
         sidebarProvider.setActiveSection(section);
       }
     },

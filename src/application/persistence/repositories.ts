@@ -49,21 +49,6 @@ export interface ProgressData {
   versions: Record<string, number>;
 }
 
-export interface PersistedGameState {
-  gameSessionId: string;
-  board: readonly (readonly number[])[];
-  score: number;
-  bestScore: number;
-  moveSequence: number;
-  status?: 'playing' | 'won' | 'lost';
-  [key: string]: unknown;
-}
-
-export interface GameData {
-  activeSessionId: string;
-  state: PersistedGameState;
-}
-
 export interface PreferencesData {
   [key: string]: unknown;
 }

@@ -114,8 +114,6 @@ const populatedSnapshot: HomeSnapshot = {
     },
   ],
   booksCount: 2,
-  bestScore: 128,
-  hasGameSession: true,
 };
 
 describe('HomeView', () => {
@@ -135,16 +133,17 @@ describe('HomeView', () => {
     expect(root.fullText).toContain('Chapter 2');
     expect(root.fullText).toContain('Quick Access');
     expect(root.fullText).toContain('2 books');
-    expect(root.fullText).toContain('Best 128');
     expect(root.fullText).toContain('Recent Books');
     expect(root.fullText).toContain('Source unavailable');
+    expect(root.fullText).not.toContain('2048');
+    expect(root.fullText).not.toContain('Best score');
     expect(root.fullText).not.toContain('file:///');
 
     root.querySelector('[data-home-action="continue-book-1"]')?.click();
     expect(actions).toEqual([{ type: 'continue', bookId: 'book-1' }]);
   });
 
-  it('renders useful no-book, no-progress, and no-game actions', () => {
+  it('renders useful no-book and no-progress actions', () => {
     const document = new DocumentStub();
     const root = document.createElement('main');
     const actions: unknown[] = [];
@@ -155,8 +154,6 @@ describe('HomeView', () => {
     view.render({
       recentBooks: [],
       booksCount: 0,
-      bestScore: 0,
-      hasGameSession: false,
     });
     expect(root.fullText).toContain('Import your first book');
     root.querySelector('[data-home-action="books"]')?.click();
@@ -164,16 +161,11 @@ describe('HomeView', () => {
     view.render({
       recentBooks: [populatedSnapshot.recentBooks[0]!],
       booksCount: 1,
-      bestScore: 0,
-      hasGameSession: false,
     });
     expect(root.fullText).toContain('Open a book to start reading');
-    expect(root.fullText).toContain('Start a game');
-    root.querySelector('[data-home-action="game2048"]')?.click();
-    expect(actions).toEqual([
-      { type: 'navigate', section: 'books' },
-      { type: 'navigate', section: 'game2048' },
-    ]);
+    expect(root.fullText).not.toContain('Start a game');
+    expect(root.fullText).not.toContain('2048');
+    expect(actions).toEqual([{ type: 'navigate', section: 'books' }]);
   });
 });
 

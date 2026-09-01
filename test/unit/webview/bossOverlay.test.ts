@@ -18,24 +18,6 @@ const durableReaderAnchor = {
   characterOffset: 9,
   contentFingerprint: 'block-fingerprint-7',
 };
-const durableGameState = {
-  gameSessionId: 'durable-game-1',
-  board: [
-    [2, 4, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  score: 12,
-  bestScore: 12,
-  won: false,
-  gameOver: false,
-  moveSequence: 3,
-  startedAt: 1,
-  updatedAt: 2,
-  stateVersion: 1,
-};
-
 function productionModuleClient() {
   return {
     readSettings: async () => ({
@@ -73,9 +55,6 @@ function productionModuleClient() {
       version: 5,
       locator: durableReaderAnchor,
     }),
-    load: async () => ({ version: 6, data: { state: durableGameState } }),
-    save: async () => ({ version: 7, data: { state: durableGameState } }),
-    newGame: async () => ({ version: 7, data: { state: durableGameState } }),
   };
 }
 
@@ -353,45 +332,6 @@ describe('BossOverlay', () => {
     expect(after.logicalAnchor).toEqual(readerAnchor);
   });
 
-  it('uses mounted production Reader and 2048 controllers without replacing their state objects', async () => {
-    const document = new TestDocument();
-    const root = document.createElement('main');
-    const app = createApp(
-      root as unknown as HTMLElement,
-      productionModuleClient(),
-      'reader',
-    ) as unknown as {
-      captureModuleSnapshot(): ModuleSnapshot;
-      navigate(section: 'reader' | 'game2048'): boolean;
-      setBossMode(mode: 'NORMAL' | 'BOSS_MODE', template: 'typescript'): void;
-    };
-
-    const readerBefore = app.captureModuleSnapshot();
-    app.setBossMode('BOSS_MODE', 'typescript');
-    app.setBossMode('NORMAL', 'typescript');
-    const readerAfter = app.captureModuleSnapshot();
-    expect(readerAfter.controller).toBe(readerBefore.controller);
-    expect(readerAfter.moduleState).toBe(readerBefore.moduleState);
-
-    expect(app.navigate('game2048')).toBe(true);
-    await Promise.resolve();
-    const gameBefore = app.captureModuleSnapshot();
-    expect(
-      (gameBefore.moduleState as { gameSessionId: string }).gameSessionId,
-    ).toBe('durable-game-1');
-    expect((gameBefore.moduleState as { board: unknown[] }).board[0]).toContain(
-      2,
-    );
-    app.setBossMode('BOSS_MODE', 'typescript');
-    app.setBossMode('NORMAL', 'typescript');
-    const gameAfter = app.captureModuleSnapshot();
-    expect(gameAfter.controller).toBe(gameBefore.controller);
-    expect(gameAfter.moduleState).toBe(gameBefore.moduleState);
-    expect((gameAfter.moduleState as { board: unknown }).board).toBe(
-      (gameBefore.moduleState as { board: unknown }).board,
-    );
-  });
-
   it('captures and restores the production Reader logical anchor', async () => {
     const restoreLogicalAnchor = vi.spyOn(
       ReaderController.prototype,
@@ -449,13 +389,13 @@ describe('BossOverlay', () => {
       'reader',
     ) as unknown as {
       captureModuleSnapshot(): ModuleSnapshot;
-      navigate(section: 'game2048'): boolean;
+      navigate(section: 'settings'): boolean;
       setBossMode(mode: 'NORMAL' | 'BOSS_MODE', template: 'typescript'): void;
     };
     const before = app.captureModuleSnapshot();
 
     app.setBossMode('BOSS_MODE', 'typescript');
-    expect(app.navigate('game2048')).toBe(false);
+    expect(app.navigate('settings')).toBe(false);
     expect(app.captureModuleSnapshot().controller).toBe(before.controller);
     app.setBossMode('NORMAL', 'typescript');
   });

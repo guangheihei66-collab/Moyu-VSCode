@@ -1,42 +1,21 @@
 import { strict as assert } from 'node:assert';
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import * as vscode from 'vscode';
 
 import { BookshelfService } from '../../../src/application/books/BookshelfService';
-import { Game2048Service } from '../../../src/application/game2048/Game2048Service';
 import { EncodingSelectionService } from '../../../src/application/reader/EncodingSelectionService';
-import { ReaderService } from '../../../src/application/reader/ReaderService';
-import { createNodeFileStatProvider } from '../../../src/infrastructure/filesystem/fileIdentity';
-import { EpubParser } from '../../../src/infrastructure/epub/EpubParser';
-import { EpubCache } from '../../../src/infrastructure/epub/EpubCache';
 import { EpubReaderService } from '../../../src/application/reader/EpubReaderService';
-import { EpubPresentationAdapter } from '../../../src/extension/panel/EpubPresentationAdapter';
+import { ReaderService } from '../../../src/application/reader/ReaderService';
+import { EpubCache } from '../../../src/infrastructure/epub/EpubCache';
+import { EpubParser } from '../../../src/infrastructure/epub/EpubParser';
+import { createNodeFileStatProvider } from '../../../src/infrastructure/filesystem/fileIdentity';
 import type { BookMetadata } from '../../../src/domain/books/types';
+import { EpubPresentationAdapter } from '../../../src/extension/panel/EpubPresentationAdapter';
 import { BookshelfRepository } from '../../../src/infrastructure/storage/bookshelfRepository';
-import { GameRepository } from '../../../src/infrastructure/storage/gameRepository';
 import { ProgressRepository } from '../../../src/infrastructure/storage/progressRepository';
 import { IndexStore } from '../../../src/infrastructure/txt/indexStore';
 import { TxtBlockReader } from '../../../src/infrastructure/txt/TxtBlockReader';
 import { TxtIndexer } from '../../../src/infrastructure/txt/TxtIndexer';
-
-export async function runRestartRecoveryAcceptance(): Promise<void> {
-  await vscode.commands.executeCommand('moyu.open2048');
-  const fixtureRoot = process.env.MOYU_TEST_FIXTURE_ROOT;
-  assert.ok(fixtureRoot, 'The isolated fixture root is not configured.');
-
-  const repository = new GameRepository(join(fixtureRoot, 'global-storage'));
-  const firstService = new Game2048Service(
-    repository,
-    () => 0,
-    () => 1_700_000_000_000,
-    () => 'acceptance-session-1',
-  );
-  const saved = await firstService.newGame(0);
-  const restored = await new Game2048Service(repository).load();
-
-  assert.deepEqual(restored?.data.state, saved.data.state);
-}
 
 export async function runBookImportReadAcceptance(): Promise<void> {
   const fixtureRoot = process.env.MOYU_TEST_FIXTURE_ROOT;

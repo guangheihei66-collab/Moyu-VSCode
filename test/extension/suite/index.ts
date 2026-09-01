@@ -1,9 +1,6 @@
 import { runActivationAcceptance } from './activation.test';
 import { runMultiWindowAcceptance } from './multiWindow.test';
-import {
-  runBookImportReadAcceptance,
-  runRestartRecoveryAcceptance,
-} from './restartRecovery.test';
+import { runBookImportReadAcceptance } from './bookImportRead.test';
 import { runSidebarProviderAcceptance } from './sidebar.test';
 
 type TestCallback = (error?: unknown, failures?: number) => void;
@@ -14,7 +11,6 @@ export function run(_args: readonly string[], callback: TestCallback): void {
     await runActivationAcceptance();
     await runSidebarProviderAcceptance();
     await runBookImportReadAcceptance();
-    await runRestartRecoveryAcceptance();
     await runMultiWindowAcceptance();
   })()
     .then(() => callback(undefined, 0))

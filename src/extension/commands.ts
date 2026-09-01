@@ -114,7 +114,6 @@ export function registerCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand('moyu.open', () => open('books')),
     vscode.commands.registerCommand('moyu.openBooks', () => open('books')),
-    vscode.commands.registerCommand('moyu.open2048', () => open('game2048')),
     vscode.commands.registerCommand('moyu.openSettings', () =>
       open('settings'),
     ),

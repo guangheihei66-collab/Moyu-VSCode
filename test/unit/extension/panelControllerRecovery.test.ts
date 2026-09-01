@@ -182,8 +182,6 @@ describe('PanelController recovery lifecycle', () => {
           readHome: async () => ({
             recentBooks: [],
             booksCount: 0,
-            bestScore: 0,
-            hasGameSession: false,
           }),
         },
       },

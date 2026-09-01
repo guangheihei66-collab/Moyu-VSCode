@@ -6,9 +6,7 @@ import { PanelSerializer } from '../../../src/extension/panel/PanelSerializer';
 
 interface PanelHandle {
   isVisible?: boolean;
-  open?: (
-    section: 'home' | 'books' | 'reader' | 'game2048' | 'settings',
-  ) => unknown;
+  open?: (section: 'home' | 'books' | 'reader' | 'settings') => unknown;
   dispose?: () => void;
   captureSnapshot?: () => { route: string; panelTitle: string };
   panel?: { webview?: { html?: string } };
@@ -20,7 +18,7 @@ export async function runActivationAcceptance(): Promise<void> {
     'moyu.openBooks',
   )) as PanelHandle;
   const secondPanel = (await vscode.commands.executeCommand(
-    'moyu.open2048',
+    'moyu.openSettings',
   )) as PanelHandle;
   assert.equal(
     secondPanel,
@@ -32,7 +30,6 @@ export async function runActivationAcceptance(): Promise<void> {
   for (const command of [
     'moyu.open',
     'moyu.openBooks',
-    'moyu.open2048',
     'moyu.openSettings',
     'moyu.toggleBossMode',
   ]) {
@@ -46,13 +43,7 @@ export async function runActivationAcceptance(): Promise<void> {
   assert.equal(panel?.isVisible, true);
 
   assert.match(panel?.panel?.webview?.html ?? '', /data-session-id=/);
-  for (const section of [
-    'home',
-    'books',
-    'reader',
-    'game2048',
-    'settings',
-  ] as const) {
+  for (const section of ['home', 'books', 'reader', 'settings'] as const) {
     panel?.open?.(section);
     assert.equal(panel?.captureSnapshot?.().route, section);
   }
@@ -113,7 +104,7 @@ export async function runActivationAcceptance(): Promise<void> {
   );
   const serializedPanel = {};
   await serializer.deserializeWebviewPanel(serializedPanel as never, {
-    route: 'game2048',
+    route: 'settings',
   });
   assert.deepEqual(restored, {
     windowId: 'acceptance-window',

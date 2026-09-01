@@ -2,14 +2,11 @@ import { randomUUID } from 'node:crypto';
 
 import type { ReaderSettingsService } from '../../application/reader/ReaderSettingsService';
 import type { ReaderService } from '../../application/reader/ReaderService';
-import type { Game2048Service } from '../../application/game2048/Game2048Service';
-import type { VersionedGameState } from '../../application/game2048/Game2048Service';
 import type { PresentationSnapshotReader } from './PresentationSnapshotProvider';
 import type {
   BookshelfSnapshot,
   EpubChapterListSnapshot,
   EpubChapterSnapshot,
-  Game2048SessionSnapshot,
   HomeSnapshot,
   HostRequest,
   HostResponse,
@@ -35,7 +32,6 @@ const UPDATE_ERROR: ProtocolError = {
 
 export interface HostModuleServices {
   reader?: ReaderService;
-  game?: Game2048Service;
   presentation?: PresentationSnapshotReader;
   books?: HostBookOperations;
   epub?: HostEpubOperations;
@@ -291,65 +287,9 @@ export class SettingsMessageDispatcher {
           },
         });
       }
-      case 'game2048/load':
-        return this.gameSessionResponse(
-          id,
-          request.id,
-          await this.requireGame().load(),
-        );
-      case 'game2048/newGame':
-        return this.gameSessionResponse(
-          id,
-          request.id,
-          await this.requireGame().newGame(request.payload.baseVersion),
-        );
-      case 'game2048/save':
-        return this.gameSessionResponse(
-          id,
-          request.id,
-          await this.requireGame().save(
-            request.payload.baseVersion,
-            request.payload.state,
-          ),
-        );
-      case 'game2048/move':
-        return this.gameSessionResponse(
-          id,
-          request.id,
-          await this.requireGame().move(
-            request.payload.baseVersion,
-            request.payload.sessionId,
-            request.payload.moveSequence,
-            request.payload.direction,
-          ),
-        );
       default:
         return undefined;
     }
-  }
-
-  private gameSessionResponse(
-    id: string,
-    requestId: string,
-    session: VersionedGameState | undefined,
-  ): HostResponse {
-    return validatedResponse({
-      protocol: PROTOCOL_VERSION,
-      id,
-      sessionId: this.sessionId,
-      type: 'game2048/session',
-      payload: {
-        requestId,
-        session:
-          session === undefined
-            ? null
-            : {
-                version: session.version,
-                state: session.data
-                  .state as unknown as Game2048SessionSnapshot['state'],
-              },
-      },
-    });
   }
 
   private booksSnapshotResponse(
@@ -415,13 +355,6 @@ export class SettingsMessageDispatcher {
     return this.moduleServices.reader;
   }
 
-  private requireGame(): Game2048Service {
-    if (this.moduleServices.game === undefined) {
-      throw new Error('2048 service is unavailable.');
-    }
-    return this.moduleServices.game;
-  }
-
   private requirePresentation(): PresentationSnapshotReader {
     if (this.moduleServices.presentation === undefined) {
       throw new Error('Presentation snapshot provider is unavailable.');
@@ -477,10 +410,7 @@ export class SettingsMessageDispatcher {
       request.type === 'books/import' ||
       request.type === 'books/remove' ||
       request.type === 'books/relocate' ||
-      request.type === 'books/selectEncoding' ||
-      request.type === 'game2048/newGame' ||
-      request.type === 'game2048/save' ||
-      request.type === 'game2048/move';
+      request.type === 'books/selectEncoding';
     return validatedResponse({
       protocol: PROTOCOL_VERSION,
       id,

@@ -18,10 +18,6 @@ import {
 } from '../books/BookshelfController';
 import { HomeController, type HomeAction } from '../home/HomeController';
 import {
-  Game2048Controller,
-  type Game2048Transport,
-} from '../game2048/Game2048Controller';
-import {
   ReaderController,
   type ReaderTransport,
 } from '../reader/ReaderController';
@@ -50,8 +46,7 @@ export interface SettingsClient {
 
 export interface ProductionModuleClient
   extends SettingsClient,
-    ReaderTransport,
-    Game2048Transport {}
+    ReaderTransport {}
 
 function isProductionModuleClient(
   client: SettingsClient | undefined,
@@ -60,10 +55,7 @@ function isProductionModuleClient(
   return (
     typeof candidate?.open === 'function' &&
     typeof candidate.readBlocks === 'function' &&
-    typeof candidate.saveProgress === 'function' &&
-    typeof candidate.load === 'function' &&
-    typeof candidate.save === 'function' &&
-    typeof candidate.newGame === 'function'
+    typeof candidate.saveProgress === 'function'
   );
 }
 
@@ -99,10 +91,6 @@ export function createApp(
     : undefined;
   const readerController =
     moduleClient === undefined ? undefined : new ReaderController(moduleClient);
-  const gameController =
-    moduleClient === undefined
-      ? undefined
-      : new Game2048Controller(moduleClient);
   const shellController = {};
   const shellModule: ModuleBinding = {
     id: 'shell',
@@ -182,24 +170,10 @@ export function createApp(
     restoreScroll: (scroll) => readerController.restoreScroll(scroll as number),
     captureState: () => readerController.captureState(),
   };
-  const gameModule: ModuleBinding | undefined = gameController && {
-    get id() {
-      return `game2048:${gameController.captureState().gameSessionId}`;
-    },
-    controller: gameController,
-    pause: () => gameController.pause(),
-    resume: () => gameController.resume(),
-    captureFocus: () => gameController.captureFocus(),
-    restoreFocus: (token) => gameController.restoreFocus(token as string),
-    captureAnchor: () => gameController.captureAnchor(),
-    restoreAnchor: (anchor) => gameController.restoreAnchor(anchor as string),
-    captureState: () => gameController.captureState(),
-  };
   const productionModule = (route: AppSection): ModuleBinding | undefined => {
     if (route === 'home') return homeModule ?? shellModule;
     if (route === 'books') return booksModule ?? shellModule;
     if (route === 'reader') return readerModule;
-    if (route === 'game2048') return gameModule;
     return shellModule;
   };
   const lifecycle = new ModuleLifecycle(
@@ -325,15 +299,6 @@ export function createApp(
       },
     });
   });
-  const unregisterGame = router.register('game2048', () => {
-    prepareNormalRegion();
-    if (gameController === undefined) {
-      renderModuleUnavailable('2048');
-      return;
-    }
-    gameController.mount(normalRegion);
-  });
-
   router.navigate(initialSection);
   return {
     router,
@@ -384,11 +349,9 @@ export function createApp(
       unregisterHome();
       unregisterBooks();
       unregisterReader();
-      unregisterGame();
       homeController?.dispose();
       bookshelfController?.dispose();
       readerController?.dispose();
-      gameController?.dispose();
       root.replaceChildren();
     },
   };

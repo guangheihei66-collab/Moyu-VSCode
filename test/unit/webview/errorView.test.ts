@@ -64,21 +64,21 @@ class TestDocument {
 }
 
 describe('ErrorView', () => {
-  it('renders safe accessible stale-session UI and dispatches a bounded action', () => {
+  it('renders safe accessible recovery UI and dispatches a bounded action', () => {
     const document = new TestDocument();
     const root = document.createElement('main');
     const onAction = vi.fn();
     const view = new ErrorView(root as unknown as HTMLElement, onAction);
 
-    view.show(new MoyuError('GAME_SESSION_STALE', 'C:\\private\\game.json'));
+    view.show(new MoyuError('STATE_CORRUPT', 'C:\\private\\state.json'));
 
     expect(root.attributes.get('role')).toBe('alert');
-    expect(root.fullText).toContain('game session');
+    expect(root.fullText).toContain('invalid saved data');
     expect(root.fullText).not.toContain('C:\\private');
-    const reload = root.querySelector('[data-recovery-action="reloadGame"]');
-    expect(reload).not.toBeNull();
-    reload?.listeners.get('click')?.();
-    expect(onAction).toHaveBeenCalledWith('reloadGame');
+    const retry = root.querySelector('[data-recovery-action="retry"]');
+    expect(retry).not.toBeNull();
+    retry?.listeners.get('click')?.();
+    expect(onAction).toHaveBeenCalledWith('retry');
 
     view.clear();
     expect(root.children).toHaveLength(0);

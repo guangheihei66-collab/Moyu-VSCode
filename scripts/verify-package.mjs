@@ -31,6 +31,14 @@ export const REQUIRED_VSIX_ENTRIES = Object.freeze([
   'extension/media/moyu.svg',
 ]);
 
+const REMOVED_GAME_RUNTIME_PATTERNS = Object.freeze([
+  /game2048/i,
+  /Game2048/,
+  /open2048/i,
+  /bestScore/,
+  /hasGameSession/,
+]);
+
 const FORBIDDEN_VSIX_PATTERNS = Object.freeze([
   /(?:^|\/)node_modules(?:\/|$)/i,
   /(?:^|\/)(?:test|tests|fixtures)(?:[._-]|\/|$)/i,
@@ -149,6 +157,33 @@ export async function readVsixEntries(vsixPath) {
   });
 }
 
+export async function verifyRemovedGameRuntime(vsixPath) {
+  const runtimeEntries = new Set([
+    'extension/package.json',
+    'extension/dist/extension.js',
+    'extension/dist/webview/main.js',
+    'extension/dist/webview/sidebar.js',
+  ]);
+  const findings = [];
+  await withZip(vsixPath, async (reader) => {
+    for (const entry of await reader.getEntries()) {
+      if (entry.directory || !runtimeEntries.has(entry.filename)) continue;
+      const data = await entry.getData(new Uint8ArrayWriter());
+      const source = Buffer.from(data).toString('utf8');
+      for (const pattern of REMOVED_GAME_RUNTIME_PATTERNS) {
+        if (pattern.test(source))
+          findings.push(`${entry.filename}: ${pattern}`);
+      }
+    }
+  });
+  if (findings.length > 0) {
+    throw new Error(
+      `Removed 2048 runtime identifiers remain in VSIX:\n${findings.join('\n')}`,
+    );
+  }
+  return true;
+}
+
 async function extractVsix(vsixPath, destinationRoot) {
   await mkdir(destinationRoot, { recursive: true });
   await withZip(vsixPath, async (reader) => {
@@ -245,16 +280,15 @@ exports.run = (_args, callback) => {
     for (const command of [
       'moyu.open',
       'moyu.openBooks',
-      'moyu.open2048',
       'moyu.openSettings',
       'moyu.toggleBossMode',
     ]) {
       assert.equal(commands.includes(command), true, command + ' is missing');
     }
+    assert.equal(commands.includes('moyu.open2048'), false, '2048 command remains');
     const panel = await vscode.commands.executeCommand('moyu.openBooks');
     assert.equal(panel && panel.isVisible, true);
     assert.match(panel.panel.webview.html, /data-session-id=/);
-    await vscode.commands.executeCommand('moyu.open2048');
     await vscode.commands.executeCommand('moyu.toggleBossMode');
     await vscode.commands.executeCommand('moyu.toggleBossMode');
   })()
@@ -365,6 +399,7 @@ async function packagePath(argument) {
 export async function verifyVsixArchive(vsixPath) {
   const entries = await readVsixEntries(vsixPath);
   const normalized = validateVsixEntries(entries);
+  await verifyRemovedGameRuntime(vsixPath);
   console.log(
     `Verified ${normalized.length} VSIX entries for ${resolve(vsixPath)}.`,
   );

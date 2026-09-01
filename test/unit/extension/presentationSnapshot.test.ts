@@ -6,28 +6,8 @@ import {
   validateHostResponse,
 } from '../../../src/shared/protocol/validate';
 
-function gameState(bestScore = 128) {
-  return {
-    gameSessionId: 'game-1',
-    board: [
-      [2, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-    ],
-    score: bestScore,
-    bestScore,
-    won: false,
-    gameOver: false,
-    moveSequence: 3,
-    startedAt: 1,
-    updatedAt: 2,
-    stateVersion: 1,
-  };
-}
-
 describe('PresentationSnapshotProvider', () => {
-  it('joins books, progress, game, and source status without exposing paths or mutating sources', async () => {
+  it('joins books, progress, and source status without exposing paths or mutating sources', async () => {
     const list = vi.fn(async () => ({
       schemaVersion: 1,
       version: 7,
@@ -79,10 +59,6 @@ describe('PresentationSnapshotProvider', () => {
         versions: { 'book-1': 3 },
       },
     }));
-    const loadGame = vi.fn(async () => ({
-      version: 5,
-      data: { state: gameState() },
-    }));
     const stat = vi.fn(async (uri: string) => {
       if (uri.endsWith('older.txt')) throw new Error('missing source');
       return { size: 10, modifiedAt: 3, fingerprint: 'fp' };
@@ -90,7 +66,6 @@ describe('PresentationSnapshotProvider', () => {
     const provider = new PresentationSnapshotProvider({
       bookshelf: { list },
       progress: { read: readProgress },
-      game: { load: loadGame },
       fileStats: { stat },
     });
 
@@ -98,8 +73,6 @@ describe('PresentationSnapshotProvider', () => {
 
     expect(snapshot).toMatchObject({
       booksCount: 2,
-      bestScore: 128,
-      hasGameSession: true,
       continueReading: {
         bookId: 'book-1',
         title: '<Book>',
@@ -116,7 +89,6 @@ describe('PresentationSnapshotProvider', () => {
     expect(JSON.stringify(snapshot)).not.toContain('file:///private');
     expect(list).toHaveBeenCalledOnce();
     expect(readProgress).toHaveBeenCalledOnce();
-    expect(loadGame).toHaveBeenCalledOnce();
     expect(stat).toHaveBeenCalledTimes(2);
   });
 
@@ -124,15 +96,12 @@ describe('PresentationSnapshotProvider', () => {
     const provider = new PresentationSnapshotProvider({
       bookshelf: { list: async () => undefined },
       progress: { read: async () => undefined },
-      game: { load: async () => undefined },
       fileStats: { stat: vi.fn() },
     });
 
     await expect(provider.readHome()).resolves.toEqual({
       recentBooks: [],
       booksCount: 0,
-      bestScore: 0,
-      hasGameSession: false,
     });
   });
 });
@@ -161,8 +130,6 @@ describe('Home protocol contract', () => {
         snapshot: {
           recentBooks: [],
           booksCount: 0,
-          bestScore: 0,
-          hasGameSession: false,
         },
       },
     });

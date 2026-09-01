@@ -82,31 +82,13 @@ describe('outbound protocol validation', () => {
     ).toMatchObject({ ok: true });
   });
 
-  it('accepts correlated durable reader and 2048 response snapshots', () => {
+  it('accepts correlated durable reader response snapshots', () => {
     const readerAnchor = {
       kind: 'txt',
       blockId: 'block-7',
       characterOffset: 9,
       contentFingerprint: 'block-fingerprint-7',
     } as const;
-    const gameState = {
-      gameSessionId: 'durable-game-1',
-      board: [
-        [2, 4, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-      ],
-      score: 12,
-      bestScore: 12,
-      won: false,
-      gameOver: false,
-      moveSequence: 3,
-      startedAt: 1,
-      updatedAt: 2,
-      stateVersion: 1,
-    };
-
     expect(
       validateHostResponse({
         protocol: 1,
@@ -161,18 +143,6 @@ describe('outbound protocol validation', () => {
         },
       }),
     ).toMatchObject({ ok: true });
-    expect(
-      validateHostResponse({
-        protocol: 1,
-        id: 'game-session-response',
-        sessionId: 'webview-session-1',
-        type: 'game2048/session',
-        payload: {
-          requestId: 'game-load-request',
-          session: { version: 6, state: gameState },
-        },
-      }),
-    ).toMatchObject({ ok: true });
   });
 
   it('rejects incomplete durable module response payloads', () => {
@@ -185,32 +155,6 @@ describe('outbound protocol validation', () => {
         payload: {
           requestId: 'reader-open-request',
           snapshot: { bookId: 'book-1', version: 4 },
-        },
-      }),
-    ).toMatchObject({ ok: false, error: { code: 'INVALID_PAYLOAD' } });
-    expect(
-      validateHostResponse({
-        protocol: 1,
-        id: 'game-session-response',
-        sessionId: 'webview-session-1',
-        type: 'game2048/session',
-        payload: {
-          requestId: 'game-load-request',
-          session: {
-            version: 6,
-            state: {
-              gameSessionId: 'durable-game-1',
-              board: [[2, 0, 0, 0]],
-              score: 12,
-              bestScore: 12,
-              won: false,
-              gameOver: false,
-              moveSequence: 3,
-              startedAt: 1,
-              updatedAt: 2,
-              stateVersion: 1,
-            },
-          },
         },
       }),
     ).toMatchObject({ ok: false, error: { code: 'INVALID_PAYLOAD' } });

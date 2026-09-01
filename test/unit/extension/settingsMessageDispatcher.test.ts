@@ -2,8 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ReaderSettingsService } from '../../../src/application/reader/ReaderSettingsService';
 import { ReaderService } from '../../../src/application/reader/ReaderService';
-import { Game2048Service } from '../../../src/application/game2048/Game2048Service';
-import { GameRepository } from '../../../src/infrastructure/storage/gameRepository';
 import { ProgressRepository } from '../../../src/infrastructure/storage/progressRepository';
 import { DEFAULT_READER_SETTINGS } from '../../../src/domain/reader/settings';
 import { SettingsMessageDispatcher } from '../../../src/extension/panel/SettingsMessageDispatcher';
@@ -24,7 +22,7 @@ function request(
 }
 
 describe('SettingsMessageDispatcher', () => {
-  it('returns correlated populated Reader and durable 2048 service snapshots', async () => {
+  it('returns correlated populated Reader snapshots', async () => {
     await withStorageDirectory(async (root) => {
       const reader = new ReaderService({
         bookProvider: async (bookId) =>
@@ -77,17 +75,11 @@ describe('SettingsMessageDispatcher', () => {
           }),
         },
       });
-      const game = new Game2048Service(
-        new GameRepository(root),
-        () => 0,
-        () => 1,
-        () => 'durable-game-1',
-      );
       let responseSequence = 0;
       const dispatcher = new SettingsMessageDispatcher(
         'session-current',
         new ReaderSettingsService(new PreferencesRepository(root)),
-        { reader, game } as never,
+        { reader } as never,
         () => `response-${++responseSequence}`,
       );
 
@@ -129,23 +121,6 @@ describe('SettingsMessageDispatcher', () => {
         payload: {
           requestId: 'request-reader/readBlocks',
           batch: { blocks: [{ id: 'block-7' }] },
-        },
-      });
-      await expect(
-        dispatcher.dispatch(
-          request('game2048/newGame' as never, { baseVersion: 0 }),
-        ),
-      ).resolves.toMatchObject({
-        type: 'game2048/session',
-        payload: {
-          requestId: 'request-game2048/newGame',
-          session: {
-            version: 0,
-            state: {
-              gameSessionId: 'durable-game-1',
-              board: expect.arrayContaining([expect.arrayContaining([2])]),
-            },
-          },
         },
       });
     });
@@ -318,8 +293,6 @@ describe('SettingsMessageDispatcher', () => {
             readHome: async () => ({
               recentBooks: [],
               booksCount: 0,
-              bestScore: 0,
-              hasGameSession: false,
             }),
             readBooks: async () => ({ version: 3, books: [] }),
           },
@@ -340,7 +313,7 @@ describe('SettingsMessageDispatcher', () => {
         type: 'home/snapshot',
         payload: {
           requestId: 'home-read-1',
-          snapshot: { booksCount: 0, hasGameSession: false },
+          snapshot: { booksCount: 0 },
         },
       });
       await expect(

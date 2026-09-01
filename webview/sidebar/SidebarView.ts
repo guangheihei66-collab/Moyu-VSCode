@@ -23,12 +23,6 @@ const ENTRIES: readonly SidebarEntry[] = [
     summary: (model) => `${model.booksCount} books`,
   },
   {
-    section: 'game2048',
-    label: '2048',
-    icon: 'game2048',
-    summary: (model) => `Best ${model.bestScore}`,
-  },
-  {
     section: 'settings',
     label: 'Settings',
     icon: 'settings',

@@ -10,7 +10,7 @@ import { createSectionHeader } from '../components/SectionHeader';
 import { createText } from '../components/dom';
 
 export type HomeAction =
-  | { type: 'navigate'; section: Extract<AppSection, 'books' | 'game2048'> }
+  | { type: 'navigate'; section: Extract<AppSection, 'books'> }
   | { type: 'continue'; bookId: string };
 
 export class HomeView {
@@ -30,7 +30,7 @@ export class HomeView {
     page.append(
       createSectionHeader(this.document, {
         title: 'Home',
-        description: 'A quiet place to continue reading or start a game.',
+        description: 'A quiet place to continue reading or browse your books.',
       }),
       this.renderContinue(snapshot),
       this.renderQuickAccess(snapshot),
@@ -108,16 +108,7 @@ export class HomeView {
       onClick: () => this.navigate('books'),
     });
     booksButton.setAttribute('data-home-action', 'books');
-    const gameButton = createButton(this.document, {
-      label: snapshot.hasGameSession
-        ? `2048 · Best ${snapshot.bestScore}`
-        : 'Start a game',
-      variant: 'secondary',
-      icon: 'game2048',
-      onClick: () => this.navigate('game2048'),
-    });
-    gameButton.setAttribute('data-home-action', 'game2048');
-    actions.append(booksButton, gameButton);
+    actions.append(booksButton);
     section.append(actions);
     return section;
   }
@@ -165,7 +156,7 @@ export class HomeView {
     return row;
   }
 
-  private navigate(section: Extract<AppSection, 'books' | 'game2048'>): void {
+  private navigate(section: Extract<AppSection, 'books'>): void {
     this.onAction({ type: 'navigate', section });
   }
 

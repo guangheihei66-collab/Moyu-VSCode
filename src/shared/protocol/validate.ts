@@ -1,7 +1,6 @@
 import { MAX_MESSAGE_BYTES } from './limits';
 import {
   type AppSection,
-  type Game2048State,
   type HostRequest,
   type HostResponse,
   type HostEvent,
@@ -43,18 +42,15 @@ const APP_SECTIONS: ReadonlySet<AppSection> = new Set([
   'home',
   'books',
   'reader',
-  'game2048',
   'settings',
 ]);
 const SIDEBAR_SECTIONS: ReadonlySet<SidebarSection> = new Set([
   'home',
   'books',
-  'game2048',
   'settings',
 ]);
 const BOSS_MODES = new Set(['NORMAL', 'BOSS_MODE']);
 const BOSS_TEMPLATES = new Set(['typescript', 'json', 'buildLog']);
-const MAX_2048_TILE = 2 ** 52;
 const MAX_EPUB_CHAPTERS = 2048;
 const MAX_EPUB_PARAGRAPHS = 4096;
 const MAX_EPUB_PARAGRAPH_CHARS = 1_000_000;
@@ -134,11 +130,7 @@ function isPresentationBook(value: unknown): value is PresentationBook {
 function isHomeSnapshot(value: unknown): value is HomeSnapshot {
   if (
     !isRecord(value) ||
-    !hasOnlyKeys(
-      value,
-      ['recentBooks', 'booksCount', 'bestScore', 'hasGameSession'],
-      ['continueReading'],
-    )
+    !hasOnlyKeys(value, ['recentBooks', 'booksCount'], ['continueReading'])
   ) {
     return false;
   }
@@ -146,8 +138,6 @@ function isHomeSnapshot(value: unknown): value is HomeSnapshot {
     Array.isArray(value.recentBooks) &&
     value.recentBooks.every(isPresentationBook) &&
     isNonNegativeInteger(value.booksCount) &&
-    isNonNegativeInteger(value.bestScore) &&
-    typeof value.hasGameSession === 'boolean' &&
     (value.continueReading === undefined ||
       isPresentationBook(value.continueReading))
   );
@@ -215,11 +205,10 @@ function isEpubChapterSnapshot(value: unknown): value is EpubChapterSnapshot {
 function isSidebarViewModel(value: unknown): value is SidebarViewModel {
   return (
     isRecord(value) &&
-    hasExactKeys(value, ['active', 'booksCount', 'bestScore']) &&
+    hasExactKeys(value, ['active', 'booksCount']) &&
     typeof value.active === 'string' &&
     SIDEBAR_SECTIONS.has(value.active as SidebarSection) &&
-    isNonNegativeInteger(value.booksCount) &&
-    isNonNegativeInteger(value.bestScore)
+    isNonNegativeInteger(value.booksCount)
   );
 }
 
@@ -262,67 +251,6 @@ function isLogicalLocator(value: unknown): value is LogicalLocator {
   }
 
   return false;
-}
-
-function isPowerOfTwoTile(value: unknown): value is number {
-  if (
-    typeof value !== 'number' ||
-    !Number.isSafeInteger(value) ||
-    value < 0 ||
-    value > MAX_2048_TILE
-  ) {
-    return false;
-  }
-
-  let remaining = value;
-  while (remaining > 1) {
-    if (remaining % 2 !== 0) {
-      return false;
-    }
-    remaining /= 2;
-  }
-  return true;
-}
-
-function isGame2048State(value: unknown): value is Game2048State {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, [
-      'gameSessionId',
-      'board',
-      'score',
-      'bestScore',
-      'won',
-      'gameOver',
-      'moveSequence',
-      'startedAt',
-      'updatedAt',
-      'stateVersion',
-    ])
-  ) {
-    return false;
-  }
-
-  return (
-    isNonEmptyString(value.gameSessionId) &&
-    Array.isArray(value.board) &&
-    value.board.length === 4 &&
-    value.board.every(
-      (row) =>
-        Array.isArray(row) &&
-        row.length === 4 &&
-        row.every((tile) => isPowerOfTwoTile(tile)),
-    ) &&
-    isNonNegativeInteger(value.score) &&
-    isNonNegativeInteger(value.bestScore) &&
-    typeof value.won === 'boolean' &&
-    typeof value.gameOver === 'boolean' &&
-    isNonNegativeInteger(value.moveSequence) &&
-    isNonNegativeInteger(value.startedAt) &&
-    isNonNegativeInteger(value.updatedAt) &&
-    isNonNegativeInteger(value.stateVersion) &&
-    value.stateVersion > 0
-  );
 }
 
 function isReaderBlockBatch(value: unknown): boolean {
@@ -437,35 +365,6 @@ function isPayloadForType(type: string, payload: unknown): boolean {
         isNonNegativeInteger(payload.baseVersion) &&
         isLogicalLocator(payload.locator)
       );
-    case 'game2048/load':
-      return hasExactKeys(payload, []);
-    case 'game2048/newGame':
-      return (
-        hasExactKeys(payload, ['baseVersion']) &&
-        isNonNegativeInteger(payload.baseVersion)
-      );
-    case 'game2048/move':
-      return (
-        hasExactKeys(payload, [
-          'baseVersion',
-          'sessionId',
-          'moveSequence',
-          'direction',
-        ]) &&
-        isNonNegativeInteger(payload.baseVersion) &&
-        isNonEmptyString(payload.sessionId) &&
-        isNonNegativeInteger(payload.moveSequence) &&
-        (payload.direction === 'left' ||
-          payload.direction === 'right' ||
-          payload.direction === 'up' ||
-          payload.direction === 'down')
-      );
-    case 'game2048/save':
-      return (
-        hasExactKeys(payload, ['baseVersion', 'state']) &&
-        isNonNegativeInteger(payload.baseVersion) &&
-        isGame2048State(payload.state)
-      );
     default:
       return false;
   }
@@ -563,16 +462,6 @@ function isResponsePayloadForType(type: string, payload: unknown): boolean {
         hasExactKeys(payload.snapshot, ['version', 'locator']) &&
         isNonNegativeInteger(payload.snapshot.version) &&
         isLogicalLocator(payload.snapshot.locator)
-      );
-    case 'game2048/session':
-      return (
-        hasExactKeys(payload, ['requestId', 'session']) &&
-        isNonEmptyString(payload.requestId) &&
-        (payload.session === null ||
-          (isRecord(payload.session) &&
-            hasExactKeys(payload.session, ['version', 'state']) &&
-            isNonNegativeInteger(payload.session.version) &&
-            isGame2048State(payload.session.state)))
       );
     case 'response/error':
       return (
@@ -709,11 +598,7 @@ export function validateHostRequest(
       envelope.value.type !== 'settings/read' &&
       envelope.value.type !== 'settings/update' &&
       envelope.value.type !== 'reader/readBlocks' &&
-      envelope.value.type !== 'reader/saveProgress' &&
-      envelope.value.type !== 'game2048/load' &&
-      envelope.value.type !== 'game2048/newGame' &&
-      envelope.value.type !== 'game2048/move' &&
-      envelope.value.type !== 'game2048/save'
+      envelope.value.type !== 'reader/saveProgress'
     ) {
       return protocolError('UNKNOWN_REQUEST_TYPE');
     }
@@ -748,7 +633,6 @@ export function validateHostResponse(
       envelope.value.type !== 'reader/chapter' &&
       envelope.value.type !== 'reader/blocks' &&
       envelope.value.type !== 'reader/progressSaved' &&
-      envelope.value.type !== 'game2048/session' &&
       envelope.value.type !== 'response/error'
     ) {
       return protocolError('UNKNOWN_RESPONSE_TYPE');

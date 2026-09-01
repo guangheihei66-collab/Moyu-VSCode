@@ -3,7 +3,6 @@ import { createText } from './dom';
 export type IconName =
   | 'home'
   | 'books'
-  | 'game2048'
   | 'settings'
   | 'more'
   | 'close'
@@ -14,7 +13,6 @@ export type IconName =
 const GLYPHS: Readonly<Record<IconName, string>> = {
   home: '⌂',
   books: '▤',
-  game2048: '▦',
   settings: '⚙',
   more: '⋯',
   close: '×',

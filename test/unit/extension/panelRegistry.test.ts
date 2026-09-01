@@ -10,11 +10,11 @@ describe('PanelRegistry', () => {
     const registry = new PanelRegistry(factory as never, contextKeys as never);
 
     await registry.openOrReveal('window-a', 'books');
-    await registry.openOrReveal('window-a', 'game2048');
+    await registry.openOrReveal('window-a', 'settings');
 
     expect(factory).toHaveBeenCalledTimes(1);
     expect(panel.open).toHaveBeenNthCalledWith(1, 'books');
-    expect(panel.open).toHaveBeenNthCalledWith(2, 'game2048');
+    expect(panel.open).toHaveBeenNthCalledWith(2, 'settings');
     expect(contextKeys.set).toHaveBeenCalledWith({
       isOpen: true,
       isVisible: true,

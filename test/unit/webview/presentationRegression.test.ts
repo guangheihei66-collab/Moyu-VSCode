@@ -7,7 +7,6 @@ import {
   type ReaderSettings,
   type ReaderSettingsPatch,
 } from '../../../src/domain/reader/settings';
-import type { Game2048State } from '../../../src/domain/game2048/types';
 import type {
   AppSection,
   BookshelfSnapshot,
@@ -207,26 +206,14 @@ class PresentationDocument {
   }
 }
 
-const ROUTES: readonly AppSection[] = [
-  'home',
-  'books',
-  'reader',
-  'game2048',
-  'settings',
-];
+const ROUTES: readonly AppSection[] = ['home', 'books', 'reader', 'settings'];
 
-const SIDEBAR_ROUTES: readonly AppSection[] = [
-  'home',
-  'books',
-  'game2048',
-  'settings',
-];
+const SIDEBAR_ROUTES: readonly AppSection[] = ['home', 'books', 'settings'];
 
 const SURFACES: Readonly<Record<AppSection, string>> = {
   home: '.moyu-home',
   books: '.moyu-bookshelf',
   reader: '.moyu-reader',
-  game2048: '.moyu-game2048',
   settings: '.moyu-settings',
 };
 
@@ -236,24 +223,6 @@ const epubAnchor: LogicalLocator = {
   paragraphIndex: 0,
   characterOffset: 3,
   contentFingerprint: 'chapter-fingerprint-1',
-};
-
-const gameState: Game2048State = {
-  gameSessionId: 'game-session-regression',
-  board: [
-    [2, 4, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  score: 12,
-  bestScore: 48,
-  won: false,
-  gameOver: false,
-  moveSequence: 7,
-  startedAt: 1,
-  updatedAt: 2,
-  stateVersion: 1,
 };
 
 function createClient() {
@@ -277,8 +246,6 @@ function createClient() {
     continueReading: books.books[0],
     recentBooks: books.books,
     booksCount: 1,
-    bestScore: gameState.bestScore,
-    hasGameSession: true,
   };
   const chapter = (chapterId: string, position: number) => ({
     bookId: 'book-1',
@@ -324,12 +291,6 @@ function createClient() {
       chapter(chapterId, chapterId === 'chapter-1' ? 0 : 1),
     ),
     navigateChapter: vi.fn(async () => chapter('chapter-2', 1)),
-    load: vi.fn(async () => ({ version: 12, data: { state: gameState } })),
-    save: vi.fn(async (_baseVersion: number, state: Game2048State) => ({
-      version: 13,
-      data: { state },
-    })),
-    newGame: vi.fn(async () => ({ version: 14, data: { state: gameState } })),
     readSettings: vi.fn(async () => ({
       version: settingsVersion,
       settings,
@@ -415,7 +376,7 @@ describe('integrated Moyu presentation regression', () => {
     expect(root.children).toHaveLength(0);
   });
 
-  it('preserves EPUB logical anchors and 2048 state identity while Boss pauses the active surface', async () => {
+  it('preserves EPUB logical anchors while Boss pauses the active surface', async () => {
     const document = new PresentationDocument();
     const root = document.createElement('div');
     const client = createClient();
@@ -467,25 +428,6 @@ describe('integrated Moyu presentation regression', () => {
     expect(root.querySelector('[role="menu"]')).toBe(openMenu);
     expect(openMenu.hidden).toBe(false);
 
-    expect(app.navigate('game2048')).toBe(true);
-    await flush();
-    const board = root.querySelector('[data-game-board]')!;
-    const gameBefore = app.captureModuleSnapshot();
-    expect(gameBefore.moduleId).toBe(`game2048:${gameState.gameSessionId}`);
-    expect(gameBefore.moduleState).toBe(gameState);
-    expect((gameBefore.moduleState as Game2048State).moveSequence).toBe(7);
-    app.setBossMode('BOSS_MODE', 'buildLog');
-    expect(board.getAttribute('aria-disabled')).toBe('true');
-    app.setBossMode('NORMAL', 'buildLog');
-    const gameAfter = app.captureModuleSnapshot();
-    expect(gameAfter.controller).toBe(gameBefore.controller);
-    expect(gameAfter.moduleState).toBe(gameBefore.moduleState);
-    expect(gameAfter.moduleId).toBe(gameBefore.moduleId);
-    expect((gameAfter.moduleState as Game2048State).gameSessionId).toBe(
-      gameState.gameSessionId,
-    );
-    expect(board.getAttribute('aria-disabled')).toBe('false');
-
     app.dispose();
     expect(root.children).toHaveLength(0);
   });
@@ -510,7 +452,7 @@ describe('integrated Moyu presentation regression', () => {
         void registry.openOrReveal('regression-window', message.section);
       },
     );
-    sidebar.render({ active: 'home', booksCount: 1, bestScore: 48 });
+    sidebar.render({ active: 'home', booksCount: 1 });
     for (const route of SIDEBAR_ROUTES) {
       sidebarRoot.querySelector(`[data-sidebar-section="${route}"]`)?.click();
       await flush();

@@ -4,7 +4,6 @@ import type {
   ProgressData,
 } from '../../application/persistence/repositories';
 import type { FileStatProvider } from '../../infrastructure/filesystem/fileIdentity';
-import type { VersionedGameState } from '../../application/game2048/Game2048Service';
 import type {
   BookshelfSnapshot,
   HomeSnapshot,
@@ -19,14 +18,9 @@ export interface PresentationProgressReader {
   read(): Promise<VersionedEnvelope<ProgressData> | undefined>;
 }
 
-export interface PresentationGameReader {
-  load(): Promise<VersionedGameState | undefined>;
-}
-
 export interface PresentationSnapshotDependencies {
   bookshelf: PresentationBookshelfReader;
   progress: PresentationProgressReader;
-  game: PresentationGameReader;
   fileStats: FileStatProvider;
 }
 
@@ -48,10 +42,9 @@ export class PresentationSnapshotProvider
   ) {}
 
   async readHome(): Promise<HomeSnapshot> {
-    const [bookshelf, progress, game] = await Promise.all([
+    const [bookshelf, progress] = await Promise.all([
       this.dependencies.bookshelf.list(),
       this.dependencies.progress.read(),
-      this.dependencies.game.load(),
     ]);
     const books = await this.projectBooks(
       bookshelf?.data.books ?? [],
@@ -66,8 +59,6 @@ export class PresentationSnapshotProvider
         : { continueReading: { ...continueReading } }),
       recentBooks: books.slice(0, 8),
       booksCount: books.length,
-      bestScore: game?.data.state.bestScore ?? 0,
-      hasGameSession: game !== undefined,
     };
   }
 

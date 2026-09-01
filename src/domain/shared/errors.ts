@@ -15,7 +15,6 @@ export const STABLE_ERROR_CODES = [
   'STATE_CONFLICT',
   'STATE_LOCK_TIMEOUT',
   'STATE_CORRUPT',
-  'GAME_SESSION_STALE',
   'PROTOCOL_INVALID',
 ] as const;
 
@@ -28,8 +27,6 @@ export const RECOVERY_ACTIONS = [
   'selectEncoding',
   'rebuildIndex',
   'retry',
-  'reloadGame',
-  'startNewGame',
 ] as const;
 
 export type RecoveryAction = (typeof RECOVERY_ACTIONS)[number];

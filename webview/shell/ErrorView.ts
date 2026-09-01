@@ -15,8 +15,6 @@ const ACTION_LABELS: Record<RecoveryAction, string> = {
   selectEncoding: 'Reselect Encoding',
   rebuildIndex: 'Rebuild Index',
   retry: 'Retry',
-  reloadGame: 'Reload Game',
-  startNewGame: 'Start New Game',
 };
 
 function isRecoveryAction(value: unknown): value is RecoveryAction {

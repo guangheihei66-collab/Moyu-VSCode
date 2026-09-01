@@ -3,7 +3,6 @@ import type {
   EpubChapterListSnapshot,
   EpubChapterSnapshot,
   HomeSnapshot,
-  Game2048State,
   HostRequest,
   HostResponse,
   LogicalLocator,
@@ -247,51 +246,6 @@ export class MessageClient {
     return response.payload.snapshot;
   }
 
-  async load(): Promise<
-    { version: number; data: { state: Game2048State } } | undefined
-  > {
-    return this.requestGameSession({
-      protocol: PROTOCOL_VERSION,
-      id: this.createRequestId(),
-      sessionId: this.sessionId,
-      type: 'game2048/load',
-      payload: {},
-    });
-  }
-
-  async save(
-    baseVersion: number,
-    state: Game2048State,
-  ): Promise<{ version: number; data: { state: Game2048State } }> {
-    const session = await this.requestGameSession({
-      protocol: PROTOCOL_VERSION,
-      id: this.createRequestId(),
-      sessionId: this.sessionId,
-      type: 'game2048/save',
-      payload: { baseVersion, state },
-    });
-    if (session === undefined) {
-      throw new Error('The Host returned no saved 2048 session.');
-    }
-    return session;
-  }
-
-  async newGame(
-    baseVersion: number,
-  ): Promise<{ version: number; data: { state: Game2048State } }> {
-    const session = await this.requestGameSession({
-      protocol: PROTOCOL_VERSION,
-      id: this.createRequestId(),
-      sessionId: this.sessionId,
-      type: 'game2048/newGame',
-      payload: { baseVersion },
-    });
-    if (session === undefined) {
-      throw new Error('The Host returned no new 2048 session.');
-    }
-    return session;
-  }
-
   acknowledgeBoss(requestId: string, mode: BossMode): void {
     this.api.postMessage({
       protocol: PROTOCOL_VERSION,
@@ -387,26 +341,5 @@ export class MessageClient {
     if (response.type === 'response/error') {
       throw new Error(response.payload.error.message);
     }
-  }
-
-  private async requestGameSession(
-    request: Extract<
-      HostRequest,
-      {
-        type: 'game2048/load' | 'game2048/save' | 'game2048/newGame';
-      }
-    >,
-  ): Promise<{ version: number; data: { state: Game2048State } } | undefined> {
-    const response = await this.request(request);
-    this.throwIfError(response);
-    if (response.type !== 'game2048/session') {
-      throw new Error('The Host returned an unexpected 2048 session response.');
-    }
-    return response.payload.session === null
-      ? undefined
-      : {
-          version: response.payload.session.version,
-          data: { state: response.payload.session.state },
-        };
   }
 }

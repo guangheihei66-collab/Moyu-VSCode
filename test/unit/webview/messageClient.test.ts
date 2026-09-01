@@ -9,24 +9,6 @@ const durableReaderAnchor = {
   contentFingerprint: 'block-fingerprint-7',
 };
 
-const durableGameState = {
-  gameSessionId: 'durable-game-1',
-  board: [
-    [2, 4, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ],
-  score: 12,
-  bestScore: 12,
-  won: false,
-  gameOver: false,
-  moveSequence: 3,
-  startedAt: 1,
-  updatedAt: 2,
-  stateVersion: 1,
-};
-
 const request = {
   protocol: 1 as const,
   id: 'request-1',
@@ -36,16 +18,9 @@ const request = {
 };
 
 describe('MessageClient', () => {
-  it('uses validated correlated Reader and durable 2048 transports', async () => {
+  it('uses validated correlated Reader transports', async () => {
     const api = { postMessage: vi.fn() };
-    const ids = [
-      'reader-open-1',
-      'reader-blocks-1',
-      'reader-save-1',
-      'game-load-1',
-      'game-save-1',
-      'game-new-1',
-    ];
+    const ids = ['reader-open-1', 'reader-blocks-1', 'reader-save-1'];
     const client = new MessageClient(
       api,
       'session-1',
@@ -150,54 +125,6 @@ describe('MessageClient', () => {
     await expect(savedProgress).resolves.toEqual({
       version: 5,
       locator: durableReaderAnchor,
-    });
-
-    const loadedGame = client.load();
-    client.handleMessage({
-      protocol: 1,
-      id: 'host-game-load-1',
-      sessionId: 'session-1',
-      type: 'game2048/session',
-      payload: {
-        requestId: 'game-load-1',
-        session: { version: 6, state: durableGameState },
-      },
-    });
-    await expect(loadedGame).resolves.toEqual({
-      version: 6,
-      data: { state: durableGameState },
-    });
-
-    const savedGame = client.save(6, durableGameState);
-    client.handleMessage({
-      protocol: 1,
-      id: 'host-game-save-1',
-      sessionId: 'session-1',
-      type: 'game2048/session',
-      payload: {
-        requestId: 'game-save-1',
-        session: { version: 7, state: durableGameState },
-      },
-    });
-    await expect(savedGame).resolves.toEqual({
-      version: 7,
-      data: { state: durableGameState },
-    });
-
-    const newGame = client.newGame(7);
-    client.handleMessage({
-      protocol: 1,
-      id: 'host-game-new-1',
-      sessionId: 'session-1',
-      type: 'game2048/session',
-      payload: {
-        requestId: 'game-new-1',
-        session: { version: 8, state: durableGameState },
-      },
-    });
-    await expect(newGame).resolves.toEqual({
-      version: 8,
-      data: { state: durableGameState },
     });
   });
 

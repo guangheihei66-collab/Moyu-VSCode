@@ -8,9 +8,7 @@ export interface VersionedEnvelope<T> {
 
 export class StateConflict extends Error {
   constructor(
-    readonly code:
-      | 'STATE_VERSION_CONFLICT'
-      | 'GAME_SESSION_STALE' = 'STATE_VERSION_CONFLICT',
+    readonly code: 'STATE_VERSION_CONFLICT' = 'STATE_VERSION_CONFLICT',
     message = 'The state changed in another window.',
   ) {
     super(message);

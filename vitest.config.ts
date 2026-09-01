@@ -6,7 +6,7 @@ export default defineConfig({
     include: ['test/**/*.test.ts'],
     exclude: [
       'test/extension/suite/activation.test.ts',
-      'test/extension/suite/restartRecovery.test.ts',
+      'test/extension/suite/bookImportRead.test.ts',
       'test/extension/suite/multiWindow.test.ts',
       'test/extension/suite/sidebar.test.ts',
     ],

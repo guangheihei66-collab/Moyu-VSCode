@@ -75,11 +75,11 @@ describe('MoyuSidebarProvider', () => {
     await harness.receive({ type: 'navigate', section: 'reader' });
     expect(registry.openOrReveal).toHaveBeenCalledTimes(1);
 
-    provider.setSummary({ booksCount: 4, bestScore: 2048 });
-    provider.setActiveSection('game2048');
+    provider.setSummary({ booksCount: 4 });
+    provider.setActiveSection('books');
     expect(harness.webview.postMessage).toHaveBeenLastCalledWith({
       type: 'state',
-      model: { active: 'game2048', booksCount: 4, bestScore: 2048 },
+      model: { active: 'books', booksCount: 4 },
     });
 
     harness.dispose();

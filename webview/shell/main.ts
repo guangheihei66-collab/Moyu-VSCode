@@ -11,13 +11,7 @@ declare function acquireVsCodeApi(): {
   postMessage(message: HostRequest): void;
 };
 
-const SECTIONS: readonly AppSection[] = [
-  'home',
-  'books',
-  'reader',
-  'game2048',
-  'settings',
-];
+const SECTIONS: readonly AppSection[] = ['home', 'books', 'reader', 'settings'];
 
 const root = document.querySelector<HTMLElement>('#app');
 

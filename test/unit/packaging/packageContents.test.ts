@@ -13,7 +13,7 @@ describe('VSIX package content contract', () => {
     const manifest = JSON.parse(
       readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'),
     ) as { version: string };
-    expect(manifest.version).toBe('0.2.0');
+    expect(manifest.version).toBe('0.2.1');
   });
 
   it('does not flag ordinary dependency properties as credentials', () => {

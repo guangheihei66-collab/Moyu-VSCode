@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { StateConflict } from '../../../src/domain/persistence/envelope';
 import { BookshelfRepository } from '../../../src/infrastructure/storage/bookshelfRepository';
-import { GameRepository } from '../../../src/infrastructure/storage/gameRepository';
 import { ProgressRepository } from '../../../src/infrastructure/storage/progressRepository';
 import { withStorageDirectory } from '../../fixtures/storage/storageTestHarness';
 
@@ -108,27 +106,5 @@ describe('versioned module repositories', () => {
       const state = await repository.read();
       expect(state?.data.byBookId).not.toHaveProperty('a');
       expect(state?.data.byBookId).toHaveProperty('b');
-    }));
-
-  it('rejects stale game sessions while preserving the best score', async () =>
-    withStorageDirectory(async (root) => {
-      const repository = new GameRepository(root);
-      const initial = await repository.save(0, {
-        gameSessionId: 's1',
-        board: [[2]],
-        score: 128,
-        bestScore: 128,
-        moveSequence: 1,
-      });
-      await expect(
-        repository.save(initial.version, {
-          gameSessionId: 's2',
-          board: [[2]],
-          score: 512,
-          bestScore: 512,
-          moveSequence: 1,
-        }),
-      ).rejects.toMatchObject({ code: 'GAME_SESSION_STALE' });
-      expect(StateConflict).toBeDefined();
     }));
 });

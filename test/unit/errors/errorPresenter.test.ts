@@ -17,7 +17,7 @@ describe('error presenter', () => {
     ['BOOK_NOT_FOUND', ['relocate', 'removeFromBookshelf']],
     ['ENCODING_AMBIGUOUS', ['selectEncoding']],
     ['TXT_INDEX_INVALID', ['rebuildIndex']],
-    ['GAME_SESSION_STALE', ['reloadGame']],
+    ['STATE_CORRUPT', ['retry']],
   ] as const)('maps %s to bounded recovery actions', (code, actions) => {
     const result = present(new MoyuError(code, 'C:\\private\\secret.txt'));
 

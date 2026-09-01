@@ -25,7 +25,6 @@ const SAFE_MESSAGES: Record<ErrorCode, string> = {
   STATE_CONFLICT: 'The data changed in another VS Code window.',
   STATE_LOCK_TIMEOUT: 'Moyu is busy in another VS Code window.',
   STATE_CORRUPT: 'Moyu found invalid saved data and could not use it.',
-  GAME_SESSION_STALE: 'The 2048 game session is stale.',
   PROTOCOL_INVALID: 'Moyu received an invalid message.',
 };
 
@@ -43,7 +42,6 @@ const ACTIONS: Record<ErrorCode, readonly RecoveryAction[]> = {
   STATE_CONFLICT: ['retry'],
   STATE_LOCK_TIMEOUT: ['retry'],
   STATE_CORRUPT: ['retry'],
-  GAME_SESSION_STALE: ['reloadGame'],
   PROTOCOL_INVALID: ['retry'],
 };
 

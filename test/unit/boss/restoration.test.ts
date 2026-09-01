@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Game2048State } from '../../../src/domain/game2048/types';
 import { Router } from '../../../webview/shell/router';
 import {
   validateHostEvent,
@@ -10,26 +9,6 @@ import {
   ModuleLifecycle,
   type ModuleBinding,
 } from '../../../webview/shell/moduleLifecycle';
-
-function gameState(): Game2048State {
-  return {
-    gameSessionId: 'session-1',
-    board: [
-      [2, 4, 8, 16],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-    ],
-    score: 28,
-    bestScore: 28,
-    won: false,
-    gameOver: false,
-    moveSequence: 3,
-    startedAt: 1,
-    updatedAt: 2,
-    stateVersion: 1,
-  };
-}
 
 describe('ModuleLifecycle restoration', () => {
   it('restores the exact reader locator, focus, controller, and timer state', () => {
@@ -68,36 +47,6 @@ describe('ModuleLifecycle restoration', () => {
     expect(timerPaused).toBe(false);
   });
 
-  it('preserves the exact 2048 controller and board state object', () => {
-    const router = new Router().navigate('game2048');
-    const controller = { kind: 'game2048' };
-    const state = gameState();
-    const pause = vi.fn();
-    const resume = vi.fn();
-    const binding: ModuleBinding = {
-      id: 'game2048:session-1',
-      controller,
-      captureFocus: () => 'board',
-      restoreFocus: vi.fn(),
-      captureAnchor: () => 'cell:0',
-      restoreAnchor: vi.fn(),
-      captureState: () => state,
-      pause,
-      resume,
-    };
-    const lifecycle = new ModuleLifecycle(router, () => binding);
-
-    const snapshot = lifecycle.capture();
-    lifecycle.pause();
-    lifecycle.resume(snapshot);
-
-    expect(snapshot.controller).toBe(controller);
-    expect(snapshot.moduleState).toBe(state);
-    expect((snapshot.moduleState as Game2048State).board).toBe(state.board);
-    expect(pause).toHaveBeenCalledOnce();
-    expect(resume).toHaveBeenCalledOnce();
-  });
-
   it('fails closed instead of restoring a recreated module', () => {
     const router = new Router().navigate('reader');
     const original = {
@@ -128,13 +77,13 @@ describe('ModuleLifecycle restoration', () => {
     let current: ModuleBinding = original;
     const lifecycle = new ModuleLifecycle(router, () => current);
     const snapshot = lifecycle.capture();
-    router.navigate('game2048');
+    router.navigate('settings');
     current = { ...original, controller: {} };
 
     expect(() => lifecycle.resume(snapshot)).toThrow(
       'Active module identity changed during Boss Mode.',
     );
-    expect(router.current).toBe('game2048');
+    expect(router.current).toBe('settings');
   });
 });
 

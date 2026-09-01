@@ -5,7 +5,7 @@ import {
 } from '../../../src/application/boss/BossModeService';
 
 const snapshot = {
-  route: 'game2048',
+  route: 'reader',
   moduleId: 'game',
   logicalFocus: 'board',
   scrollAnchor: 'tile-2',

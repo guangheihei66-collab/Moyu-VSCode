@@ -1,4 +1,4 @@
-export type RefreshTarget = 'bookshelf' | 'reader' | 'game2048' | 'settings';
+export type RefreshTarget = 'bookshelf' | 'reader' | 'settings';
 
 export interface RefreshRepository<T = unknown> {
   /** Preferred name for repositories that explicitly expose latest-read semantics. */

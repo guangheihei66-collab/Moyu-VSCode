@@ -3,7 +3,6 @@ import type {
   ReaderBlockBatch,
   TxtLocator,
 } from '../../domain/reader/locator';
-import type { Game2048State as DurableGame2048State } from '../../domain/game2048/types';
 import type {
   BossTemplate,
   ReaderSettingsPatch,
@@ -20,14 +19,13 @@ export type {
 
 export const PROTOCOL_VERSION = 1 as const;
 
-export type AppSection = 'home' | 'books' | 'reader' | 'game2048' | 'settings';
+export type AppSection = 'home' | 'books' | 'reader' | 'settings';
 
-export type SidebarSection = 'home' | 'books' | 'game2048' | 'settings';
+export type SidebarSection = 'home' | 'books' | 'settings';
 
 export interface SidebarViewModel {
   active: SidebarSection;
   booksCount: number;
-  bestScore: number;
 }
 
 export type SidebarMessage = {
@@ -54,8 +52,6 @@ export interface HomeSnapshot {
   continueReading?: PresentationBook;
   recentBooks: readonly PresentationBook[];
   booksCount: number;
-  bestScore: number;
-  hasGameSession: boolean;
 }
 
 export interface BookshelfSnapshot {
@@ -92,10 +88,6 @@ export interface Envelope<Type extends string, Payload> {
 }
 
 export type LogicalLocator = TxtLocator | EpubLocator;
-
-export type Game2048State = DurableGame2048State;
-
-export type GameDirection = 'left' | 'right' | 'up' | 'down';
 
 export type HostRequest =
   | Envelope<'app/ready', Record<string, never>>
@@ -135,19 +127,7 @@ export type HostRequest =
   | Envelope<
       'reader/saveProgress',
       { bookId: string; baseVersion: number; locator: LogicalLocator }
-    >
-  | Envelope<'game2048/load', Record<string, never>>
-  | Envelope<'game2048/newGame', { baseVersion: number }>
-  | Envelope<
-      'game2048/move',
-      {
-        baseVersion: number;
-        sessionId: string;
-        moveSequence: number;
-        direction: GameDirection;
-      }
-    >
-  | Envelope<'game2048/save', { baseVersion: number; state: Game2048State }>;
+    >;
 
 export type ProtocolErrorCode =
   | 'INVALID_MESSAGE'
@@ -181,11 +161,6 @@ export interface ReaderProgressSnapshot {
   locator: LogicalLocator;
 }
 
-export interface Game2048SessionSnapshot {
-  version: number;
-  state: Game2048State;
-}
-
 export type HostResponse =
   | Envelope<'response/success', { requestId: string }>
   | Envelope<'home/snapshot', { requestId: string; snapshot: HomeSnapshot }>
@@ -213,10 +188,6 @@ export type HostResponse =
   | Envelope<
       'reader/progressSaved',
       { requestId: string; snapshot: ReaderProgressSnapshot }
-    >
-  | Envelope<
-      'game2048/session',
-      { requestId: string; session: Game2048SessionSnapshot | null }
     >
   | Envelope<'response/error', { requestId: string; error: ProtocolError }>;
 

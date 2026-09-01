@@ -89,7 +89,7 @@ class DocumentStub {
 }
 
 describe('SidebarView', () => {
-  it('renders four typed navigation entries with summary and selected state', () => {
+  it('renders three typed navigation entries with summary and selected state', () => {
     const document = new DocumentStub();
     const root = document.createElement('main');
     const messages: SidebarMessage[] = [];
@@ -97,16 +97,15 @@ describe('SidebarView', () => {
       messages.push(message),
     );
 
-    view.render({ active: 'books', booksCount: 3, bestScore: 8192 });
+    view.render({ active: 'books', booksCount: 3 });
 
     const buttons = root.querySelectorAll('button');
-    expect(buttons).toHaveLength(4);
+    expect(buttons).toHaveLength(3);
     expect(root.fullText).toContain('Home');
     expect(root.fullText).toContain('Books');
-    expect(root.fullText).toContain('2048');
     expect(root.fullText).toContain('Settings');
     expect(root.fullText).toContain('3 books');
-    expect(root.fullText).toContain('Best 8192');
+    expect(root.fullText).not.toContain('Best');
     expect(
       root
         .querySelector('[aria-current="page"]')

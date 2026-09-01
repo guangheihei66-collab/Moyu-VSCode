@@ -99,12 +99,12 @@ describe('PanelController settings wiring', () => {
         }),
       );
 
-      controller.open('game2048');
+      controller.open('books');
       expect(vscodeHarness.postMessage).toHaveBeenLastCalledWith(
         expect.objectContaining({
           sessionId,
           type: 'app/navigate',
-          payload: { section: 'game2048' },
+          payload: { section: 'books' },
         }),
       );
     });

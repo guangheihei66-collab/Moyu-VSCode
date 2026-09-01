@@ -18,8 +18,8 @@ describe('README user workflow contract', () => {
     expect(readme).toContain('npm run package');
     expect(readme).toContain('Ctrl+M');
     expect(readme).toContain('moyu.openBooks');
-    expect(readme).toContain('moyu.open2048');
     expect(readme).toContain('moyu.openSettings');
+    expect(readme).not.toContain('moyu.open2048');
   });
 
   it('documents source-file safety, local storage, and multi-window limits', () => {

@@ -7,7 +7,6 @@ const FEATURE_STYLES = [
   'webview/home/home.css',
   'webview/books/bookshelf.css',
   'webview/reader/reader.css',
-  'webview/game2048/game2048.css',
   'webview/settings/settings.css',
   'webview/boss/boss.css',
 ] as const;
@@ -17,7 +16,6 @@ const NARROW_LAYOUT_STYLES = [
   'webview/home/home.css',
   'webview/books/bookshelf.css',
   'webview/reader/reader.css',
-  'webview/game2048/game2048.css',
 ] as const;
 
 describe('cross-surface presentation accessibility and themes', () => {
@@ -90,19 +88,16 @@ describe('cross-surface presentation accessibility and themes', () => {
   });
 
   it('retains semantic state hooks and safe bounded recovery actions', async () => {
-    const [sidebar, drawer, game, settings, shell, errorView] =
-      await Promise.all([
-        readFile('webview/sidebar/SidebarView.ts', 'utf8'),
-        readFile('webview/reader/ChapterDrawer.ts', 'utf8'),
-        readFile('webview/game2048/Game2048View.ts', 'utf8'),
-        readFile('webview/settings/SettingsView.ts', 'utf8'),
-        readFile('webview/shell/app.ts', 'utf8'),
-        readFile('webview/shell/ErrorView.ts', 'utf8'),
-      ]);
+    const [sidebar, drawer, settings, shell, errorView] = await Promise.all([
+      readFile('webview/sidebar/SidebarView.ts', 'utf8'),
+      readFile('webview/reader/ChapterDrawer.ts', 'utf8'),
+      readFile('webview/settings/SettingsView.ts', 'utf8'),
+      readFile('webview/shell/app.ts', 'utf8'),
+      readFile('webview/shell/ErrorView.ts', 'utf8'),
+    ]);
     expect(sidebar).toContain("aria-current', 'page'");
     expect(drawer).toContain("aria-expanded', 'true'");
     expect(drawer).toContain("aria-controls', id");
-    expect(game).toContain('aria-keyshortcuts');
     expect(settings).toContain("aria-live', 'polite'");
     expect(shell).toContain("'role', 'main'");
     expect(errorView).toContain('RECOVERY_ACTIONS');

@@ -31,7 +31,7 @@ export interface PanelLifecycleServices {
 
 function refreshTarget(
   section: AppSection,
-): 'bookshelf' | 'reader' | 'game2048' | 'settings' {
+): 'bookshelf' | 'reader' | 'settings' {
   return section === 'books' || section === 'home' ? 'bookshelf' : section;
 }
 
@@ -44,10 +44,7 @@ function isMutation(request: HostRequest): request is Extract<
       | 'books/remove'
       | 'books/relocate'
       | 'books/selectEncoding'
-      | 'reader/saveProgress'
-      | 'game2048/newGame'
-      | 'game2048/move'
-      | 'game2048/save';
+      | 'reader/saveProgress';
   }
 > {
   return (
@@ -56,10 +53,7 @@ function isMutation(request: HostRequest): request is Extract<
     request.type === 'books/remove' ||
     request.type === 'books/relocate' ||
     request.type === 'books/selectEncoding' ||
-    request.type === 'reader/saveProgress' ||
-    request.type === 'game2048/newGame' ||
-    request.type === 'game2048/move' ||
-    request.type === 'game2048/save'
+    request.type === 'reader/saveProgress'
   );
 }
 
@@ -321,11 +315,9 @@ export class PanelController {
             refreshTarget(
               request.value.type === 'settings/update'
                 ? 'settings'
-                : request.value.type.startsWith('game2048/')
-                  ? 'game2048'
-                  : request.value.type.startsWith('books/')
-                    ? 'books'
-                    : 'reader',
+                : request.value.type.startsWith('books/')
+                  ? 'books'
+                  : 'reader',
             ),
           );
         } catch {
